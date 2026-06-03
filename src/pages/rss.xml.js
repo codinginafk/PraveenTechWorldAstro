@@ -16,8 +16,8 @@ export async function GET() {
     <item>
       <title><![CDATA[${article.data.seoTitle || article.data.title}]]></title>
       <description><![CDATA[${article.data.description}]]></description>
-      <link>https://praveentechworld.com/blog/${article.id}</link>
-      <guid>https://praveentechworld.com/blog/${article.id}</guid>
+      <link>https://www.praveentechworld.com/blog/${article.id}</link>
+      <guid>https://www.praveentechworld.com/blog/${article.id}</guid>
       <pubDate>${new Date(article.data.publishDate).toUTCString()}</pubDate>
       <category>${article.data.category}</category>
     </item>`
@@ -29,8 +29,8 @@ export async function GET() {
       <channel>
         <title>PraveenTechWorld</title>
         <description>Practical Technology Knowledge Base</description>
-        <link>https://praveentechworld.com</link>
-        <atom:link href="https://praveentechworld.com/rss.xml" rel="self" type="application/rss+xml"/>
+        <link>https://www.praveentechworld.com</link>
+        <atom:link href="https://www.praveentechworld.com/rss.xml" rel="self" type="application/rss+xml"/>
         <language>en</language>
         ${items.join("")}
       </channel>
