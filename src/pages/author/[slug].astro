@@ -1,0 +1,69 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getCollection, getEntry } from "astro:content";
+import { getPublishedArticles } from "@lib/content/posts";
+import ArticleCard from "@components/content/ArticleCard.astro";
+
+export async function getStaticPaths() {
+  const authors = await getCollection("authors");
+  return authors.map((author) => ({
+    params: { slug: author.id },
+    props: { authorSlug: author.id },
+  }));
+}
+
+const { authorSlug } = Astro.props;
+const author = await getEntry("authors", authorSlug);
+const allArticles = await getPublishedArticles();
+const authorArticles = allArticles.filter(
+  (a) => a.data.author === authorSlug
+);
+---
+
+<BaseLayout
+  seo={{
+    title: author?.data.name || "Author",
+    description: author?.data.bio || `Articles by ${author?.data.name}`,
+  }}
+>
+  <div class="mx-auto max-w-6xl px-4 py-16">
+    <div class="mb-10">
+      <nav class="mb-4 text-sm text-text-muted dark:text-text-dark-muted">
+        <a href="/" class="hover:text-brand-600 dark:hover:text-brand-400">Home</a>
+        <span class="mx-2">/</span>
+        <span>{author?.data.name}</span>
+      </nav>
+      <div class="flex items-center gap-4">
+        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-2xl font-bold text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
+          {author?.data.name?.charAt(0)}
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold">{author?.data.name}</h1>
+          <p class="mt-1 text-text-muted dark:text-text-dark-muted">{author?.data.bio}</p>
+          <div class="mt-2 flex gap-3">
+            {author?.data.twitter && (
+              <a href={author.data.twitter} target="_blank" rel="noopener noreferrer" class="text-sm text-text-muted hover:text-brand-600 dark:text-text-dark-muted dark:hover:text-brand-400">X (Twitter)</a>
+            )}
+            {author?.data.linkedin && (
+              <a href={author.data.linkedin} target="_blank" rel="noopener noreferrer" class="text-sm text-text-muted hover:text-brand-600 dark:text-text-dark-muted dark:hover:text-brand-400">LinkedIn</a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="mb-6 text-xl font-semibold">Articles ({authorArticles.length})</h2>
+
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {authorArticles.map((article) => (
+        <ArticleCard article={article} />
+      ))}
+    </div>
+
+    {authorArticles.length === 0 && (
+      <p class="py-12 text-center text-text-muted dark:text-text-dark-muted">
+        No articles published yet.
+      </p>
+    )}
+  </div>
+</BaseLayout>

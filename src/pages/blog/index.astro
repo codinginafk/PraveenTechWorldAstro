@@ -1,0 +1,67 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getPublishedArticles, getAllCategories } from "@lib/content/posts";
+import ArticleCard from "@components/content/ArticleCard.astro";
+
+const articles = await getPublishedArticles();
+const categories = await getAllCategories();
+---
+
+<BaseLayout
+  seo={{
+    title: "Blog",
+    description:
+      "Practical technology guides, AI tutorials, productivity tips, and troubleshooting solutions.",
+  }}
+>
+  <div class="mx-auto max-w-6xl px-4 py-16">
+    <div class="mb-10">
+      <h1 class="mb-3 text-3xl font-bold">All Articles</h1>
+      <p class="text-text-muted dark:text-text-dark-muted">
+        Practical technology guides to help you save time and solve problems.
+      </p>
+    </div>
+
+    <div class="mb-8 flex flex-wrap gap-2">
+      <a
+        href="/blog"
+        class="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-medium text-white"
+      >
+        All
+      </a>
+      {categories.map((cat) => (
+        <a
+          href={`/category/${cat}`}
+          class="rounded-full border border-border px-4 py-1.5 text-xs font-medium transition-colors hover:border-brand-600 dark:border-border-dark dark:hover:border-brand-400"
+        >
+          {cat}
+        </a>
+      ))}
+    </div>
+
+    <div class="mb-8">
+      <form action="/search" method="get" class="flex gap-3" role="search">
+        <label for="blog-search" class="sr-only">Search articles</label>
+        <input
+          id="blog-search"
+          type="search"
+          name="q"
+          placeholder="Search articles..."
+          class="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-text placeholder:text-text-muted focus:border-brand-600 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark dark:placeholder:text-text-dark-muted"
+        />
+      </form>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {articles.map((article) => (
+        <ArticleCard article={article} />
+      ))}
+    </div>
+
+    {articles.length === 0 && (
+      <p class="py-12 text-center text-text-muted dark:text-text-dark-muted">
+        No articles published yet. Check back soon.
+      </p>
+    )}
+  </div>
+</BaseLayout>

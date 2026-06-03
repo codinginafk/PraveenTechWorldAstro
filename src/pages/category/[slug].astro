@@ -1,0 +1,62 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getPublishedArticles } from "@lib/content/posts";
+import { getEntry } from "astro:content";
+import ArticleCard from "@components/content/ArticleCard.astro";
+
+export async function getStaticPaths() {
+  const articles = await getPublishedArticles();
+  const categories = [...new Set(articles.map((a) => a.data.category))];
+  return categories.map((cat) => ({
+    params: { slug: cat },
+    props: { categorySlug: cat },
+  }));
+}
+
+const { categorySlug } = Astro.props;
+const allArticles = await getPublishedArticles();
+const categoryArticles = allArticles.filter(
+  (a) => a.data.category === categorySlug
+);
+const categoryEntry = await getEntry("categories", categorySlug);
+const categoryName = categoryEntry?.data.name || categorySlug;
+const categoryDescription = categoryEntry?.data.description || "";
+---
+
+<BaseLayout
+  seo={{
+    title: categoryName,
+    description: categoryDescription || `Articles about ${categoryName}.`,
+  }}
+>
+  <div class="mx-auto max-w-6xl px-4 py-16">
+    <div class="mb-10">
+      <nav class="mb-4 text-sm text-text-muted dark:text-text-dark-muted">
+        <a href="/" class="hover:text-brand-600 dark:hover:text-brand-400">Home</a>
+        <span class="mx-2">/</span>
+        <a href="/blog" class="hover:text-brand-600 dark:hover:text-brand-400">Blog</a>
+        <span class="mx-2">/</span>
+        <span>{categoryName}</span>
+      </nav>
+      <h1 class="mb-2 text-3xl font-bold">{categoryName}</h1>
+      {categoryDescription && (
+        <p class="text-text-muted dark:text-text-dark-muted">{categoryDescription}</p>
+      )}
+      <p class="mt-2 text-sm text-text-muted dark:text-text-dark-muted">
+        {categoryArticles.length} article{categoryArticles.length !== 1 ? "s" : ""}
+      </p>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {categoryArticles.map((article) => (
+        <ArticleCard article={article} />
+      ))}
+    </div>
+
+    {categoryArticles.length === 0 && (
+      <p class="py-12 text-center text-text-muted dark:text-text-dark-muted">
+        No articles in this category yet.
+      </p>
+    )}
+  </div>
+</BaseLayout>

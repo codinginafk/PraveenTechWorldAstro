@@ -1,0 +1,68 @@
+---
+export interface Props {
+  type: string;
+  articleData?: {
+    title: string;
+    description: string;
+    url: string;
+    publishDate: string;
+    updatedDate?: string;
+    authorName: string;
+    image?: string;
+    tags?: string[];
+  };
+  breadcrumbItems?: Array<{ name: string; url: string }>;
+  faqItems?: Array<{ question: string; answer: string }>;
+}
+
+const { type, articleData, breadcrumbItems, faqItems } = Astro.props;
+---
+
+{
+  type === "article" && articleData && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: articleData.title,
+      description: articleData.description,
+      url: articleData.url,
+      datePublished: articleData.publishDate,
+      dateModified: articleData.updatedDate || articleData.publishDate,
+      author: { "@type": "Person", name: articleData.authorName },
+      image: articleData.image,
+      keywords: articleData.tags?.join(", "),
+    })} />
+  )
+}
+
+{
+  type === "breadcrumb" && breadcrumbItems && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: breadcrumbItems.map((item, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: item.name,
+        item: item.url,
+      })),
+    })} />
+  )
+}
+
+{
+  type === "faq" && faqItems && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqItems.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.answer,
+        },
+      })),
+    })} />
+  )
+}

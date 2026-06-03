@@ -1,0 +1,149 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import SchemaOrg from "@components/seo/SchemaOrg.astro";
+import { getCollection, getEntry } from "astro:content";
+import { getRelatedArticles } from "@lib/content/posts";
+import { formatDate } from "@lib/utils/dateFormat";
+import { calculateReadingTime } from "@lib/utils/readingTime";
+import { buildCanonical } from "@lib/seo/metadata";
+import { extractHeadings } from "@lib/content/headings";
+import TableOfContents from "@components/content/TableOfContents.astro";
+import AuthorBox from "@components/content/AuthorBox.astro";
+import SocialShare from "@components/content/SocialShare.astro";
+import FAQ from "@components/content/FAQ.astro";
+import ArticleCard from "@components/content/ArticleCard.astro";
+
+export async function getStaticPaths() {
+  const articles = await getCollection("articles");
+  return articles
+    .filter((a) => !a.data.draft)
+    .map((article) => ({
+      params: { slug: article.id },
+      props: { article },
+    }));
+}
+
+const { article } = Astro.props;
+const relatedArticles = await getRelatedArticles(article, 3);
+const author = await getEntry("authors", article.data.author);
+const readingTime = article.data.readingTime || calculateReadingTime(article.body || article.data.description);
+const articleUrl = buildCanonical("https://praveentechworld.com", `/blog/${article.id}`);
+const headings = extractHeadings(article.body || "");
+
+const breadcrumbItems = [
+  { name: "Home", url: "https://praveentechworld.com/" },
+  { name: "Blog", url: "https://praveentechworld.com/blog" },
+  { name: article.data.seoTitle || article.data.title, url: articleUrl },
+];
+---
+
+<BaseLayout
+  seo={{
+    title: article.data.seoTitle || article.data.title,
+    description: article.data.seoDescription || article.data.description,
+    canonical: article.data.canonical,
+  }}
+>
+  <SchemaOrg
+    type="article"
+    articleData={{
+      title: article.data.title,
+      description: article.data.description,
+      url: articleUrl,
+      publishDate: article.data.publishDate.toISOString(),
+      updatedDate: article.data.updatedDate?.toISOString(),
+      authorName: author?.data.name || "Praveen",
+      image: article.data.coverImage,
+      tags: article.data.tags,
+    }}
+  />
+  <SchemaOrg
+    type="breadcrumb"
+    breadcrumbItems={breadcrumbItems}
+  />
+
+  <div class="mx-auto max-w-6xl px-4 py-12">
+    <div class="lg:grid lg:grid-cols-[1fr_250px] lg:gap-10">
+      <article>
+        <nav class="mb-6 text-sm text-text-muted dark:text-text-dark-muted">
+          <a href="/" class="hover:text-brand-600 dark:hover:text-brand-400">Home</a>
+          <span class="mx-2">/</span>
+          <a href="/blog" class="hover:text-brand-600 dark:hover:text-brand-400">Blog</a>
+          <span class="mx-2">/</span>
+          <a href={`/category/${article.data.category}`} class="hover:text-brand-600 dark:hover:text-brand-400">{article.data.category}</a>
+        </nav>
+
+        <header class="mb-8">
+          <p class="mb-3 text-xs font-medium uppercase tracking-wider text-brand-600 dark:text-brand-400">
+            {article.data.category}
+          </p>
+          <h1 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+            {article.data.seoTitle || article.data.title}
+          </h1>
+          <div class="flex flex-wrap items-center gap-3 text-sm text-text-muted dark:text-text-dark-muted">
+            {author && (
+              <a href={`/author/${article.data.author}`} class="hover:text-brand-600 dark:hover:text-brand-400">
+                {author.data.name}
+              </a>
+            )}
+            <time datetime={article.data.publishDate.toISOString()}>
+              {formatDate(article.data.publishDate)}
+            </time>
+            <span>{readingTime} min read</span>
+          </div>
+          <div class="mt-4">
+            <SocialShare url={articleUrl} title={article.data.seoTitle || article.data.title} />
+          </div>
+        </header>
+
+        <div class="prose max-w-none dark:prose-invert">
+          <slot />
+        </div>
+
+        {article.data.faq && article.data.faq.length > 0 && (
+          <div class="mt-10">
+            <FAQ items={article.data.faq} />
+          </div>
+        )}
+
+        <div class="mt-10">
+          <AuthorBox author={author} />
+        </div>
+      </article>
+
+      <aside class="hidden lg:block">
+        <div class="sticky top-20">
+          <TableOfContents headings={headings} />
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="border-t border-border dark:border-border-dark">
+    <div class="mx-auto max-w-6xl px-4 py-12">
+      {article.data.tags.length > 0 && (
+        <div class="mb-8 flex flex-wrap gap-2">
+          {article.data.tags.map((tag) => (
+            <a
+              href={`/tag/${tag}`}
+              class="rounded-full border border-border px-3 py-1 text-xs font-medium transition-colors hover:border-brand-600 hover:text-brand-600 dark:border-border-dark dark:hover:border-brand-400 dark:hover:text-brand-400"
+            >
+              #{tag}
+            </a>
+          ))}
+        </div>
+      )}
+
+      {relatedArticles.length > 0 && (
+        <section>
+          <h2 class="mb-6 text-2xl font-bold">Related Articles</h2>
+          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {relatedArticles.map((related) => (
+              <ArticleCard article={related} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  </div>
+</BaseLayout>

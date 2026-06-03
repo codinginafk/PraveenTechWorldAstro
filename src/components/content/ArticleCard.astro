@@ -1,0 +1,33 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { formatDate } from "@lib/utils/dateFormat";
+import { calculateReadingTime } from "@lib/utils/readingTime";
+import Badge from "./Badge.astro";
+
+export interface Props {
+  article: CollectionEntry<"articles">;
+}
+
+const { article } = Astro.props;
+const readingTime = article.data.readingTime || calculateReadingTime(article.body || article.data.description);
+---
+
+<article class="group rounded-xl border border-border bg-surface p-6 transition-all hover:-translate-y-0.5 hover:border-brand-600 hover:shadow-md dark:border-border-dark dark:bg-surface-dark dark:hover:border-brand-400">
+  <a href={`/blog/${article.id}`}>
+    <p class="mb-3 text-xs font-medium uppercase tracking-wider text-brand-600 dark:text-brand-400">
+      <Badge variant="category">{article.data.category}</Badge>
+    </p>
+    <h2 class="mb-2 font-semibold group-hover:text-brand-600 dark:group-hover:text-brand-400">
+      {article.data.seoTitle || article.data.title}
+    </h2>
+    <p class="mb-4 text-sm text-text-muted dark:text-text-dark-muted">
+      {article.data.description}
+    </p>
+    <div class="flex items-center gap-3 text-xs text-text-muted dark:text-text-dark-muted">
+      <time datetime={article.data.publishDate.toISOString()}>
+        {formatDate(article.data.publishDate)}
+      </time>
+      <span>{readingTime} min read</span>
+    </div>
+  </a>
+</article>

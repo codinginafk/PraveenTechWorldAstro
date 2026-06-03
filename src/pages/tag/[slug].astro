@@ -1,0 +1,64 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getPublishedArticles } from "@lib/content/posts";
+import { getEntry } from "astro:content";
+import ArticleCard from "@components/content/ArticleCard.astro";
+
+export async function getStaticPaths() {
+  const articles = await getPublishedArticles();
+  const tagSet = new Set<string>();
+  articles.forEach((a) => a.data.tags.forEach((t) => tagSet.add(t)));
+  const tags = [...tagSet];
+  return tags.map((tag) => ({
+    params: { slug: tag },
+    props: { tagSlug: tag },
+  }));
+}
+
+const { tagSlug } = Astro.props;
+const allArticles = await getPublishedArticles();
+const tagArticles = allArticles.filter((a) =>
+  a.data.tags.includes(tagSlug)
+);
+const tagEntry = await getEntry("tags", tagSlug);
+const tagName = tagEntry?.data.name || tagSlug;
+const tagDescription = tagEntry?.data.description || "";
+---
+
+<BaseLayout
+  seo={{
+    title: `Tag: ${tagName}`,
+    description: tagDescription || `Articles tagged with ${tagName}.`,
+  }}
+>
+  <div class="mx-auto max-w-6xl px-4 py-16">
+    <div class="mb-10">
+      <nav class="mb-4 text-sm text-text-muted dark:text-text-dark-muted">
+        <a href="/" class="hover:text-brand-600 dark:hover:text-brand-400">Home</a>
+        <span class="mx-2">/</span>
+        <a href="/blog" class="hover:text-brand-600 dark:hover:text-brand-400">Blog</a>
+        <span class="mx-2">/</span>
+        <span>Tag: {tagName}</span>
+      </nav>
+      <h1 class="mb-2 text-3xl font-bold">#{tagName}</h1>
+      {tagDescription && (
+        <p class="text-text-muted dark:text-text-dark-muted">{tagDescription}</p>
+      )}
+      <p class="mt-2 text-sm text-text-muted dark:text-text-dark-muted">
+        {tagArticles.length} article{tagArticles.length !== 1 ? "s" : ""}
+      </p>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {tagArticles.map((article) => (
+        <ArticleCard article={article} />
+      ))}
+    </div>
+
+    {tagArticles.length === 0 && (
+      <p class="py-12 text-center text-text-muted dark:text-text-dark-muted">
+        No articles with this tag yet.
+      </p>
+    )}
+  </div>
+</BaseLayout>
