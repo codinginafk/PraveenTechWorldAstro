@@ -7,6 +7,7 @@ import {
   formatDate,
   writeReport,
   loadConfig,
+  callLLM,
 } from "./lib/shared.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -79,12 +80,21 @@ export async function runDraft(briefSlug) {
   const slug = generateSlug(topic);
   const category = detectCategory(topic);
 
+  console.log("Generating article content with LLM...");
+  const articleBody = await generateLLMContent({
+    topic,
+    seoTitle,
+    summary,
+    faqItems,
+    category,
+  });
+
   const draft = generateDraftArticle({
     topic,
     seoTitle,
     summary,
     faqItems,
-    internalLinks,
+    articleBody,
     category,
     slug,
     date: today,
@@ -99,6 +109,45 @@ export async function runDraft(briefSlug) {
   console.log("\nNOTE: This is a machine-generated draft.");
   console.log("Human review and editing are REQUIRED before publishing.\n");
   await tryNotify(topic, `${slug}.md`);
+}
+
+async function generateLLMContent({ topic, seoTitle, summary, faqItems, category }) {
+  const faqBlock = faqItems.length
+    ? faqItems.map((q, i) => `${i + 1}. ${q}`).join("\n")
+    : "None provided";
+
+  const result = await callLLM(
+    `You are a tech content writer for "PraveenTechWorld", a practical technology knowledge base. Write in simple, clear English. Target audience: students and office workers (non-experts). Use short paragraphs, bullet points, and practical examples. Never use markdown headings — use plain text section titles with "##" prefix only for Astro compatibility. Never include frontmatter. End with a call to action.`,
+    `Write a complete blog article with these details:
+
+TITLE: ${seoTitle}
+SUMMARY: ${summary || "A practical guide"}
+CATEGORY: ${category}
+FAQ to answer:
+${faqBlock}
+
+Return this structure:
+## Why This Matters
+(2-3 paragraphs about the real-world problem this solves)
+
+## What You Will Learn
+(bullet list of 4-6 learning objectives)
+
+## Step-by-Step Guide
+(3-5 subsections with "###" headings, each with 2-3 practical paragraphs)
+
+## Tips for Best Results
+(4-6 numbered tips)
+
+## Frequently Asked Questions
+(${faqItems.length ? `Answer each of these questions with 1-2 paragraphs:\n${faqBlock}` : "Write 3 relevant questions with answers"})
+
+## Conclusion
+(1-2 paragraphs summarizing + call to action to explore more on PraveenTechWorld)`,
+    { temperature: 0.5, maxTokens: 4096 }
+  );
+
+  return result || "";
 }
 
 function detectCategory(topic) {
@@ -163,7 +212,7 @@ function generateDraftArticle(data) {
   const frontmatter = [
     "---",
     `title: "${data.seoTitle}"`,
-    `description: "${data.summary.slice(0, 150)}"`,
+    `description: "${(data.summary || "").slice(0, 150)}"`,
     `publishDate: ${data.date}`,
     `author: praveen`,
     `category: ${data.category}`,
@@ -176,7 +225,7 @@ function generateDraftArticle(data) {
     "",
   ].join("\n");
 
-  const body = [
+  const body = data.articleBody || [
     `## Why This Matters`,
     ``,
     `${data.summary || `A comprehensive guide to ${data.topic}.`}`,
