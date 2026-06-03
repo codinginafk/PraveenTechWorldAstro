@@ -23,7 +23,6 @@ async function tryNotify(topic, filename) {
     // Telegram not configured—silently skip
   }
 }
-}
 
 function listOpportunityReports() {
   const dir = path.join(getReportsDir(), "opportunities");
@@ -39,7 +38,7 @@ function readOpportunityReport(filename) {
 function extractTopics(reportText) {
   const topics = [];
   const headingRegex = /^### (.+)$/gm;
-  const urlRegex = /^\*\*URL:\*\* (.+)$/gm;
+  const urlRegex = /^- \*\*URL:\*\* (.+)$/gm;
   const headings = [...reportText.matchAll(headingRegex)].map((m) => m[1]);
   const urls = [...reportText.matchAll(urlRegex)].map((m) => m[1]);
   for (let i = 0; i < headings.length; i++) {
