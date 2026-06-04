@@ -6,6 +6,11 @@ const USER_AGENT = "PraveenTechWorld/1.0 (article-generator)";
 
 export async function searchImage(keywords, slug, articleTitle, assetsDir) {
   for (const kw of keywords) {
+    const unsplash = await tryUnsplash(kw);
+    if (unsplash) {
+      console.log(`  Image found via Unsplash: "${kw}"`);
+      return unsplash;
+    }
     const commons = await tryCommons(kw);
     if (commons) {
       console.log(`  Image found via Commons: "${kw}"`);
@@ -19,6 +24,31 @@ export async function searchImage(keywords, slug, articleTitle, assetsDir) {
   }
   console.log(`  No external image found, generating SVG fallback`);
   return await generateSVG(slug, articleTitle, assetsDir);
+}
+
+async function tryUnsplash(query) {
+  try {
+    const key = process.env.UNSPLASH_ACCESS_KEY;
+    if (!key) return null;
+    const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3&client_id=${key}`;
+    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, "Accept-Version": "v1" } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const results = data?.results || [];
+    for (const r of results) {
+      if (!r.urls?.regular) continue;
+      // Trigger download tracking (Unsplash requirement)
+      if (r.links?.download_location) {
+        fetch(r.links.download_location + `&client_id=${key}`).catch(() => {});
+      }
+      const credit = `Photo by ${r.user?.name || "Unknown"} on Unsplash`;
+      const alt = r.alt_description || r.description || "";
+      // Use regular URL with size params for our layout (1200x600 crop)
+      const url = `${r.urls.raw}&w=1200&h=600&fit=crop`;
+      return { url, credit, alt };
+    }
+  } catch {}
+  return null;
 }
 
 async function tryCommons(query) {
@@ -38,7 +68,6 @@ async function tryCommons(query) {
       const info = entry.imageinfo?.[0];
       if (!info?.url) continue;
       if (!/\.(jpg|jpeg|png|webp)$/i.test(info.url)) continue;
-      // Relevance check: file title should share at least one word with query
       const titleLower = title.toLowerCase();
       const hasMatch = queryWords.some(w => titleLower.includes(w));
       if (queryWords.length > 0 && !hasMatch) continue;
@@ -96,46 +125,69 @@ function parseMeta(field) {
   if (typeof field === "string") val = field;
   else if (typeof field === "object" && field?.value) val = field.value;
   else return "";
-  // Strip HTML tags
   val = val.replace(/<[^>]*>/g, "").trim();
-  // Decode common entities
   val = val.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-  // Strip lengthy URLs
   val = val.replace(/https?:\/\/\S+/g, "").trim();
   return val;
 }
 
 function buildCredit(artist, license) {
   const parts = [];
-  if (artist) parts.push(artist);
-  if (license && license.toUpperCase() !== "CC0" && license.toUpperCase() !== "PUBLIC DOMAIN") parts.push(license);
+  if (artist) { let a = artist.replace(/\s+/g, " ").trim(); if (a.length < 80) parts.push(a); }
+  if (license && license.toUpperCase() !== "CC0" && license.toUpperCase() !== "PUBLIC DOMAIN") { let l = license.replace(/\s+/g, " ").trim(); if (l.length < 40) parts.push(l); }
   return parts.length ? parts.join(" — ") : "";
 }
 
+const STOP_WORDS = new Set([
+  "the","a","an","in","on","at","to","for","of","with","by","from","and","or",
+  "is","are","was","were","been","being","have","has","had","do","does","did",
+  "will","would","can","could","should","may","might","must","shall",
+  "get","use","set","fix","make","take","find","learn","build","create",
+  "improve","remove","write","add","put","run","keep","stop","start","get",
+  "your","our","their","its","his","her","how","what","why","when","where"
+]);
+
 export function extractKeywords(title, tags, category) {
   const kws = [];
-  // Priority 1: tags as search terms (most descriptive)
+  // Strip noise
+  let clean = title
+    .replace(/^(how to|what is|why|does|can|is|are|do|the|a|an)\s+/i, "")
+    .replace(/in \d{4}.*$/i, "")
+    .replace(/[:–—\-—?][\s\S]*$/, "")
+    .replace(/[^\w\s]/g, "")
+    .trim();
+  const words = clean.split(/\s+/).filter(w => w.length > 1);
+  // Extract meaningful content words (skip verbs and stop words)
+  const contentWords = words.filter(w => !STOP_WORDS.has(w.toLowerCase()));
+  // Primary: Short specific phrase from content words (2-3 words)
+  if (contentWords.length >= 2) {
+    kws.push(contentWords.slice(0, 3).join(" "));
+    kws.push(contentWords.slice(0, 2).join(" "));
+  }
+  // Secondary: Skip first word if it's verb-like, take next 2-3
+  const skipVerbs = new Set(["fix","remove","learn","build","create","get","use","set","write","speed","improve","automate","make","take"]);
+  let startIdx = 0;
+  if (words.length > 1 && skipVerbs.has(words[0].toLowerCase())) startIdx = 1;
+  if (words.length >= startIdx + 2) {
+    kws.push(words.slice(startIdx, startIdx + 3).join(" "));
+    kws.push(words.slice(startIdx, startIdx + 2).join(" "));
+  }
+  // Tags
   if (tags) tags.forEach(t => { const s = String(t).trim(); if (s.length > 2) kws.push(s); });
-  // Priority 2: short meaningful phrases from title (2-4 words)
-  const titleClean = title.replace(/^(how to|what is|why|does|can|the|a|an|is|are|do)\s+/i, "").replace(/in \d{4}.*$/, "").replace(/[:–—\-—][\s\S]*$/, "").replace(/[^\w\s]/g, "").trim();
-  const words = titleClean.split(/\s+/).filter(Boolean);
-  if (words.length > 2) kws.push(words.slice(0, 4).join(" "));
-  if (words.length > 3) kws.push(words.slice(1, 5).join(" "));
-  // Priority 3: category-specific terms
+  // Category-specific
   const catMap = {
-    "windows-fixes": ["Windows error screen", "computer repair", "technology"],
-    "android-fixes": ["Android smartphone", "mobile phone", "technology"],
-    "ai-tools": ["artificial intelligence", "AI technology", "robot"],
-    "ai-workflows": ["AI productivity", "workspace technology"],
-    "productivity": ["workspace organization", "office productivity"],
-    "career-growth": ["career development", "professional growth"],
-    "privacy": ["data privacy protection", "online security"],
+    "windows-fixes": ["Windows 11 error screen", "Windows update", "computer"],
+    "android-fixes": ["Android smartphone", "phone battery", "mobile"],
+    "ai-tools": ["artificial intelligence", "AI technology", "ChatGPT"],
+    "ai-workflows": ["AI productivity", "workspace"],
+    "productivity": ["workspace organization", "productivity"],
+    "career-growth": ["career development", "professional"],
+    "privacy": ["data privacy", "online security"],
     "security": ["cybersecurity", "computer security"],
-    "free-software": ["open source software", "free technology"],
-    "automation": ["automation technology", "smart automation"],
+    "free-software": ["open source", "free software"],
+    "automation": ["workflow automation", "technology"],
   };
   if (catMap[category]) catMap[category].forEach(w => kws.push(w));
-  // Priority 4: generic fallbacks
-  kws.push("technology", "digital", "computer");
+  kws.push("technology", "digital");
   return [...new Set(kws)];
 }

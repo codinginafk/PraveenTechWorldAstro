@@ -7,7 +7,12 @@ const __filename = fileURLToPath(import.meta.url);
 const ROOT_DIR = path.resolve(__filename, "../..");
 const ARTICLES_DIR = path.join(ROOT_DIR, "src/content/articles");
 
+function normalizeEOL(mdx) {
+  return mdx.replace(/\r\n/g, "\n");
+}
+
 function parseFrontmatter(mdx) {
+  mdx = normalizeEOL(mdx);
   const match = mdx.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return null;
   const raw = match[1];
@@ -30,23 +35,28 @@ function parseFrontmatter(mdx) {
 }
 
 function replaceFrontmatterField(mdx, field, value) {
+  mdx = normalizeEOL(mdx);
   if (value === null || value === undefined) {
-    // Remove the field line if it exists
-    const regex = new RegExp(`^${field}: .*$`, "m");
-    return mdx.replace(regex, "");
+    const regex = new RegExp(`^${field}: .*(?:\n(?:[ \t].*))*`, "m");
+    return mdx.replace(regex, "").replace(/\n{2,}/g, "\n");
   }
   const escaped = value.replace(/"/g, "'");
   const line = `${field}: "${escaped}"`;
-  const regex = new RegExp(`^${field}: .*$`, "m");
+  // Match field: value (possibly multi-line if continued with indented continuation lines)
+  const regex = new RegExp(`^${field}: .*(?:\n(?:[ \t].*))*`, "m");
   if (regex.test(mdx)) {
     return mdx.replace(regex, line);
   }
-  // Add after description or the last existing field before publishDate
   return mdx.replace(/^description: .*$/m, (m) => `${m}\n${line}`);
 }
 
 async function main() {
-  const files = fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx"));
+  const allFiles = fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx"));
+  const targetFiles = process.argv.slice(2);
+  const files = targetFiles.length > 0
+    ? allFiles.filter(f => targetFiles.includes(f))
+    : allFiles;
+
   console.log(`Found ${files.length} articles to process.\n`);
 
   let updated = 0;
@@ -54,7 +64,8 @@ async function main() {
 
   for (const file of files) {
     const filePath = path.join(ARTICLES_DIR, file);
-    const mdx = fs.readFileSync(filePath, "utf-8");
+    const mdxRaw = fs.readFileSync(filePath, "utf-8");
+    const mdx = normalizeEOL(mdxRaw);
     const fm = parseFrontmatter(mdx);
     if (!fm) {
       console.log(`  SKIP ${file}: could not parse frontmatter`);
