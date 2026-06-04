@@ -74,6 +74,23 @@ export async function fetchXML(url) {
   }
 }
 
+export function getCurrentsKey() {
+  return process.env.CURRENTS_API_KEY || "";
+}
+
+export function getGAId() {
+  return process.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
+}
+
+export function log(...args) {
+  const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
+  console.log(`[${ts}]`, ...args);
+}
+
+export function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
 export async function fetchJSON(url) {
   try {
     const res = await fetch(url, {

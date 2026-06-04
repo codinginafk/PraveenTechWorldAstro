@@ -1,4 +1,8 @@
 
 export default new Map([
-["src/content/articles/learn-excel-faster-using-chatgpt.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Farticles%2Flearn-excel-faster-using-chatgpt.mdx&astroContentModuleFlag=true")]]);
+["src/content/articles/chatgpt-has-been-tracking-everything-you-say-heres-how-to-see-what-it-knows.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Farticles%2Fchatgpt-has-been-tracking-everything-you-say-heres-how-to-see-what-it-knows.mdx&astroContentModuleFlag=true")],
+["src/content/articles/how-to-learn-excel-faster-using-chatgpt.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Farticles%2Fhow-to-learn-excel-faster-using-chatgpt.mdx&astroContentModuleFlag=true")],
+["src/content/articles/how-to-remove-your-personal-information-from-google-search-results-2026-guide.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Farticles%2Fhow-to-remove-your-personal-information-from-google-search-results-2026-guide.mdx&astroContentModuleFlag=true")],
+["src/content/articles/how-to-use-chatgpt-to-summarize-long-pdfs-for-free.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Farticles%2Fhow-to-use-chatgpt-to-summarize-long-pdfs-for-free.mdx&astroContentModuleFlag=true")],
+["src/content/articles/why-ai-usage-is-dropping-math-skills-in-berkeley-cs-classes-and-what-students-ca.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Farticles%2Fwhy-ai-usage-is-dropping-math-skills-in-berkeley-cs-classes-and-what-students-ca.mdx&astroContentModuleFlag=true")]]);
 		
