@@ -2,6 +2,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 import { callLLM } from "./lib/shared.mjs";
+import { searchImage, extractKeywords } from "./lib/imagesearch.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT_DIR = path.resolve(__filename, "../../..");
@@ -62,18 +63,24 @@ Include a FAQ section at the end with **Q:** and **A:** format. The article shou
   // Strip any em/en dashes from body (safety net)
   body = body.replace(/\u2014/g, "-").replace(/\u2013/g, "-");
 
+  // Find a topic-relevant image
+  const s = slug(title);
+  const keywords = extractKeywords(title, tags, category);
+  const imgResult = await searchImage(keywords, s, title, ROOT_DIR);
+  const coverImage = imgResult?.url || `https://picsum.photos/seed/${s}/1200/600`;
+  const imageAlt = (imgResult?.alt || title).slice(0, 120);
+  const imageCredit = imgResult?.credit || "";
+
   // Generate frontmatter
   const desc = extractDescription(body, description);
-  const s = slug(title);
   const faqYaml = extractFAQ(body);
-  const coverImage = `https://picsum.photos/seed/${s}/1200/600`;
-  const imageAlt = `Cover image for ${title}`;
 
   const lines = ["---",
     `title: "${title.replace(/"/g, "'")}"`,
     `description: "${desc.replace(/"/g, "'")}"`,
     `coverImage: "${coverImage}"`,
     `imageAlt: "${imageAlt.replace(/"/g, "'")}"`,
+    imageCredit ? `imageCredit: "${imageCredit.replace(/"/g, "'")}"` : null,
     `publishDate: ${publishDate}`,
     `author: praveen`,
     `category: ${category}`,
