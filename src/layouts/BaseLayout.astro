@@ -50,19 +50,16 @@ const gaId = import.meta.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
 
     <script is:inline src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
     <script is:inline data-ga-id={gaId}>
-      (function () {
-        var id = document.currentScript.getAttribute("data-ga-id");
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('consent', 'default', {
-          'ad_storage': 'denied',
-          'ad_user_data': 'denied',
-          'ad_personalization': 'denied',
-          'analytics_storage': 'denied'
-        });
-        gtag('js', new Date());
-        gtag('config', id);
-      })();
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        'ad_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied',
+        'analytics_storage': 'denied'
+      });
+      gtag('js', new Date());
+      gtag('config', document.currentScript.getAttribute("data-ga-id"));
     </script>
   </head>
   <body class="bg-surface text-text dark:bg-surface-dark dark:text-text-dark antialiased">
@@ -89,31 +86,33 @@ const gaId = import.meta.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
     </div>
 
     <script is:inline>
-      (function () {
-        const banner = document.getElementById("cookie-banner");
-        const acceptBtn = document.getElementById("cookie-accept");
-        const rejectBtn = document.getElementById("cookie-reject");
-        const consent = localStorage.getItem("cookie-consent");
-        if (consent === "accepted") {
-          gtag('consent', 'update', { 'analytics_storage': 'granted' });
-        } else if (consent === "rejected") {
-        } else if (banner) {
-          banner.classList.remove("hidden");
+      function updateConsent(status) {
+        try { localStorage.setItem("cookie-consent", status); } catch(e) {}
+        if (status === "accepted") {
+          try { gtag('consent', 'update', { 'analytics_storage': 'granted' }); } catch(e) {}
         }
-        if (acceptBtn) {
-          acceptBtn.addEventListener("click", function () {
-            localStorage.setItem("cookie-consent", "accepted");
-            gtag('consent', 'update', { 'analytics_storage': 'granted' });
-            if (banner) banner.classList.add("hidden");
-          });
-        }
-        if (rejectBtn) {
-          rejectBtn.addEventListener("click", function () {
-            localStorage.setItem("cookie-consent", "rejected");
-            if (banner) banner.classList.add("hidden");
-          });
-        }
-      })();
+      }
+      var banner = document.getElementById("cookie-banner");
+      var acceptBtn = document.getElementById("cookie-accept");
+      var rejectBtn = document.getElementById("cookie-reject");
+      var consent = localStorage.getItem("cookie-consent");
+      if (consent === "accepted") {
+        try { gtag('consent', 'update', { 'analytics_storage': 'granted' }); } catch(e) {}
+      } else if (!consent && banner) {
+        banner.classList.remove("hidden");
+      }
+      if (acceptBtn) {
+        acceptBtn.addEventListener("click", function () {
+          updateConsent("accepted");
+          if (banner) banner.classList.add("hidden");
+        });
+      }
+      if (rejectBtn) {
+        rejectBtn.addEventListener("click", function () {
+          updateConsent("rejected");
+          if (banner) banner.classList.add("hidden");
+        });
+      }
     </script>
   </body>
 </html>
