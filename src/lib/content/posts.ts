@@ -5,8 +5,10 @@ type Article = CollectionEntry<"articles">;
 
 export async function getPublishedArticles(): Promise<Article[]> {
   const articles = await getCollection("articles");
+  const now = new Date();
   return articles
     .filter((a) => !a.data.draft)
+    .filter((a) => new Date(a.data.publishDate) <= now)
     .sort(
       (a, b) =>
         new Date(b.data.publishDate).getTime() -

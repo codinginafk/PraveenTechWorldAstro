@@ -7,6 +7,23 @@ const ROOT_DIR = path.resolve(__filename, "../../../..");
 const REPORTS_DIR = path.join(ROOT_DIR, "research/reports");
 const SOURCES_DIR = path.join(ROOT_DIR, "research/sources");
 
+// Load .env from project root
+try {
+  const envPath = path.join(ROOT_DIR, ".env");
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, "utf-8");
+    for (const line of envContent.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
+        const eqIdx = trimmed.indexOf("=");
+        const k = trimmed.slice(0, eqIdx).trim();
+        const v = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "");
+        process.env[k] = process.env[k] || v;
+      }
+    }
+  }
+} catch { /* ignore */ }
+
 export function loadConfig() {
   const configPath = path.join(SOURCES_DIR, "config.json");
   return JSON.parse(fs.readFileSync(configPath, "utf-8"));
@@ -72,4 +89,43 @@ export async function fetchJSON(url) {
     console.error(`  [fetchJSON error] ${url}: ${err.message}`);
     return null;
   }
+}
+
+export async function callLLM(systemPrompt, userPrompt, opts = {}) {
+  const apiKey = process.env.LLM_API_KEY;
+  const baseUrl = process.env.LLM_BASE_URL || "https://opencode.ai/zen/v1";
+  const model = process.env.LLM_MODEL || "mimo-v2.5-free";
+
+  if (!apiKey) {
+    console.warn("  [callLLM] No LLM_API_KEY in env. Faking response.");
+    return `[LLM unavailable - no API key configured]`;
+  }
+
+  const body = {
+    model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: opts.temperature ?? 0.7,
+    max_tokens: opts.maxTokens ?? 4096,
+  };
+
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(opts.timeout ?? 120000),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`LLM API ${res.status}: ${text.slice(0, 200)}`);
+  }
+
+  const json = await res.json();
+  return json.choices?.[0]?.message?.content || "";
 }
