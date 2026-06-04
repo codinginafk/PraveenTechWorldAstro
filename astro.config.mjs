@@ -4,7 +4,7 @@ import sitemap from "@astrojs/sitemap";
 import pagefind from "astro-pagefind";
 
 export default defineConfig({
-  site: "https://praveentechworld.com",
+  site: "https://www.praveentechworld.com",
   trailingSlash: "never",
   build: {
     format: "file",
