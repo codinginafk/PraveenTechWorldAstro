@@ -31,13 +31,15 @@ function slug(text) {
   return text.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").slice(0, 80);
 }
 
-export async function generateArticle({ title, description, category, tags, seoTitle, socialHook, publishDate }) {
+export async function generateArticle({ title, description, category, tags, seoTitle, socialHook, publishDate, depthInstruction }) {
   console.log(`\n=== Generating: ${title} ===\n`);
 
   const sysPrompt = `You are a tech writer who actually knows their stuff. You write for PraveenTechWorld, a site for students and office workers who want practical tech help.
 
 Follow these rules exactly:
 ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
+
+  const depth = depthInstruction || "Write at least 1500 words. Go deep.";
 
   const userPrompt = `Write a complete article with this information:
 
@@ -49,7 +51,7 @@ SOCIAL HOOK: ${socialHook}
 
 Return only the article body. No frontmatter. No --- separators. Start with the first heading (##).
 
-Write the article as a natural flowing piece. Include a FAQ section at the end with **Q:** and **A:** format. The article should thoroughly answer the question someone would search for. Write at least 1500 words. Go deep.`;
+Write the article as a natural flowing piece. Include a FAQ section at the end with **Q:** and **A:** format. The article should thoroughly answer the question someone would search for. ${depth}`;
 
   const body = await callLLM(sysPrompt, userPrompt, { temperature: 0.7, maxTokens: 8192 });
   if (!body) {

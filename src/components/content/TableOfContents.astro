@@ -8,25 +8,58 @@ const { headings } = Astro.props;
 
 {
   headings.length > 0 && (
-    <nav class="rounded-xl border border-border bg-surface-alt p-4 dark:border-border-dark dark:bg-surface-dark-alt" aria-label="Table of contents">
-      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-text-muted dark:text-text-dark-muted">
-        On this page
-      </p>
-      <ul class="space-y-1.5">
-        {headings
-          .filter((h) => h.depth <= 3)
-          .map((heading) => (
-            <li>
-              <a
-                href={`#${heading.slug}`}
-                class="block text-sm text-text-muted transition-colors hover:text-brand-600 dark:text-text-dark-muted dark:hover:text-brand-400"
-                style={{ paddingLeft: `${(heading.depth - 2) * 1}rem` }}
-              >
-                {heading.text}
-              </a>
-            </li>
-          ))}
-      </ul>
-    </nav>
+    <div class="toc-wrapper">
+      <button
+        id="toc-toggle"
+        class="flex w-full items-center justify-between rounded-xl border border-border bg-surface-alt p-3 dark:border-border-dark dark:bg-surface-dark-alt lg:hidden"
+        aria-expanded="false"
+        aria-controls="toc-content"
+      >
+        <span class="text-xs font-semibold uppercase tracking-wider text-text-muted dark:text-text-dark-muted">
+          On this page
+        </span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="toc-chevron" class="transition-transform text-text-muted dark:text-text-dark-muted">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </button>
+      <nav
+        id="toc-content"
+        class="mt-1 hidden rounded-xl border border-border bg-surface-alt p-4 dark:border-border-dark dark:bg-surface-dark-alt lg:mt-0 lg:block"
+        aria-label="Table of contents"
+      >
+        <p class="mb-3 hidden text-xs font-semibold uppercase tracking-wider text-text-muted dark:text-text-dark-muted lg:block">
+          On this page
+        </p>
+        <ul class="space-y-1.5">
+          {headings
+            .filter((h) => h.depth <= 3)
+            .map((heading) => (
+              <li>
+                <a
+                  href={`#${heading.slug}`}
+                  class="block text-sm text-text-muted transition-colors hover:text-brand-600 dark:text-text-dark-muted dark:hover:text-brand-400"
+                  style={{ paddingLeft: `${(heading.depth - 2) * 1}rem` }}
+                >
+                  {heading.text}
+                </a>
+              </li>
+            ))}
+        </ul>
+      </nav>
+    </div>
   )
 }
+
+<script>
+  const toggle = document.getElementById("toc-toggle");
+  const content = document.getElementById("toc-content");
+  const chevron = document.getElementById("toc-chevron");
+  if (toggle && content && chevron) {
+    toggle.addEventListener("click", () => {
+      const expanded = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", String(!expanded));
+      content.classList.toggle("hidden");
+      chevron.classList.toggle("rotate-180");
+    });
+  }
+</script>
