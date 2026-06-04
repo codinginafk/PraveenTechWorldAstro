@@ -68,8 +68,6 @@ async function generateFromTopic(topic, existingTitles) {
   const title = topic.seoTitle || topic.topic?.title || "Untitled";
   const existing = existingTitles?.length || 0;
   const publishDate = new Date();
-  publishDate.setDate(publishDate.getDate() + Math.floor(existing / 2)); // spread out
-
   const dateStr = publishDate.toISOString().split("T")[0];
 
   const result = await generateArticle({

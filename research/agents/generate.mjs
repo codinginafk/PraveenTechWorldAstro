@@ -71,7 +71,7 @@ Write the article as a natural flowing piece. Include a FAQ section at the end w
     `author: praveen`,
     `category: ${category}`,
     `tags:`,
-    ...tags.map(t => `  - ${t}`),
+    ...tags.map(t => `  - ${/^\d+$/.test(t) ? `"${t}"` : t}`),
     `seoTitle: "${seoTitle.replace(/"/g, "'")}"`,
     `socialHook: "${socialHook.replace(/"/g, "'")}"`,
   ];
