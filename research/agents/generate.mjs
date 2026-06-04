@@ -9,22 +9,22 @@ const ARTICLES_DIR = path.join(ROOT_DIR, "src/content/articles");
 
 // ---- quality rules for humanized content ----
 const RULES = [
-  "Write like a knowledgeable human explaining something they actually know. Not like a content writer filling a template.",
-  "No em dashes. Ever. Use periods or commas instead.",
+  "Write as a real person with real experience. Use first person: 'In my experience', 'Here is what worked for me', 'I found that', 'The way I like to do this is'. Sound like you have actually done this before.",
+  "Never use em dashes (—) or en dashes (–). Not in titles, not anywhere. Use a regular hyphen with spaces ( - ), use a colon (:), use a comma, or write two separate sentences.",
+  "Structure tutorials as numbered step-by-step instructions. Each step must be a clear, specific action: 'Step 1: Click the Start button in the bottom-left corner of your screen.'",
+  "Very short paragraphs. 1-3 sentences max. Break complex instructions into individual numbered steps. No walls of text.",
+  "Use exact directional language: 'the blue button on the right side of the screen', 'scroll down to the third option under Settings', 'press Ctrl + Shift + Esc on your keyboard'.",
   "No random bold text. Only bold UI labels like menu names or button text.",
   "No blockquotes unless you are quoting a real person or source.",
-  "No headings like 'Why This Matters' or 'What You Will Learn'. Use natural headings that describe the actual section content.",
-  "Vary the article structure. Not every article needs the same sections.",
+  "No headings like 'Why This Matters' or 'What You Will Learn'. Use natural headings that describe what the section actually covers.",
   "Start with a real hook. A specific situation, a common frustration, a surprising fact. Not a generic statement.",
   "Use contractions naturally: don't, can't, won't, it's, you'll, we've, I'm, there's.",
-  "Write short paragraphs. 2-4 sentences. Let some be 1 sentence. Vary it.",
   "Avoid these words completely: delve, navigate, landscape, tapestry, leverage, utilize, transformative, revolutionize, game-changer, ever-evolving, a myriad of, multifaceted.",
   "Avoid these phrases: 'In today's digital world', 'In this article', 'It is important to note', 'It's worth noting', 'In conclusion', 'To summarize'.",
   "Use specific numbers and real examples. Not 'many people' but '73% of office workers'.",
-  "Write the article as a single flowing piece. Don't label sections artificially.",
   "The FAQ should be 3-5 real questions with genuine answers, not filler. Put them at the end using **Q:** and **A:** format naturally.",
-  "Target length: 1200-2000 words. Cover the topic thoroughly.",
-  "Read the article back to yourself. If any sentence sounds like it was written by AI, rewrite it.",
+  "Target length: 1200-2000 words but do not pad. Every paragraph must teach something useful.",
+  "Read the article back to yourself. If any sentence sounds like it was written by AI, rewrite it in your own voice with specific experience.",
 ];
 
 function slug(text) {
@@ -34,12 +34,12 @@ function slug(text) {
 export async function generateArticle({ title, description, category, tags, seoTitle, socialHook, publishDate, depthInstruction }) {
   console.log(`\n=== Generating: ${title} ===\n`);
 
-  const sysPrompt = `You are a tech writer who actually knows their stuff. You write for PraveenTechWorld, a site for students and office workers who want practical tech help.
+  const sysPrompt = `You are a tech expert writing from real experience. You write for PraveenTechWorld, a site that helps students and office workers solve practical tech problems. Every article should sound like you are explaining to a friend who asked for help — specific, patient, and step-by-step.
 
 Follow these rules exactly:
 ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
 
-  const depth = depthInstruction || "Write at least 1500 words. Go deep.";
+  const depth = depthInstruction || "Write at least 1500 words with clear step-by-step instructions.";
 
   const userPrompt = `Write a complete article with this information:
 
@@ -51,22 +51,29 @@ SOCIAL HOOK: ${socialHook}
 
 Return only the article body. No frontmatter. No --- separators. Start with the first heading (##).
 
-Write the article as a natural flowing piece. Include a FAQ section at the end with **Q:** and **A:** format. The article should thoroughly answer the question someone would search for. ${depth}`;
+Include a FAQ section at the end with **Q:** and **A:** format. The article should thoroughly answer the question someone would search for. ${depth}`;
 
-  const body = await callLLM(sysPrompt, userPrompt, { temperature: 0.7, maxTokens: 8192 });
+  let body = await callLLM(sysPrompt, userPrompt, { temperature: 0.7, maxTokens: 8192 });
   if (!body) {
     console.error("  Generation failed");
     return null;
   }
 
+  // Strip any em/en dashes from body (safety net)
+  body = body.replace(/\u2014/g, "-").replace(/\u2013/g, "-");
+
   // Generate frontmatter
   const desc = extractDescription(body, description);
   const s = slug(title);
   const faqYaml = extractFAQ(body);
+  const coverImage = `https://picsum.photos/seed/${s}/1200/600`;
+  const imageAlt = `Cover image for ${title}`;
 
   const lines = ["---",
     `title: "${title.replace(/"/g, "'")}"`,
     `description: "${desc.replace(/"/g, "'")}"`,
+    `coverImage: "${coverImage}"`,
+    `imageAlt: "${imageAlt.replace(/"/g, "'")}"`,
     `publishDate: ${publishDate}`,
     `author: praveen`,
     `category: ${category}`,

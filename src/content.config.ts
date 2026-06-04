@@ -15,6 +15,7 @@ const articles = defineCollection({
     featured: z.boolean().default(false),
     draft: z.boolean().default(false),
     coverImage: z.string().optional(),
+    imageAlt: z.string().optional(),
     seoTitle: z.string().optional(),
     seoDescription: z.string().optional(),
     canonical: z.string().url().optional(),
