@@ -11,6 +11,7 @@ export interface Props {
 }
 
 const { seo } = Astro.props;
+const gaId = import.meta.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
 ---
 
 <!doctype html>
@@ -20,7 +21,6 @@ const { seo } = Astro.props;
     <GlobalSchema />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- <meta name="generator" content={Astro.generator} /> -->
     <meta name="theme-color" content="#2563eb" />
     <meta name="author" content="Praveen" />
     <meta property="og:locale" content="en_US" />
@@ -30,6 +30,8 @@ const { seo } = Astro.props;
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com; img-src 'self' data: https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
 
     <script is:inline>
       (function () {
@@ -46,12 +48,18 @@ const { seo } = Astro.props;
       })();
     </script>
 
-    <script is:inline src="https://www.googletagmanager.com/gtag/js?id=G-TR2F3NPMVN"></script>
+    <script is:inline src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        'ad_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied',
+        'analytics_storage': 'denied'
+      });
       gtag('js', new Date());
-      gtag('config', 'G-TR2F3NPMVN');
+      gtag('config', '${gaId}');
     </script>
   </head>
   <body class="bg-surface text-text dark:bg-surface-dark dark:text-text-dark antialiased">
@@ -63,5 +71,46 @@ const { seo } = Astro.props;
       <slot />
     </main>
     <Footer />
+
+    <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface p-4 shadow-lg dark:border-border-dark dark:bg-surface-dark hidden">
+      <div class="mx-auto flex max-w-4xl flex-col items-center gap-3 sm:flex-row">
+        <p class="flex-1 text-sm text-text-muted dark:text-text-dark-muted">
+          This site uses cookies to analyze traffic and improve your experience.
+          <a href="/privacy" class="underline hover:text-brand-600 dark:hover:text-brand-400">Privacy Policy</a>
+        </p>
+        <div class="flex shrink-0 gap-2">
+          <button id="cookie-reject" class="rounded-lg border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-surface-alt dark:border-border-dark dark:text-text-dark-muted dark:hover:bg-surface-dark-alt">Reject</button>
+          <button id="cookie-accept" class="rounded-lg bg-brand-600 px-4 py-2 text-sm text-white transition-colors hover:bg-brand-700">Accept</button>
+        </div>
+      </div>
+    </div>
+
+    <script is:inline>
+      (function () {
+        const banner = document.getElementById("cookie-banner");
+        const acceptBtn = document.getElementById("cookie-accept");
+        const rejectBtn = document.getElementById("cookie-reject");
+        const consent = localStorage.getItem("cookie-consent");
+        if (consent === "accepted") {
+          gtag('consent', 'update', { 'analytics_storage': 'granted' });
+        } else if (consent === "rejected") {
+        } else if (banner) {
+          banner.classList.remove("hidden");
+        }
+        if (acceptBtn) {
+          acceptBtn.addEventListener("click", function () {
+            localStorage.setItem("cookie-consent", "accepted");
+            gtag('consent', 'update', { 'analytics_storage': 'granted' });
+            if (banner) banner.classList.add("hidden");
+          });
+        }
+        if (rejectBtn) {
+          rejectBtn.addEventListener("click", function () {
+            localStorage.setItem("cookie-consent", "rejected");
+            if (banner) banner.classList.add("hidden");
+          });
+        }
+      })();
+    </script>
   </body>
 </html>

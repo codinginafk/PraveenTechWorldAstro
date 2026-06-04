@@ -79,7 +79,7 @@ export function getCurrentsKey() {
 }
 
 export function getGAId() {
-  return process.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
+  return process.env.PUBLIC_GA_ID || "";
 }
 
 export function log(...args) {
