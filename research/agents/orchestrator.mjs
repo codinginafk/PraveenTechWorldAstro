@@ -61,12 +61,33 @@ function getExistingTitles() {
   });
 }
 
+function isDuplicateTitle(newTitle, existingTitles) {
+  const normalize = (t) => [...new Set(
+    t.toLowerCase()
+      .replace(/[^\w\s]/g, "")
+      .split(/\s+/)
+      .filter(w => !["guide","tutorial","how","to","in","for","the","a","an","and","2024","2025","2026","complete","step","by","proven","your","new","best","free","fix","tips","with","of","that","this","from","using","get","use","more","ultimate"].includes(w) && w.length > 2)
+  )];
+  const newWords = normalize(newTitle);
+  for (const existing of existingTitles) {
+    const existingWords = normalize(existing);
+    const overlap = newWords.filter(w => existingWords.includes(w));
+    if (overlap.length >= 3) return true;
+  }
+  return false;
+}
+
 // Article generation from approved topic
 async function generateFromTopic(topic, existingTitles) {
   log(`  Generating article: ${topic.topic?.title?.slice(0, 60)}...`);
 
   const title = topic.seoTitle || topic.topic?.title || "Untitled";
   const existing = existingTitles?.length || 0;
+
+  if (isDuplicateTitle(title, existingTitles)) {
+    log(`  SKIPPED — "${title}" is a semantic duplicate of an existing article`);
+    return null;
+  }
   const publishDate = new Date();
   const dateStr = publishDate.toISOString().split("T")[0];
 

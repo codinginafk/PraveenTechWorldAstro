@@ -96,6 +96,10 @@ Include a FAQ section at the end with **Q:** and **A:** format. The article shou
   const mdx = frontmatter + body;
 
   const filePath = path.join(ARTICLES_DIR, `${s}.mdx`);
+  if (fs.existsSync(filePath)) {
+    console.warn(`  DUPLICATE SKIPPED: ${s}.mdx already exists (slug collision). Delete manually if intentional.`);
+    return null;
+  }
   fs.writeFileSync(filePath, mdx, "utf-8");
 
   console.log(`  Saved: src/content/articles/${s}.mdx`);
