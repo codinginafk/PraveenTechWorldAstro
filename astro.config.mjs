@@ -9,7 +9,9 @@ export default defineConfig({
   build: {
     format: "file",
   },
-  integrations: [mdx(), sitemap(), pagefind()],
+  integrations: [mdx(), sitemap({
+    filter: (page) => !page.startsWith("https://www.praveentechworld.com/tag/") && !page.startsWith("https://www.praveentechworld.com/category/"),
+  }), pagefind()],
   markdown: {
     shikiConfig: {
       theme: "github-dark",
