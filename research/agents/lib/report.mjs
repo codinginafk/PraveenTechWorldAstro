@@ -83,6 +83,15 @@ export function wasReportOpened() {
   return flagTime >= reportModified;
 }
 
+export function appendToReport(sectionHeader, content) {
+  ensureDir(REPORTS_DIR);
+  const filePath = getReportPath();
+  const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : "# PraveenTechWorld — System Report\n\n";
+  const updated = existing.trimEnd() + `\n\n## ${sectionHeader}\n${content}\n`;
+  fs.writeFileSync(filePath, updated, "utf-8");
+  log(`  Appended "${sectionHeader}" to report.md`);
+}
+
 export function writeGoal(dateStr, content) {
   const dir = path.join(REPORTS_DIR, "goals", "daily");
   ensureDir(dir);
