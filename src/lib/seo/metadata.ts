@@ -15,6 +15,6 @@ export function buildPageTitle(title: string, siteName = "PraveenTechWorld"): st
 
 export function buildCanonical(site: string, path: string): string {
   const cleanSite = site.replace(/\/$/, "");
-  const cleanPath = path.replace(/\/$/, "") || "";
-  return `${cleanSite}${cleanPath}`;
+  const cleanPath = path.replace(/\.html$/, "").replace(/\/$/, "") || "";
+  return cleanPath === "/index" ? cleanSite : `${cleanSite}${cleanPath}`;
 }
