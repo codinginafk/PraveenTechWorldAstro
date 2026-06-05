@@ -9,19 +9,30 @@ export async function getStaticPaths() {
   const tagSet = new Set<string>();
   articles.forEach((a) => a.data.tags.forEach((t) => tagSet.add(t)));
   const tags = [...tagSet];
-  return tags.map((tag) => ({
-    params: { slug: tag },
-    props: { tagSlug: tag },
-  }));
+  const paths = [];
+  for (const tag of tags) {
+    paths.push({ params: { slug: tag }, props: { tagSlug: tag, canonicalSlug: tag } });
+    const lower = tag.toLowerCase();
+    if (lower !== tag) {
+      paths.push({ params: { slug: lower }, props: { tagSlug: tag, canonicalSlug: tag } });
+    }
+    if (tag.includes(" ")) {
+      const hyphenated = tag.toLowerCase().replace(/\s+/g, "-");
+      if (hyphenated !== lower) {
+        paths.push({ params: { slug: hyphenated }, props: { tagSlug: tag, canonicalSlug: tag } });
+      }
+    }
+  }
+  return paths;
 }
 
-const { tagSlug } = Astro.props;
+const { tagSlug, canonicalSlug } = Astro.props;
 const allArticles = await getPublishedArticles();
 const tagArticles = allArticles.filter((a) =>
-  a.data.tags.includes(tagSlug)
+  a.data.tags.some((t) => t.toLowerCase() === tagSlug.toLowerCase())
 );
-const tagEntry = await getEntry("tags", tagSlug);
-const tagName = tagEntry?.data.name || tagSlug;
+const tagEntry = await getEntry("tags", canonicalSlug);
+const tagName = tagEntry?.data.name || canonicalSlug;
 const tagDescription = tagEntry?.data.description || "";
 ---
 
@@ -29,6 +40,7 @@ const tagDescription = tagEntry?.data.description || "";
   seo={{
     title: `Tag: ${tagName}`,
     description: tagDescription || `Articles tagged with ${tagName}.`,
+    canonical: canonicalSlug !== tagSlug ? `https://www.praveentechworld.com/tag/${canonicalSlug}` : undefined,
   }}
 >
   <div class="mx-auto max-w-6xl px-4 py-16">
