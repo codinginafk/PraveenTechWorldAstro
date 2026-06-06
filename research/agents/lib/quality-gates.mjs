@@ -361,7 +361,7 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   for (const link of internalLinks) {
     const targetPath = link.url.split("?")[0].split("#")[0];
     if (!targetPath.startsWith("http") && !targetPath.startsWith("#")) {
-      let slug = targetPath.replace(/^\/blog\//, "").replace(/^\//, "").replace(/\/$/, "");
+      let slug = targetPath.replace(/^blog\//, "").replace(/^\//, "").replace(/\/$/, "");
       if (slug && !existingSlugs.has(slug)) {
         failures.push({ gate: "T8", rule: "Broken internal link", message: `Internal link points to non-existent article: /${targetPath}` });
       }
