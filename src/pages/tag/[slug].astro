@@ -7,21 +7,12 @@ import ArticleCard from "@components/content/ArticleCard.astro";
 export async function getStaticPaths() {
   const articles = await getPublishedArticles();
   const tagSet = new Set<string>();
-  articles.forEach((a) => a.data.tags.forEach((t) => tagSet.add(t)));
+  articles.forEach((a) => a.data.tags.forEach((t) => tagSet.add(t.toLowerCase())));
   const tags = [...tagSet];
   const paths = [];
   for (const tag of tags) {
-    paths.push({ params: { slug: tag }, props: { tagSlug: tag, canonicalSlug: tag } });
-    const lower = tag.toLowerCase();
-    if (lower !== tag) {
-      paths.push({ params: { slug: lower }, props: { tagSlug: tag, canonicalSlug: tag } });
-    }
-    if (tag.includes(" ")) {
-      const hyphenated = tag.toLowerCase().replace(/\s+/g, "-");
-      if (hyphenated !== lower) {
-        paths.push({ params: { slug: hyphenated }, props: { tagSlug: tag, canonicalSlug: tag } });
-      }
-    }
+    const slug = tag.replace(/\s+/g, "-");
+    paths.push({ params: { slug }, props: { tagSlug: tag, canonicalSlug: tag } });
   }
   return paths;
 }
@@ -37,6 +28,7 @@ const tagDescription = tagEntry?.data.description || "";
 ---
 
 <BaseLayout
+  noindex={true}
   seo={{
     title: `Tag: ${tagName}`,
     description: tagDescription || `Articles tagged with ${tagName}.`,

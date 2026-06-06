@@ -8,9 +8,14 @@ export interface SEOMetadata {
   noindex?: boolean;
 }
 
-export function buildPageTitle(title: string, siteName = "PraveenTechWorld"): string {
-  if (title === "Home") return siteName;
-  return `${title} | ${siteName}`;
+const SUFFIX = " | PTW";
+
+export function buildPageTitle(title: string): string {
+  if (title === "Home") return "PraveenTechWorld";
+  const full = title + SUFFIX;
+  if (full.length <= 60) return full;
+  const maxTitleLen = 60 - SUFFIX.length - 3;
+  return title.slice(0, maxTitleLen) + "..." + SUFFIX;
 }
 
 export function buildCanonical(site: string, path: string): string {

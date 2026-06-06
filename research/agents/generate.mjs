@@ -8,6 +8,52 @@ const __filename = fileURLToPath(import.meta.url);
 const ROOT_DIR = path.resolve(__filename, "../../..");
 const ARTICLES_DIR = path.join(ROOT_DIR, "src/content/articles");
 
+function readArticleFrontmatter(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    const fm = {};
+    const titleMatch = content.match(/title:\s*"(.+?)"/);
+    if (titleMatch) fm.title = titleMatch[1];
+    const descMatch = content.match(/description:\s*"(.+?)"/);
+    if (descMatch) fm.description = descMatch[1];
+    const catMatch = content.match(/category:\s*(.+)/);
+    if (catMatch) fm.category = catMatch[1].trim();
+    const seoMatch = content.match(/seoTitle:\s*"(.+?)"/);
+    if (seoMatch) fm.seoTitle = seoMatch[1];
+    const tagsMatch = content.match(/tags:\s*\n((?:\s+-\s+.+\n?)*)/);
+    if (tagsMatch) {
+      fm.tags = [...tagsMatch[1].matchAll(/-\s+(.+?)$/gm)].map(m => m[1].trim().replace(/"/g, ""));
+    }
+    const slug = path.basename(filePath, ".mdx");
+    return { ...fm, slug };
+  } catch { return null; }
+}
+
+function findRelatedArticles(newTitle, newCategory, newTags, excludeSlug) {
+  if (!fs.existsSync(ARTICLES_DIR)) return [];
+  const files = fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx") && f !== `${excludeSlug}.mdx`);
+  const articles = files.map(f => readArticleFrontmatter(path.join(ARTICLES_DIR, f))).filter(Boolean);
+
+  const scored = articles.map(a => {
+    let score = 0;
+    if (a.category === newCategory) score += 10;
+    const tagOverlap = (a.tags || []).filter(t => (newTags || []).some(nt => nt.toLowerCase() === t.toLowerCase())).length;
+    score += tagOverlap * 3;
+    return { ...a, score };
+  }).filter(a => a.score > 0);
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, 3);
+}
+
+function buildInterlinkingSection(relatedArticles) {
+  if (!relatedArticles.length) return "";
+  const links = relatedArticles.map(a =>
+    `- [${a.seoTitle || a.title}](/blog/${a.slug}) — ${(a.description || "").slice(0, 100)}`
+  ).join("\n");
+  return `\n\n## Further Reading\n\nWant to go deeper? Check out these related guides:\n\n${links}\n`;
+}
+
 // ---- quality rules for humanized content ----
 const RULES = [
   "Write as a real person with real experience. Use first person: 'In my experience', 'Here is what worked for me', 'I found that', 'The way I like to do this is'. Sound like you have actually done this before.",
@@ -62,6 +108,18 @@ Include a FAQ section at the end with **Q:** and **A:** format. The article shou
 
   // Strip any em/en dashes from body (safety net)
   body = body.replace(/\u2014/g, "-").replace(/\u2013/g, "-");
+
+  // Add contextual interlinking
+  const related = findRelatedArticles(title, category, tags, s);
+  const interlinking = buildInterlinkingSection(related);
+  if (interlinking) {
+    const faqIndex = body.search(/^##\s+faq/i);
+    if (faqIndex !== -1) {
+      body = body.slice(0, faqIndex) + interlinking + "\n\n" + body.slice(faqIndex);
+    } else {
+      body = body + interlinking;
+    }
+  }
 
   // Find a topic-relevant image
   const s = slug(title);

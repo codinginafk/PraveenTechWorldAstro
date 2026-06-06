@@ -2,7 +2,8 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import SchemaOrg from "@components/seo/SchemaOrg.astro";
 import { getCollection, getEntry, render } from "astro:content";
-import { getRelatedArticles } from "@lib/content/posts";
+import { getAllCategories } from "@lib/content/posts";
+import { getRelatedArticles, getAllCategories } from "@lib/content/posts";
 import { formatDate } from "@lib/utils/dateFormat";
 import { calculateReadingTime } from "@lib/utils/readingTime";
 import { buildCanonical } from "@lib/seo/metadata";
@@ -78,6 +79,19 @@ const breadcrumbItems = [
           <a href={`/category/${article.data.category}`} class="hover:text-brand-600 dark:hover:text-brand-400">{article.data.category}</a>
         </nav>
 
+        <a
+          href={`/guides/${article.data.category}`}
+          class="mb-6 flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-medium text-brand-700 transition-colors hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-300 dark:hover:bg-brand-900/30"
+        >
+          <svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+          </svg>
+          Part of our <strong>{article.data.category.replace(/-/g, " ")} guide series</strong>
+          <svg class="ml-auto h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clip-rule="evenodd" />
+          </svg>
+        </a>
+
         <header class="mb-8">
           <p class="mb-3 text-xs font-medium uppercase tracking-wider text-brand-600 dark:text-brand-400">
             {article.data.category}
@@ -124,6 +138,30 @@ const breadcrumbItems = [
         <div class="prose max-w-none dark:prose-invert">
           <Content />
         </div>
+
+        {relatedArticles.length > 0 && (
+          <div class="mt-10 rounded-xl border border-border bg-surface-alt p-6 dark:border-border-dark dark:bg-surface-dark-alt">
+            <h2 class="mb-4 text-lg font-bold">Further Reading</h2>
+            <p class="mb-4 text-sm text-text-muted dark:text-text-dark-muted">
+              Explore more articles in this topic area:
+            </p>
+            <div class="grid gap-3 sm:grid-cols-2">
+              {relatedArticles.slice(0, 4).map((r) => (
+                <a
+                  href={`/blog/${r.id}`}
+                  class="group rounded-lg border border-border bg-surface p-4 transition-all hover:border-brand-600 hover:shadow-sm dark:border-border-dark dark:bg-surface-dark dark:hover:border-brand-400"
+                >
+                  <h3 class="text-sm font-medium group-hover:text-brand-600 dark:group-hover:text-brand-400 line-clamp-2">
+                    {r.data.seoTitle || r.data.title}
+                  </h3>
+                  <p class="mt-1 text-xs text-text-muted dark:text-text-dark-muted line-clamp-2">
+                    {r.data.description}
+                  </p>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div class="mt-10">
           <AuthorBox author={author} />
