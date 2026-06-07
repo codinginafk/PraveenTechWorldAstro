@@ -85,7 +85,7 @@ export async function runBoss(scoredTopics, { articlesToday = 0, articlesTotal =
 
   // Write report.md
   const supplyChainIssues = [];
-  if (pass.length < 2) supplyChainIssues.push("Low topic quality: only ${pass.length} topics passed SEO threshold.");
+    if (pass.length < 2) supplyChainIssues.push(`Low topic quality: only ${pass.length} topics passed SEO threshold.`);
   if (articlesToday === 0) supplyChainIssues.push("No articles published yet today.");
 
   const improvements = [];

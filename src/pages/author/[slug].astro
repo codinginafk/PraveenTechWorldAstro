@@ -3,6 +3,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import { getCollection, getEntry } from "astro:content";
 import { getPublishedArticles } from "@lib/content/posts";
 import ArticleCard from "@components/content/ArticleCard.astro";
+import SchemaOrg from "@components/seo/SchemaOrg.astro";
 
 export async function getStaticPaths() {
   const authors = await getCollection("authors");
@@ -18,6 +19,7 @@ const allArticles = await getPublishedArticles();
 const authorArticles = allArticles.filter(
   (a) => a.data.author === authorSlug
 );
+const SITE_URL = "https://www.praveentechworld.com";
 ---
 
 <BaseLayout
@@ -26,6 +28,15 @@ const authorArticles = allArticles.filter(
     description: author?.data.bio || `Articles by ${author?.data.name}`,
   }}
 >
+  <SchemaOrg
+    type="person"
+    personData={{
+      name: author?.data.name || "",
+      description: author?.data.bio || "",
+      url: `${SITE_URL}/author/${authorSlug}`,
+      sameAs: [author?.data.twitter, author?.data.linkedin].filter(Boolean),
+    }}
+  />
   <div class="mx-auto max-w-6xl px-4 py-16">
     <div class="mb-10">
       <nav class="mb-4 text-sm text-text-muted dark:text-text-dark-muted">

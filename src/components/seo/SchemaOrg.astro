@@ -13,9 +13,23 @@ export interface Props {
   };
   breadcrumbItems?: Array<{ name: string; url: string }>;
   faqItems?: Array<{ question: string; answer: string }>;
+  personData?: {
+    name: string;
+    description?: string;
+    url?: string;
+    image?: string;
+    sameAs?: string[];
+  };
+  howToData?: {
+    name: string;
+    description: string;
+    steps: Array<{ name: string; text: string; url?: string }>;
+    totalTime?: string;
+    image?: string;
+  };
 }
 
-const { type, articleData, breadcrumbItems, faqItems } = Astro.props;
+const { type, articleData, breadcrumbItems, faqItems, howToData, personData } = Astro.props;
 ---
 
 {
@@ -70,6 +84,39 @@ const { type, articleData, breadcrumbItems, faqItems } = Astro.props;
           "@type": "Answer",
           text: item.answer,
         },
+      })),
+    })} />
+  )
+}
+
+{
+  type === "person" && personData && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Person",
+      name: personData.name,
+      description: personData.description,
+      url: personData.url,
+      image: personData.image,
+      sameAs: personData.sameAs,
+    })} />
+  )
+}
+
+{
+  type === "howto" && howToData && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      name: howToData.name,
+      description: howToData.description,
+      image: howToData.image,
+      totalTime: howToData.totalTime,
+      step: howToData.steps.map((step) => ({
+        "@type": "HowToStep",
+        name: step.name,
+        text: step.text,
+        url: step.url,
       })),
     })} />
   )

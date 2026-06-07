@@ -36,6 +36,28 @@ const breadcrumbItems = [
   { name: "Blog", url: "https://www.praveentechworld.com/blog" },
   { name: article.data.seoTitle || article.data.title, url: articleUrl },
 ];
+
+// Extract HowTo steps from headings containing "Step" or numbered steps
+function extractHowToSteps(body, baseUrl) {
+  const stepRegex = /^#{2,3}\s+(Step\s+\d+[:.]?\s*.+)$/gm;
+  const steps = [];
+  let match;
+  while ((match = stepRegex.exec(body || "")) !== null) {
+    const name = match[1].trim();
+    const stepNum = name.match(/Step\s+(\d+)/i);
+    const index = stepNum ? parseInt(stepNum[1]) : steps.length + 1;
+    steps.push({ name, text: name, url: `${baseUrl}#step-${index}` });
+  }
+  return steps.length > 0 ? steps : null;
+}
+
+const howToSteps = extractHowToSteps(article.body, articleUrl);
+const howToData = howToSteps ? {
+  name: article.data.seoTitle || article.data.title,
+  description: article.data.description || "",
+  steps: howToSteps,
+  image: article.data.coverImage,
+} : null;
 ---
 
 <BaseLayout
@@ -66,6 +88,9 @@ const breadcrumbItems = [
   />
   {article.data.faq && article.data.faq.length > 0 && (
     <SchemaOrg type="faq" faqItems={article.data.faq} />
+  )}
+  {howToData && howToData.steps.length >= 2 && (
+    <SchemaOrg type="howto" howToData={howToData} />
   )}
 
   <div class="mx-auto max-w-6xl px-4 py-12">

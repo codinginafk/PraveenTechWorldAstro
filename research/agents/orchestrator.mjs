@@ -100,7 +100,7 @@ async function generateFromTopic(topic, existingTitles) {
     seoTitle: title.slice(0, 60),
     socialHook: topic.topic?.title?.slice(0, 120) || `Learn how to ${title.toLowerCase()}.`,
     publishDate: dateStr,
-    depthInstruction: "Write 2500-3500 words. Go exceptionally deep with specific steps, examples, and actionable advice. Include a FAQ section at the end.",
+    depthInstruction: "Write 1800-2500 words with specific steps, examples, and actionable advice. Include a FAQ section at the end. Complex topics can go up to 3000 words.",
   });
 
   return result;
@@ -197,12 +197,17 @@ async function orchestratorCycle(state) {
 
   // Phase 4: Generate article from top approved topic
   log("Phase 4: Article Generation");
-  const topic = approved[0];
-  const filePath = await generateFromTopic(topic, existingTitles);
+  let filePath = null;
+  for (const topic of approved.slice(0, 5)) {
+    log(`  Trying: ${topic.topic?.title?.slice(0, 60)}...`);
+    filePath = await generateFromTopic(topic, existingTitles);
+    if (filePath) break;
+    log("  Failed, trying next approved topic.");
+  }
 
   if (!filePath) {
-    log("Generation failed. Trying next approved topic.");
-    log(`=== Cycle done (gen failed, ${Date.now() - startTime}ms) ===`);
+    log("All approved topics failed generation.");
+    log(`=== Cycle done (all gen failed, ${Date.now() - startTime}ms) ===`);
     return;
   }
 

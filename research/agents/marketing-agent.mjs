@@ -17,191 +17,61 @@ function normalizeEOL(text) {
   return text.replace(/\r\n/g, "\n");
 }
 
-// ─── System Health Checks ────────────────────────────────────────────────────
+  // ─── Content Performance Analysis ─────────────────────────────────────────────
 
-function checkBuildHealth() {
-  const result = { status: "ok", detail: "" };
+async function loadAnalyticsData() {
+  const analyticsFile = path.join(__dirname, "analytics-data.json");
+  if (!fs.existsSync(analyticsFile)) return null;
   try {
-    const output = execSync("npx astro build", { cwd: ROOT_DIR, stdio: "pipe", timeout: 60000, encoding: "utf-8" });
-    const pageMatch = output.match(/(\d+) page\(s\) built/);
-    const timeMatch = output.match(/Completed in ([\d.]+)s/);
-    const pageCount = pageMatch ? pageMatch[1] : "?";
-    const buildTime = timeMatch ? timeMatch[1] : "?";
-    if (output.includes("ERROR") || output.includes("error")) {
-      result.status = "warning";
-      result.detail = `${pageCount} pages, ${buildTime}s, but with warnings/errors`;
-    } else {
-      result.detail = `${pageCount} pages, ${buildTime}s, 0 errors`;
-    }
-  } catch (e) {
-    result.status = "fail";
-    result.detail = `Build failed: ${e.message?.slice(0, 120) || "unknown error"}`;
+    const data = JSON.parse(fs.readFileSync(analyticsFile, "utf-8"));
+    return data;
+  } catch {
+    return null;
   }
-  return result;
 }
 
-function checkYamlFrontmatter() {
-  const issues = [];
-  const files = fs.existsSync(ARTICLES_DIR) ? fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx")) : [];
-  let fixed = 0;
-  for (const file of files) {
-    const fp = path.join(ARTICLES_DIR, file);
-    let mdx = fs.readFileSync(fp, "utf-8");
-    const normalized = normalizeEOL(mdx);
-    const fmMatch = normalized.match(/^---\n([\s\S]*?)\n---/);
-    if (!fmMatch) { issues.push(`${file}: no frontmatter`); continue; }
-    const raw = fmMatch[1];
-    const lines = raw.split("\n");
-    const clean = [];
-    for (const line of lines) {
-      if (/^\w+:/.test(line) || /^\s+- /.test(line) || /^\s+\w+:/.test(line) || line.trim() === "") {
-        clean.push(line);
-      }
-    }
-    if (clean.length !== lines.length) {
-      const stripped = lines.length - clean.length;
-      const newFm = "---\n" + clean.join("\n") + "\n---\n" + normalized.slice(fmMatch[0].length);
-      fs.writeFileSync(fp, newFm, "utf-8");
-      issues.push(`${file}: stripped ${stripped} orphan line(s)`);
-      fixed++;
-    }
-    // Validate required fields exist
-    const fm = {};
-    for (const line of clean) {
-      const kv = line.match(/^(\w+):\s*(.*)/);
-      if (kv) fm[kv[1]] = kv[2].replace(/^"(.*)"$/, "$1").trim();
-    }
-    if (!fm.title) issues.push(`${file}: missing title`);
-    if (!fm.publishDate) issues.push(`${file}: missing publishDate`);
-    if (!fm.category) issues.push(`${file}: missing category`);
-  }
-  const summary = `${files.length} articles, ${fixed} auto-fixed, ${issues.filter(i => !i.includes("stripped")).length} issues`;
-  return { summary, issues, fixed };
+function findContentGaps(analyticsData) {
+  if (!analyticsData?.contentGaps || analyticsData.contentGaps.length === 0) return [];
+  return analyticsData.contentGaps.slice(0, 10);
 }
 
-function checkImageSources() {
-  const files = fs.existsSync(ARTICLES_DIR) ? fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx")) : [];
-  let unsplash = 0, commons = 0, other = 0, none = 0;
-  for (const file of files) {
-    const c = fs.readFileSync(path.join(ARTICLES_DIR, file), "utf-8");
-    const m = c.match(/coverImage:\s*"([^"]+)"/);
-    if (!m) { none++; continue; }
-    const url = m[1];
-    if (url.includes("unsplash")) unsplash++;
-    else if (url.includes("wikimedia")) commons++;
-    else other++;
-  }
-  return { unsplash, commons, other, none, total: files.length, detail: `Unsplash: ${unsplash}, Commons: ${commons}, Other: ${other}, None: ${none}` };
+function findTopPerformingTopics(analyticsData) {
+  if (!analyticsData?.performingArticles?.top) return [];
+  return analyticsData.performingArticles.top.slice(0, 5);
 }
 
-function checkModuleHealth() {
-  const issues = [];
-  const envPath = path.join(ROOT_DIR, ".env");
-  if (!fs.existsSync(envPath)) issues.push(".env file missing");
-  const articlesDir = fs.existsSync(ARTICLES_DIR);
-  if (!articlesDir) issues.push("articles directory missing");
-  if (fs.existsSync(STATE_FILE)) {
-    try {
-      const state = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
-      if (!state.dailyQuota) issues.push("state.json missing dailyQuota");
-    } catch { issues.push("state.json is invalid JSON"); }
-  } else {
-    issues.push("state.json missing");
-  }
-  const dirs = [ROOT_DIR, path.join(ROOT_DIR, "src"), path.join(ROOT_DIR, "src/content")];
-  for (const d of dirs) { if (!fs.existsSync(d)) issues.push(`directory missing: ${d}`); }
-  return { ok: issues.length === 0, issues, detail: issues.length ? issues.join("; ") : "All checks passed" };
+function findZeroClickArticles(analyticsData) {
+  if (!analyticsData?.performingArticles?.zeroClicks) return [];
+  return analyticsData.performingArticles.zeroClicks.slice(0, 5);
 }
 
-function checkOrphanCleanup() {
-  const dirs = [
-    path.join(RESEARCH_DIR, "research", "approved"),
-    path.join(RESEARCH_DIR, "research", "competitive"),
-    path.join(RESEARCH_DIR, "reports", "batch-logs"),
-  ];
-  let deleted = 0;
-  const now = Date.now();
-  const maxAge = 24 * 60 * 60 * 1000;
-  for (const dir of dirs) {
-    if (!fs.existsSync(dir)) continue;
-    for (const f of fs.readdirSync(dir)) {
-      const fp = path.join(dir, f);
-      const stat = fs.statSync(fp);
-      if (now - stat.mtimeMs > maxAge) {
-        fs.rmSync(fp);
-        deleted++;
-      }
+async function fetchCompetitorTrends() {
+  try {
+    const topics = ["tech tips", "how to", "productivity", "AI", "privacy", "Windows", "Android"];
+    const queries = topics.map(t => `https://news.google.com/rss/search?q=${encodeURIComponent(t)}+guide+how+to+2026&hl=en-US&gl=US&ceid=US:en`);
+    const allTitles = [];
+    for (const url of queries.slice(0, 3)) {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const xml = await res.text();
+      const titles = [...xml.matchAll(/<title>(.*?)<\/title>/g)].slice(1, 4).map(m => m[1]);
+      allTitles.push(...titles);
     }
+    return [...new Set(allTitles)].slice(0, 8);
+  } catch {
+    return [];
   }
-  return { deleted, detail: deleted ? `Deleted ${deleted} old file(s)` : "No orphan files" };
 }
 
-function checkUnsplashRateLimit() {
-  const key = process.env.UNSPLASH_ACCESS_KEY;
-  return { keyPresent: !!key, detail: key ? "Key present in env" : "UNSPLASH_ACCESS_KEY not set" };
-}
-
-async function runSystemHealth() {
-  log("[Marketing Agent] Running system health checks...");
-  const lines = [];
-  const checks = [];
-
-  // 1. Build health
-  const build = checkBuildHealth();
-  const icon = build.status === "ok" ? "✅" : build.status === "warning" ? "⚠️" : "❌";
-  lines.push(`- ${icon} Build: ${build.detail}`);
-  checks.push({ name: "build", ok: build.status === "ok" });
-
-  // 2. YAML frontmatter
-  const yaml = checkYamlFrontmatter();
-  const yamlIcon = yaml.fixed > 0 || yaml.issues.length > 0 ? "⚠️" : "✅";
-  lines.push(`- ${yamlIcon} YAML: ${yaml.summary}`);
-  for (const i of yaml.issues) lines.push(`  - ${i}`);
-  checks.push({ name: "yaml", ok: yaml.fixed === 0 && yaml.issues.length === 0 });
-
-  // 3. Image sources
-  const imgs = checkImageSources();
-  const imgIcon = imgs.unsplash === imgs.total ? "✅" : imgs.unsplash > 0 ? "⚠️" : "❌";
-  lines.push(`- ${imgIcon} Images: ${imgs.detail}`);
-  checks.push({ name: "images", ok: imgs.unsplash === imgs.total });
-
-  // 4. Module health
-  const mod = checkModuleHealth();
-  const modIcon = mod.ok ? "✅" : "❌";
-  lines.push(`- ${modIcon} Modules: ${mod.detail}`);
-  checks.push({ name: "modules", ok: mod.ok });
-
-  // 5. Orphan cleanup
-  const orphan = checkOrphanCleanup();
-  const orphanIcon = orphan.deleted === 0 ? "✅" : "⚠️";
-  lines.push(`- ${orphanIcon} Orphans: ${orphan.detail}`);
-  checks.push({ name: "orphans", ok: orphan.deleted === 0 });
-
-  // 6. Unsplash rate limit
-  const rate = checkUnsplashRateLimit();
-  const rateIcon = rate.keyPresent ? "✅" : "❌";
-  lines.push(`- ${rateIcon} Unsplash API: ${rate.detail}`);
-  checks.push({ name: "unsplash", ok: rate.keyPresent });
-
-  const allOk = checks.every(c => c.ok);
-  const statusLine = allOk ? "✅ All system checks passed" : "⚠️ Some issues detected";
-  const content = `**Generated:** ${new Date().toISOString()}\n\n**Status:** ${statusLine}\n\n${lines.join("\n")}\n\n*System health auto-checked by Marketing Agent*`;
-
-  appendToReport("System Health (Marketing Agent)", content);
-
-  // Re-build if any auto-fixes were applied
-  if (yaml.fixed > 0 || orphan.deleted > 0) {
-    log("[Marketing Agent] Auto-fixes applied, re-verifying build...");
-    try {
-      execSync("npx astro build", { cwd: ROOT_DIR, stdio: "pipe", timeout: 60000 });
-      log("[Marketing Agent] Build verified after auto-fix");
-    } catch (e) {
-      log(`[Marketing Agent] Build failed after auto-fix: ${e.message}`);
-      // No revert needed - YAML strip is safe, orphan delete is cosmetic
-    }
+async function analyzeHeadlinePotential(titles) {
+  try {
+    const { callLLM } = await import("./lib/shared.mjs");
+    const prompt = `Rate these article titles by clickworthiness (1-10) and suggest a better angle for the lowest-scoring one:\n${titles.map((t, i) => `${i + 1}. "${t}"`).join("\n")}\n\nReturn format: JSON {"scores": [{"title": "...", "score": 8, "suggestion": "..."}]}`;
+    const result = await callLLM("You are a content strategist focused on click-through rate optimization.", prompt, { temperature: 0.3, maxTokens: 1024 });
+    const parsed = JSON.parse(result.replace(/```json|```/g, "").trim());
+    return Array.isArray(parsed?.scores) ? parsed.scores : [];
+  } catch {
+    return [];
   }
-
-  return { checks, allOk };
 }
 
 // ─── Marketing Analysis ─────────────────────────────────────────────────────

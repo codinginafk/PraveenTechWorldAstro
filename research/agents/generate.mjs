@@ -70,7 +70,7 @@ const RULES = [
   "Avoid these phrases: 'In today's digital world', 'In this article', 'It is important to note', 'It's worth noting', 'In conclusion', 'To summarize'.",
   "Use specific numbers and real examples. Not 'many people' but '73% of office workers'.",
   "The FAQ should be 3-5 real questions with genuine answers, not filler. Put them at the end using **Q:** and **A:** format naturally.",
-  "Target length: 1200-2000 words but do not pad. Every paragraph must teach something useful.",
+  "Target length: 1800-2500 words but do not pad. Every paragraph must teach something useful. Longer is better if every sentence adds value — aim for 2500+ on complex topics.",
   "Read the article back to yourself. If any sentence sounds like it was written by AI, rewrite it in your own voice with specific experience.",
 ];
 
