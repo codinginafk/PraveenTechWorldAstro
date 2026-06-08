@@ -35,6 +35,12 @@ async function runAudit() {
   log("[SEO Agent] Running schema validation...");
   const schemaFindings = await runSchemaValidation();
 
+  log("[SEO Agent] Running Screaming Frog crawl...");
+  const { runScreamingFrogAudit } = await import("./screaming-frog.mjs");
+  const sfResult = await runScreamingFrogAudit();
+  const sfFindings = sfResult?.findings || [];
+  log(`[SEO Agent] Screaming Frog found ${sfFindings.length} issues`);
+
   const allFindings = [
     ...sitemapFindings,
     ...pageFindings,

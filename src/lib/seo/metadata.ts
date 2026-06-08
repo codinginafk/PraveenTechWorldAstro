@@ -11,7 +11,8 @@ export interface SEOMetadata {
 const SUFFIX = " | PTW";
 
 export function buildPageTitle(title: string): string {
-  if (title === "Home") return "PraveenTechWorld";
+  const homepageTitle = "Practical Tech Guides, AI Workflows & Productivity Tips";
+  if (title === "Home") return homepageTitle;
   const full = title + SUFFIX;
   if (full.length <= 60) return full;
   const maxTitleLen = 60 - SUFFIX.length - 3;

@@ -61,16 +61,20 @@ async function fetchGscData() {
 function findContentGaps(articles, gscData) {
   if (!gscData || gscData.length === 0) return [];
 
-  const articleUrls = new Set(articles.map(a => `/blog/${a.slug || a.id || a.replace(/\.mdx$/, "")}`));
+  const articlePaths = new Set(articles.map(a => {
+    const slug = a.slug || a.id || a.replace(/\.mdx$/, "");
+    return "/blog/" + slug.replace(/\/$/, "");
+  }));
   const gaps = [];
 
   for (const row of gscData) {
     const pageUrl = row.keys?.[0] || "";
     if (!pageUrl.includes("/blog/")) continue;
-    if (articleUrls.has(pageUrl)) continue;
+    const pagePath = pageUrl.replace(/https?:\/\/[^\/]+/, "").replace(/\/$/, "");
+    if (articlePaths.has(pagePath)) continue;
 
     gaps.push({
-      url: pageUrl,
+      url: pagePath,
       impressions: row.impressions || 0,
       clicks: row.clicks || 0,
       ctr: row.ctr ? (row.ctr * 100).toFixed(1) + "%" : "0%",
@@ -88,23 +92,26 @@ function findPerformingArticles(articles, gscData) {
   for (const a of articles) {
     const slug = a.slug || a.replace(/\.mdx$/, "");
     articleMap[`/blog/${slug}`] = a;
+    articleMap[slug] = a;
   }
 
   const top = [];
   const impressionsByUrl = {};
 
   for (const row of gscData) {
-    const url = row.keys?.[0] || "";
-    if (!articleMap[url]) continue;
+    const fullUrl = row.keys?.[0] || "";
+    const path = fullUrl.replace(/https?:\/\/[^\/]+/, "");
+    const match = articleMap[fullUrl] || articleMap[path];
+    if (!match) continue;
     top.push({
-      slug: url.replace("/blog/", ""),
-      title: articleMap[url].title || articleMap[url],
+      slug: path.replace("/blog/", ""),
+      title: match.title || match,
       impressions: row.impressions || 0,
       clicks: row.clicks || 0,
       ctr: row.ctr ? (row.ctr * 100).toFixed(1) + "%" : "0%",
       avgPosition: row.position ? row.position.toFixed(1) : "N/A",
     });
-    impressionsByUrl[url] = row.impressions || 0;
+    impressionsByUrl[fullUrl] = row.impressions || 0;
   }
 
   const sorted = top.sort((a, b) => b.clicks - a.clicks);

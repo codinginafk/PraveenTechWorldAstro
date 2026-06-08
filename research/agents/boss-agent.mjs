@@ -9,11 +9,11 @@ const RESEARCH_DIR = path.resolve(__dirname, "../research");
 const ARTICLES_DIR = path.resolve(__dirname, "../../src/content/articles");
 
 const MISSIONS = [
-  "Every article must satisfy at least one content pillar: ai-tools, ai-workflows, productivity, windows-fixes, android-fixes, career-growth, automation, privacy, security, free-software.",
-  "Articles must answer a real question a human would ask or an AI would search for.",
-  "Content must be useful, actionable, and practical for students and office workers.",
-  "No pillar should get more than 40% of total articles.",
-  "Topics should have virality potential (shareable, surprising, or controversial).",
+  "FOCUS PRIORITY: Windows troubleshooting and system repair articles. Write about reinstalling, resetting, fixing blue screens, driver issues, viruses, slow performance, gaming FPS. These have highest ROI for clicks.",
+  "Articles must answer a real question a human would search for when their PC breaks.",
+  "Content must be diagnostic and technical — prioritize clarity over fluff.",
+  "Pillar balance is SUSPENDED for windows-fixes. Write as many Windows articles as needed.",
+  "Every article must use the structured SEO template: Direct Answer, When It Works/Doesn't Work, Step-by-Step, Decision Summary.",
 ];
 
 const PILLARS = ["ai-tools", "ai-workflows", "productivity", "windows-fixes", "android-fixes", "career-growth", "automation", "privacy", "security", "free-software"];
@@ -61,13 +61,13 @@ export async function runBoss(scoredTopics, { articlesToday = 0, articlesTotal =
     pass.push(...scoredTopics.filter((t) => (t.overallScore || 0) >= 6));
   }
 
-  // Pick up to 2, respecting pillar balance
+  // Pick up to 2, respecting pillar balance (except windows-fixes which is priority)
   const approved = [];
   const pillarCounts = {};
   for (const topic of pass) {
     const pillar = topic.pillarFit || "unknown";
     if (!PILLARS.includes(pillar)) continue;
-    if (!pillarIsBalanced(pillar)) {
+    if (pillar !== "windows-fixes" && !pillarIsBalanced(pillar)) {
       log(`  Skipping: ${topic.topic?.title?.slice(0, 50)}... (${pillar} at limit)`);
       continue;
     }
@@ -90,7 +90,7 @@ export async function runBoss(scoredTopics, { articlesToday = 0, articlesTotal =
 
   const improvements = [];
   if (pass.length > 0 && approved.length === 0) {
-    improvements.push("All passing topics hit pillar imbalance. Consider expanding into underrepresented pillars.");
+    improvements.push("All passing topics hit pillar imbalance (non-Windows). Consider focusing on Windows-fixes topics.");
   }
 
   const report = buildReport({

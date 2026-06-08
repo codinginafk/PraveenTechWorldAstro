@@ -86,13 +86,13 @@ export async function publishToLinkedIn(post) {
   const author = `urn:li:person:${personUrn}`;
 
   try {
-    log("[LinkedIn API] Creating post...");
+    log("[LinkedIn API] Creating post with rich link preview...");
 
     const postRes = await fetch("https://api.linkedin.com/rest/posts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "LinkedIn-Version": "202401",
+        "LinkedIn-Version": "202511",
         "X-Restli-Protocol-Version": "2.0.0",
         "Content-Type": "application/json",
       },
@@ -107,6 +107,13 @@ export async function publishToLinkedIn(post) {
         },
         lifecycleState: "PUBLISHED",
         isReshareDisabledByAuthor: false,
+        content: {
+          article: {
+            source: post.url,
+            title: post.title || "PraveenTechWorld",
+            description: "Practical tech guides and tutorials.",
+          },
+        },
       }),
     });
 
@@ -117,36 +124,9 @@ export async function publishToLinkedIn(post) {
     }
 
     const activityUrn = postRes.headers.get("x-restli-id");
-    log(`[LinkedIn API] Post created: ${activityUrn}`);
-
-    const commentRes = await fetch(
-      `https://api.linkedin.com/rest/socialActions/${encodeURIComponent(activityUrn)}/comments`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "LinkedIn-Version": "202401",
-          "X-Restli-Protocol-Version": "2.0.0",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          actor: author,
-          object: activityUrn,
-          message: {
-            text: post.url,
-          },
-        }),
-      }
-    );
-
-    if (!commentRes.ok) {
-      const err = await commentRes.text();
-      log(`[LinkedIn API] Comment failed: ${commentRes.status} ${err}`);
-      return { postUrn: activityUrn, commentError: err };
-    }
-
-    log(`[LinkedIn API] Comment posted with link: ${post.url}`);
-    return { postUrn: activityUrn, postUrl: `https://www.linkedin.com/feed/update/${activityUrn}` };
+    const postUrl = `https://www.linkedin.com/feed/update/${activityUrn}`;
+    log(`[LinkedIn API] Post created: ${postUrl}`);
+    return { postUrn: activityUrn, postUrl };
   } catch (err) {
     log(`[LinkedIn API] Error: ${err.message}`);
     return null;

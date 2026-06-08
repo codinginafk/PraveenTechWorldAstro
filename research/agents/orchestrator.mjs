@@ -17,10 +17,10 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 const RESEARCH_DIR = path.resolve(__dirname, "../research");
 const ARTICLES_DIR = path.join(ROOT_DIR, "src/content/articles");
 const STATE_FILE = path.join(__dirname, "state.json");
-const RESEARCH_KEYWORDS = "AI,privacy,security,productivity,Windows,Android,ChatGPT,career,automation,free,password,data,remove,tracking";
+const RESEARCH_KEYWORDS = "Windows,troubleshooting,reinstall,reset,blue screen,driver,virus,slow performance,gaming FPS,clean install,system repair,PC diagnostics,error fix,crash,freeze,boot";
 
 const DAILY_QUOTA = 5;
-const RUN_EVERY_MS = 60 * 60 * 1000; // 1 hour
+const RUN_EVERY_MS = 2 * 60 * 60 * 1000; // 2 hours
 const WATCHER_EVERY_MS = 30 * 60 * 1000; // 30 min
 
 // State management
@@ -79,7 +79,7 @@ function isDuplicateTitle(newTitle, existingTitles) {
 }
 
 // Article generation from approved topic
-async function generateFromTopic(topic, existingTitles) {
+async function generateFromTopic(topic, existingTitles, sourceArticles = [], clusters = []) {
   log(`  Generating article: ${topic.topic?.title?.slice(0, 60)}...`);
 
   const title = topic.seoTitle || topic.topic?.title || "Untitled";
@@ -92,6 +92,19 @@ async function generateFromTopic(topic, existingTitles) {
   const publishDate = new Date();
   const dateStr = publishDate.toISOString().split("T")[0];
 
+  // Find matching cluster for research context
+  const topicCluster = clusters.find((c) =>
+    c.clusterKey === topic.topic?.clusterKey ||
+    c.topHeadlines?.some((h) => h.includes(title.slice(0, 30)))
+  );
+
+  // Build research context from topic's cxResults and source articles
+  const researchContext = {
+    sourceArticles: sourceArticles.slice(0, 8),
+    cxResults: topic.cxResults || [],
+    cluster: topicCluster || null,
+  };
+
   const result = await generateArticle({
     title: title,
     description: topic.topic?.snippet?.slice(0, 150) || `A practical guide to ${title.toLowerCase()}.`,
@@ -101,9 +114,42 @@ async function generateFromTopic(topic, existingTitles) {
     socialHook: topic.topic?.title?.slice(0, 120) || `Learn how to ${title.toLowerCase()}.`,
     publishDate: dateStr,
     depthInstruction: "Write 1800-2500 words with specific steps, examples, and actionable advice. Include a FAQ section at the end. Complex topics can go up to 3000 words.",
+    researchContext,
   });
 
   return result;
+}
+
+// Competitive check: scores our article against source articles for depth/coverage
+async function runCompetitiveCheck(filePath, sourceArticles = []) {
+  if (!sourceArticles || sourceArticles.length < 3) return null;
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    const bodyMatch = content.match(/---[\s\S]*?---\s*([\s\S]*)/);
+    if (!bodyMatch) return null;
+    const body = bodyMatch[1];
+    const ourWordCount = body.split(/\s+/).filter(Boolean).length;
+    const avgSourceWordCount = sourceArticles.reduce((s, a) => s + (a.snippet?.split(/\s+/).length || 50), 0) / sourceArticles.length;
+
+    const headingMatch = [...body.matchAll(/^#{2,3}\s+(.+)$/gm)];
+    const ourHeadings = headingMatch.map((h) => h[1].toLowerCase());
+    const sourceHeadings = sourceArticles.map((a) => a.title?.toLowerCase() || "").filter(Boolean);
+
+    const commonHeadings = ourHeadings.filter((h) => sourceHeadings.some((s) => s.includes(h.slice(0, 20))));
+    const coverageScore = sourceHeadings.length > 0 ? commonHeadings.length / Math.min(sourceHeadings.length, 10) : 0.5;
+    const depthScore = Math.min(ourWordCount / Math.max(avgSourceWordCount, 100), 2);
+
+    const coverageWeighted = coverageScore * 0.4;
+    const depthWeighted = depthScore * 0.3;
+    const lengthBonus = ourWordCount >= 1500 ? 0.2 : ourWordCount >= 1000 ? 0.1 : 0;
+    const sourceBonus = sourceArticles.length >= 3 ? 0.1 : 0;
+    const overallScore = Math.min(coverageWeighted + depthWeighted + lengthBonus + sourceBonus, 1);
+
+    return { overallScore, coverageScore, depthScore, ourWordCount, avgSourceWordCount };
+  } catch (err) {
+    log(`  [Competitive Check] Error: ${err.message}`);
+    return null;
+  }
 }
 
 // Lock file to prevent concurrent runs
@@ -152,35 +198,26 @@ async function orchestratorCycle(state) {
     return;
   }
 
-  // Phase 1: Research (once per session unless empty)
-  const lastResearch = state.lastResearchDate;
-  const needsResearch = !lastResearch || !fs.existsSync(path.join(RESEARCH_DIR, "topics"));
+  // Phase 1: Research (every cycle)
+  log("Phase 1: Research");
+  const researchResult = await runResearch(RESEARCH_KEYWORDS);
+  state.lastResearchDate = new Date().toISOString();
+  saveState(state);
 
-  if (needsResearch) {
-    log("Phase 1: Research");
-    const topics = await runResearch(RESEARCH_KEYWORDS);
-    state.lastResearchDate = new Date().toISOString();
-    saveState(state);
+  const topics = researchResult.topics || researchResult;
+  const sourceArticles = researchResult.sourceArticles || [];
+  const clusters = researchResult.clusters || [];
 
-    if (topics.length === 0) {
-      log("No topics found. Retry next cycle.");
-      log(`=== Cycle done (no topics, ${Date.now() - startTime}ms) ===`);
-      return;
-    }
-  }
-
-  // Phase 2: SEO Analysis
-  log("Phase 2: SEO Analysis");
-  const topicsDir = path.join(RESEARCH_DIR, "topics");
-  const topicFiles = fs.readdirSync(topicsDir).filter((f) => f.endsWith(".json")).sort().reverse();
-  if (topicFiles.length === 0) {
-    log("No topic files. Will research next cycle.");
-    log(`=== Cycle done (no files, ${Date.now() - startTime}ms) ===`);
+  if (!Array.isArray(topics) || topics.length === 0) {
+    log("No topics found. Retry next cycle.");
+    log(`=== Cycle done (no topics, ${Date.now() - startTime}ms) ===`);
     return;
   }
-  const latestTopics = JSON.parse(fs.readFileSync(path.join(topicsDir, topicFiles[0]), "utf-8"));
+
+  // Phase 2: SEO Analysis with CX context
+  log("Phase 2: SEO Analysis");
   const existingTitles = getExistingTitles();
-  const scored = await runSeoAnalysis(latestTopics, existingTitles);
+  const scored = await runSeoAnalysis({ topics }, existingTitles, sourceArticles);
 
   // Phase 3: Boss Approval
   log("Phase 3: Boss/CEO Approval");
@@ -198,9 +235,10 @@ async function orchestratorCycle(state) {
   // Phase 4: Generate article from top approved topic
   log("Phase 4: Article Generation");
   let filePath = null;
+
   for (const topic of approved.slice(0, 5)) {
     log(`  Trying: ${topic.topic?.title?.slice(0, 60)}...`);
-    filePath = await generateFromTopic(topic, existingTitles);
+    filePath = await generateFromTopic(topic, existingTitles, sourceArticles, clusters);
     if (filePath) break;
     log("  Failed, trying next approved topic.");
   }
@@ -213,9 +251,11 @@ async function orchestratorCycle(state) {
 
   // Phase 4b: Quality Gate check
   log("Phase 4b: Quality Gate Check");
+  let gateFailed = false;
+  let gateResult = null;
   try {
     const { validateArticle } = await import("./lib/quality-gates.mjs");
-    const gateResult = validateArticle(filePath);
+    gateResult = validateArticle(filePath);
     if (!gateResult.passed) {
       log(`  QUALITY GATE FAILED — ${gateResult.failures.length} issues found`);
       for (const f of gateResult.failures.slice(0, 5)) {
@@ -236,13 +276,36 @@ async function orchestratorCycle(state) {
         "*Auto-generated by Quality Gates Agent*",
       ];
       appendToReport("Quality Gates", lines.join("\n"));
-      log(`=== Cycle done (quality gate failed, ${Date.now() - startTime}ms) ===`);
-      return;
+      gateFailed = true;
+    } else {
+      log(`  Quality gate PASSED (score: ${gateResult.score}/100)`);
     }
-    log(`  Quality gate PASSED (score: ${gateResult.score}/100)`);
   } catch (err) {
     log(`  Quality gate check failed: ${err.message}`);
     log("  Proceeding without quality gate validation.");
+  }
+
+  if (gateFailed) {
+    log(`=== Cycle done (quality gate failed, ${Date.now() - startTime}ms) ===`);
+    return;
+  }
+
+  // Phase 4c: Competitive Check (does our article beat existing content?)
+  log("Phase 4c: Competitive Check");
+  const competitiveScore = await runCompetitiveCheck(filePath, sourceArticles);
+  if (competitiveScore) {
+    log(`  Competitive score: ${competitiveScore.overallScore.toFixed(2)}/1.00`);
+    if (competitiveScore.overallScore < 0.6) {
+      log("  Score too low. Skipping publish to regenerate with depth.");
+      const { appendToReport } = await import("./lib/report.mjs");
+      appendToReport("Competitive Check",
+        `## Competitive Check Failed\n**Article:** ${path.basename(filePath)}\n**Score:** ${competitiveScore.overallScore.toFixed(2)}/1.00\n**Action:** Rejected — not competitive enough.`);
+      log(`=== Cycle done (competitive check failed, ${Date.now() - startTime}ms) ===`);
+      return;
+    }
+    log(`  Competitive check PASSED.`);
+  } else {
+    log("  Competitive check skipped (no source articles to compare).");
   }
 
   // Phase 5: Publish with 1-hour timestamp
@@ -250,11 +313,18 @@ async function orchestratorCycle(state) {
   const publishHour = 10 + state.articlesPublishedToday; // 10:00, 11:00, etc.
   const dateStamp = `${todayStr().replace(/-/g, "-")}T${String(publishHour).padStart(2, "0")}:00:00 +0000`;
 
+  // Read title from generated file instead of out-of-scope variable
+  let publishTitle = "article";
+  try {
+    const fileContent = fs.readFileSync(filePath, "utf-8");
+    const titleMatch = fileContent.match(/title:\s*"(.+?)"/);
+    if (titleMatch) publishTitle = titleMatch[1];
+  } catch {}
+
   try {
     execSync(`git add "${filePath}"`, { cwd: ROOT_DIR });
     const env = { ...process.env, GIT_AUTHOR_DATE: dateStamp, GIT_COMMITTER_DATE: dateStamp };
-    const title = topic.seoTitle || topic.topic?.title || "article";
-    execSync(`git commit -m "Add: ${title.slice(0, 72)}"`, { cwd: ROOT_DIR, env });
+    execSync(`git commit -m "Add: ${publishTitle.slice(0, 72)}"`, { cwd: ROOT_DIR, env });
     execSync("git push", { cwd: ROOT_DIR, env, timeout: 30000 });
     log(`  Published: ${path.basename(filePath)} at ${dateStamp}`);
     state.articlesPublishedToday++;
@@ -296,6 +366,20 @@ async function orchestratorCycle(state) {
   // Watcher: check report
   await checkAndApplyUnreadReport();
 
+  // Phase 8: Agent Checker — validate every phase of this cycle
+  try {
+    const { runAgentCheck } = await import("./lib/agent-checker.mjs");
+    await runAgentCheck(state, {
+      researchResult: { topics, sourceArticles, clusters },
+      scored: scored || [],
+      approved,
+      filePath,
+      gateResult,
+    });
+  } catch (err) {
+    log(`  [Agent Checker] Error: ${err.message}`);
+  }
+
   log(`=== Cycle done (${Date.now() - startTime}ms). Published: ${state.articlesPublishedToday}/${DAILY_QUOTA} ===`);
 }
 
@@ -336,10 +420,90 @@ async function marketingCycle(state) {
   }
 }
 
+// Analytics runs once per day
+async function analyticsCycle(state) {
+  const today = todayStr();
+  const lastRun = state.lastAnalyticsDate || "";
+  if (lastRun === today) return;
+
+  log("[Orchestrator] Running Analytics Agent...");
+  try {
+    const { runAnalytics } = await import("./analytics-agent.mjs");
+    await runAnalytics();
+    state.lastAnalyticsDate = today;
+    saveState(state);
+  } catch (err) {
+    log(`[Orchestrator] Analytics failed: ${err.message}`);
+  }
+}
+
+// Link Building runs once per day
+async function linkBuildingCycle(state) {
+  const today = todayStr();
+  const lastRun = state.lastLinkBuildingDate || "";
+  if (lastRun === today) return;
+
+  log("[Orchestrator] Running Link Building Agent...");
+  try {
+    const { runLinkBuilding } = await import("./link-building-agent.mjs");
+    await runLinkBuilding();
+    state.lastLinkBuildingDate = today;
+    saveState(state);
+  } catch (err) {
+    log(`[Orchestrator] Link Building failed: ${err.message}`);
+  }
+}
+
+// Publish due scheduled posts
+async function publishScheduledPosts() {
+  try {
+    const STATE_FILE = path.join(__dirname, "state.json");
+    const state = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    if (!state.scheduledPosts?.length) return;
+
+    const now = Date.now();
+    const due = state.scheduledPosts.filter(p => p.status === "pending" && new Date(p.scheduledAt).getTime() <= now);
+    if (!due.length) return;
+
+    for (const post of due) {
+      if (post.platform === "linkedin") {
+        log(`[Scheduler] Publishing scheduled LinkedIn post: ${post.title?.slice(0, 60)}...`);
+        try {
+          const { publishToLinkedIn, generateLinkedInPost } = await import("./lib/syndicate-linkedin.mjs");
+          const { parseArticle } = await import("./lib/syndication.mjs");
+          const articlesDir = path.resolve(__dirname, "../../src/content/articles");
+          const file = post.slug + ".mdx";
+          let article = parseArticle(path.join(articlesDir, file));
+          if (!article) {
+            // Try finding the file by slug prefix
+            const files = fs.readdirSync(articlesDir).filter(f => f.endsWith(".mdx") && f.startsWith(post.slug));
+            if (files.length > 0) article = parseArticle(path.join(articlesDir, files[0]));
+          }
+          if (article) {
+            const linkedinPost = generateLinkedInPost(article);
+            await publishToLinkedIn(linkedinPost);
+            post.status = "published";
+            post.publishedAt = new Date().toISOString();
+            log(`[Scheduler] LinkedIn post published: ${post.title?.slice(0, 60)}...`);
+          }
+        } catch (err) {
+          log(`[Scheduler] LinkedIn publish failed: ${err.message}`);
+          post.status = "failed";
+          post.error = err.message;
+        }
+      }
+    }
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
+  } catch (err) {
+    log(`[Scheduler] Error: ${err.message}`);
+  }
+}
+
 // Watcher for report
 async function watcherCycle() {
   try {
     await checkAndApplyUnreadReport();
+    await publishScheduledPosts();
   } catch (err) {
     log(`[Watcher] Error: ${err.message}`);
   }
@@ -367,15 +531,16 @@ export async function runOrchestrator() {
     log("New day detected. Resetting counter.");
     state.articlesPublishedToday = 0;
     state.lastPublishDate = null;
-    state.lastResearchDate = null;
     saveState(state);
   }
 
   log(`Resuming: ${state.articlesPublishedToday}/${DAILY_QUOTA} published today`);
 
-  // Run marketing and SEO audit on start
+  // Run daily cycles on start
   await marketingCycle(state);
   await seoAuditCycle(state);
+  await analyticsCycle(state);
+  await linkBuildingCycle(state);
 
   // Run first cycle immediately
   await orchestratorCycle(state);
@@ -385,6 +550,8 @@ export async function runOrchestrator() {
     state = loadState();
     await marketingCycle(state);
     await seoAuditCycle(state);
+    await analyticsCycle(state);
+    await linkBuildingCycle(state);
     await orchestratorCycle(state);
   }, RUN_EVERY_MS);
 

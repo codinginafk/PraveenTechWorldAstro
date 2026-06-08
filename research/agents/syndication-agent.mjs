@@ -47,8 +47,6 @@ export async function runSyndication() {
   const article = parseArticle(filePath);
   if (!article) {
     log(`  Skipped (parse failed): ${file}`);
-    state.syndicated.push(file);
-    saveState(state);
     return { ok: true, syndicated: 0, total: 0 };
   }
 
@@ -72,10 +70,13 @@ export async function runSyndication() {
 
   // Hashnode: API is now a paid offering (since 2026-05-13), skipping.
 
-  // Mark as syndicated
-  state.syndicated = state.syndicated || [];
-  state.syndicated.push(file);
-  saveState(state);
+  // Mark as syndicated only if at least one platform succeeded
+  const anySuccess = results.some((r) => r.ok);
+  if (anySuccess) {
+    state.syndicated = state.syndicated || [];
+    state.syndicated.push(file);
+    saveState(state);
+  }
 
   // Report
   if (results.length) {

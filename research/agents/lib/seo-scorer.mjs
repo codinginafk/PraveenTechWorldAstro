@@ -5,6 +5,14 @@ const CONTENT_PILLARS = [
   "android-fixes", "career-growth", "automation", "privacy", "security", "free-software",
 ];
 
+const E_E_A_T_CRITERIA = [
+  "Experience: Does the topic lend itself to first-hand experience, real examples, personal workflow?",
+  "Expertise: Does the topic require deep technical knowledge? Can we demonstrate credentials?",
+  "Authoritativeness: Are there authoritative sources, documentation, or industry recognition to cite?",
+  "Trustworthiness: Can we provide accurate, transparent, honest advice without exaggeration?",
+  "WindowsFocus: Topics about Windows troubleshooting, system repair, reinstalling, resetting, driver issues, BSODs, malware removal, and performance fixes get +2 bonus.",
+];
+
 export function titlePassesSpec(title) {
   const checks = {
     hasKeyword: true, // LLM will determine
@@ -17,16 +25,27 @@ export function titlePassesSpec(title) {
   return { score: passCount / Object.keys(checks).length, checks };
 }
 
-export async function llmScoreTopic(topic, existingArticles) {
-  const sysPrompt = `You are an SEO and content strategist for PraveenTechWorld, a site that helps students and office workers solve practical tech problems.
+export async function llmScoreTopic(topic, existingArticles, cxResults = [], relatedSources = []) {
+  const sysPrompt = `You are an SEO and content strategist for PraveenTechWorld, a site that helps students and office workers fix their computers.
 
-Score this topic 1-10. pillarFit MUST be EXACTLY one of: ${CONTENT_PILLARS.join(", ")}. If none fit, pick the closest.
+Score this topic 1-10. PREFER "windows-fixes" pillar for any Windows/troubleshooting topic. pillarFit MUST be EXACTLY one of: ${CONTENT_PILLARS.join(", ")}. If none fit, pick the closest.
 
-Return ONLY valid JSON: { "searchDemand": number, "depthPotential": number, "questionValue": number, "pillarFit": string, "virality": number, "originality": number, "overallScore": number, "seoTitle": string, "recommendedTags": string[] }`;
+E-E-A-T + WindowsFocus criteria to consider:
+${E_E_A_T_CRITERIA.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+
+Return ONLY valid JSON: { "searchDemand": number, "depthPotential": number, "questionValue": number, "pillarFit": string, "virality": number, "originality": number, "overallScore": number, "seoTitle": string, "recommendedTags": string[], "eeatScore": number }`;
+
+  const cxContext = cxResults.length > 0
+    ? `\nCompetitor search results:\n${cxResults.slice(0, 5).map((r) => `- ${r.title} (${r.source}): ${r.snippet}`).join("\n")}`
+    : "";
+
+  const sourceContext = relatedSources.length > 0
+    ? `\nRelated news/articles on this topic:\n${relatedSources.map((s) => `- ${s.title} (${s.source})`).join("\n")}`
+    : "";
 
   const userPrompt = `Topic: "${topic.title || topic}"
 Source: ${topic.source || "Unknown"}
-Snippet: ${(topic.snippet || "").slice(0, 300)}
+Snippet: ${(topic.snippet || "").slice(0, 300)}${cxContext}${sourceContext}
 
 Existing article titles: ${existingArticles.join("; ") || "None"}
 

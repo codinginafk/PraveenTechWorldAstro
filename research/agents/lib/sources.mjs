@@ -16,21 +16,26 @@ async function fetchWithTimeout(url, opts = {}) {
   }
 }
 
+function parseRSSItems(xml, sourceName) {
+  if (!xml) return [];
+  const items = [...xml.matchAll(/<item>[\s\S]*?<\/item>/g)];
+  return items.map((item) => {
+    const m = item[0];
+    return {
+      title: m.match(/<title[^>]*>(.*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "") || "",
+      link: m.match(/<link[^>]*>(.*?)<\/link>/)?.[1] || "",
+      source: sourceName,
+      snippet: m.match(/<description[^>]*>(.*?)<\/description>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, "") || "",
+      date: m.match(/<pubDate[^>]*>(.*?)<\/pubDate>/)?.[1] || "",
+    };
+  }).filter((a) => a.title);
+}
+
 export async function fetchGoogleNews(keywords = "AI privacy security productivity Windows Android ChatGPT how to") {
   try {
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(keywords)}&hl=en-US&gl=US&ceid=US:en`;
     const xml = await fetchWithTimeout(url);
-    const items = [...xml.matchAll(/<item>[\s\S]*?<\/item>/g)];
-    return items.slice(0, 20).map((item) => {
-      const m = item[0];
-      return {
-        title: m.match(/<title>(.*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "") || "",
-        link: m.match(/<link>(.*?)<\/link>/)?.[1] || "",
-        source: "Google News",
-        snippet: m.match(/<description>(.*?)<\/description>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, "") || "",
-        date: m.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "",
-      };
-    }).filter((a) => a.title);
+    return parseRSSItems(xml, "Google News").slice(0, 20);
   } catch (err) {
     log(`  [Google News] Error: ${err.message}`);
     return [];
@@ -158,6 +163,63 @@ export async function fetchCurrents(keywords = "ChatGPT AI productivity privacy 
   }
 }
 
+// ---- New RSS Sources ----
+
+const RSS_FEEDS = [
+  { name: "Wired", url: "https://www.wired.com/feed/rss" },
+  { name: "TechCrunch", url: "https://techcrunch.com/feed/" },
+  { name: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/index" },
+  { name: "The Verge", url: "https://www.theverge.com/rss/index.xml" },
+  { name: "ZDNet", url: "https://www.zdnet.com/news/rss.xml" },
+  { name: "TechRadar", url: "https://www.techradar.com/rss" },
+  { name: "Stack Overflow Blog", url: "https://stackoverflow.blog/feed/" },
+  { name: "Wikipedia RecentChanges", url: "https://en.wikipedia.org/w/api.php?action=feedrecentchanges&feedformat=rss" },
+];
+
+async function fetchRSSFeed(name, url) {
+  try {
+    const xml = await fetchWithTimeout(url);
+    return parseRSSItems(xml, name).slice(0, 10);
+  } catch (err) {
+    log(`  [${name}] Error: ${err.message}`);
+    return [];
+  }
+}
+
+async function fetchAllRSSFeeds() {
+  const results = await Promise.all(RSS_FEEDS.map((f) => fetchRSSFeed(f.name, f.url)));
+  return results.flat();
+}
+
+export async function fetchProductHunt() {
+  try {
+    const xml = await fetchWithTimeout("https://www.producthunt.com/feed");
+    return parseRSSItems(xml, "Product Hunt").slice(0, 10);
+  } catch (err) {
+    log(`  [Product Hunt] Error: ${err.message}`);
+    return [];
+  }
+}
+
+export async function fetchGitHubTrending() {
+  try {
+    const html = await fetchWithTimeout("https://github.com/trending", {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+    });
+    const repos = [...html.matchAll(/<h2[^>]*>[\s\S]*?<a[^>]*href="\/([^"]+)"[^>]*>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>/g)];
+    return repos.slice(0, 10).map((r) => ({
+      title: r[1].replace(/\//g, " / ").trim(),
+      link: `https://github.com/${r[1].trim()}`,
+      source: "GitHub Trending",
+      snippet: r[2].replace(/<[^>]+>/g, "").trim().slice(0, 200),
+      date: new Date().toISOString(),
+    })).filter((a) => a.title);
+  } catch (err) {
+    log(`  [GitHub Trending] Error: ${err.message}`);
+    return [];
+  }
+}
+
 const PILLAR_KEYWORDS = ["chatgpt", "ai", "privacy", "security", "password", "windows", "android",
   "productivity", "career", "resume", "automation", "free", "student", "office",
   "google", "microsoft", "apple", "tracking", "data", "remove", "delete", "protect",
@@ -170,15 +232,18 @@ function isRelevant(title = "", snippet = "") {
 
 export async function fetchAllSources(keywords) {
   log("  Fetching all sources...");
-  const [googleNews, pillarNews, reddit, hn] = await Promise.all([
+  const [googleNews, pillarNews, reddit, hn, rssFeeds, productHunt, gitHubTrending, currents] = await Promise.all([
     fetchGoogleNews(keywords),
     fetchGoogleNewsByPillar(),
     fetchReddit(),
     fetchHackerNews(),
+    fetchAllRSSFeeds(),
+    fetchProductHunt(),
+    fetchGitHubTrending(),
+    fetchCurrents(keywords),
   ]);
-  // Filter HN for relevance (HN tends to be very technical)
   const relevantHn = hn.filter((h) => isRelevant(h.title, h.snippet));
-  const all = [...googleNews, ...pillarNews, ...reddit, ...relevantHn];
-  log(`  Got ${googleNews.length} GN, ${pillarNews.length} pillar, ${reddit.length} Reddit, ${relevantHn.length}/${hn.length} HN`);
+  const all = [...googleNews, ...pillarNews, ...reddit, ...relevantHn, ...rssFeeds, ...productHunt, ...gitHubTrending, ...currents];
+  log(`  Got ${googleNews.length} GN, ${pillarNews.length} pillar, ${reddit.length} Reddit, ${relevantHn.length}/${hn.length} HN, ${rssFeeds.length} RSS, ${productHunt.length} PH, ${gitHubTrending.length} GH`);
   return all;
 }
