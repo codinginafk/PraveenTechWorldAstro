@@ -3,7 +3,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { log, ensureDir } from "./lib/shared.mjs";
 import { appendToReport } from "./lib/report.mjs";
-import { devtoPost, hashnodePost, parseArticle, getNewArticles } from "./lib/syndication.mjs";
+import { devtoPost, hashnodePost, linkedinPost, bloggerPost, parseArticle, getNewArticles } from "./lib/syndication.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AGENTS_DIR = path.resolve(__dirname);
@@ -69,6 +69,39 @@ export async function runSyndication() {
   }
 
   // Hashnode: API is now a paid offering (since 2026-05-13), skipping.
+
+  // LinkedIn (requires OAuth 2.0 setup)
+  const linkedinToken = process.env.LINKEDIN_ACCESS_TOKEN;
+  if (linkedinToken) {
+    try {
+      const post = await linkedinPost(article, linkedinToken);
+      if (post) {
+        log(`  ✓ LinkedIn: "${article.title}"`);
+        results.push({ platform: "linkedin", file, ok: true });
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    } catch (err) {
+      log(`  ✗ LinkedIn FAILED: ${file} — ${err.message}`);
+      results.push({ platform: "linkedin", file, ok: false, error: err.message });
+    }
+  }
+
+  // Blogger (requires OAuth 2.0 setup)
+  const bloggerToken = process.env.BLOGGER_ACCESS_TOKEN;
+  const bloggerBlogId = process.env.BLOGGER_BLOG_ID;
+  if (bloggerToken && bloggerBlogId) {
+    try {
+      const post = await bloggerPost(article, bloggerToken, bloggerBlogId);
+      if (post) {
+        log(`  ✓ Blogger: "${article.title}"`);
+        results.push({ platform: "blogger", file, ok: true });
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    } catch (err) {
+      log(`  ✗ Blogger FAILED: ${file} — ${err.message}`);
+      results.push({ platform: "blogger", file, ok: false, error: err.message });
+    }
+  }
 
   // Mark as syndicated only if at least one platform succeeded
   const anySuccess = results.some((r) => r.ok);

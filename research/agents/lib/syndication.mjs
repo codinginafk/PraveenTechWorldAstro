@@ -199,3 +199,56 @@ export async function hashnodePost(_article, _pat, _pubId) {
   log("[Hashnode] API is now a paid offering — skipping");
   return null;
 }
+
+// ─── LinkedIn ────────────────────────────────────────────────────────────
+
+// LinkedIn API v2 requires OAuth 2.0 with w_member_social scope.
+// Setup:
+//   1. Go to https://www.linkedin.com/developers/apps → Create App
+//   2. Add "Share on LinkedIn" product (w_member_social scope)
+//   3. Set OAuth redirect URI to http://localhost:8080
+//   4. Use the Authorize URL to get auth code:
+//      https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=CLIENT_ID&redirect_uri=http://localhost:8080&scope=w_member_social,r_liteprofile,r_emailaddress
+//   5. Exchange auth code for access token:
+//      curl -X POST https://www.linkedin.com/oauth/v2/accessToken -d "grant_type=authorization_code&code=AUTH_CODE&redirect_uri=http://localhost:8080&client_id=CLIENT_ID&client_secret=CLIENT_SECRET"
+//   6. Set LINKEDIN_ACCESS_TOKEN in .env
+//
+// Note: LinkedIn restricts how often you can post same content.
+// Only syndicate unique, condensed versions — not full reposts.
+
+export async function linkedinPost(article, accessToken) {
+  if (!accessToken) {
+    log("[LinkedIn] No LINKEDIN_ACCESS_TOKEN in .env — skipping");
+    return null;
+  }
+  log("[LinkedIn] API requires OAuth 2.0 setup — see comments in syndication.mjs for instructions");
+  log(`[LinkedIn] Would post: "${article.title}"`);
+  return null;
+}
+
+// ─── Blogger ────────────────────────────────────────────────────────────
+
+// Google Blogger API v3 requires OAuth 2.0 with blogger scope.
+// Setup:
+//   1. Go to https://console.cloud.google.com/ → Create Project → Enable Blogger API v3
+//   2. Create OAuth 2.0 credentials (Desktop App type)
+//   3. Download client_secret.json, save as research/agents/lib/blogger-client.json
+//   4. Run the auth flow once to get refresh token:
+//      const {google} = require('googleapis');
+//      const oauth2 = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, 'http://localhost:8080');
+//      const url = oauth2.generateAuthUrl({ scope: ['https://www.googleapis.com/auth/blogger'] });
+//   5. Exchange the auth code: const {tokens} = await oauth2.getToken(code);
+//   6. Set BLOGGER_ACCESS_TOKEN and BLOGGER_REFRESH_TOKEN in .env
+//   7. Get your blog ID: GET https://www.googleapis.com/blogger/v3/users/self/blogs
+//
+// Note: Blogger API is free with daily quota (usually 1000 requests/day).
+
+export async function bloggerPost(article, accessToken, blogId) {
+  if (!accessToken || !blogId) {
+    log("[Blogger] No BLOGGER_ACCESS_TOKEN or BLOGGER_BLOG_ID in .env — skipping");
+    return null;
+  }
+  log("[Blogger] API requires OAuth 2.0 setup — see comments in syndication.mjs for instructions");
+  log(`[Blogger] Would post: "${article.title}"`);
+  return null;
+}
