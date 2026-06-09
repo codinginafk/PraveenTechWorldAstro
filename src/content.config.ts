@@ -30,6 +30,16 @@ const articles = defineCollection({
         })
       )
       .optional(),
+    references: z
+      .array(
+        z.object({
+          title: z.string(),
+          url: z.string().url(),
+          author: z.string().optional(),
+          publisher: z.string().optional(),
+        })
+      )
+      .optional(),
   }),
 });
 
