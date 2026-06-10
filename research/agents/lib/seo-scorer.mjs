@@ -1,8 +1,7 @@
 import { callLLM } from "./shared.mjs";
 
 const CONTENT_PILLARS = [
-  "ai-tools", "ai-workflows", "productivity", "windows-fixes",
-  "android-fixes", "career-growth", "automation", "privacy", "security", "free-software",
+  "website-setup", "windows-fixes", "hosting-infra", "ai-websites",
 ];
 
 const E_E_A_T_CRITERIA = [

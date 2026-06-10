@@ -176,16 +176,10 @@ export function extractKeywords(title, tags, category) {
   if (tags) tags.forEach(t => { const s = String(t).trim(); if (s.length > 2) kws.push(s); });
   // Category-specific
   const catMap = {
+    "website-setup": ["Google Search Console", "website dashboard", "website analytics"],
     "windows-fixes": ["Windows 11 error screen", "Windows update", "computer"],
-    "android-fixes": ["Android smartphone", "phone battery", "mobile"],
-    "ai-tools": ["artificial intelligence", "AI technology", "ChatGPT"],
-    "ai-workflows": ["AI productivity", "workspace"],
-    "productivity": ["workspace organization", "productivity"],
-    "career-growth": ["career development", "professional"],
-    "privacy": ["data privacy", "online security"],
-    "security": ["cybersecurity", "computer security"],
-    "free-software": ["open source", "free software"],
-    "automation": ["workflow automation", "technology"],
+    "hosting-infra": ["web hosting dashboard", "server rack", "cloud hosting"],
+    "ai-websites": ["artificial intelligence", "AI tools", "ChatGPT"],
   };
   if (catMap[category]) catMap[category].forEach(w => kws.push(w));
   kws.push("technology", "digital");

@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AGENTS_DIR = path.resolve(__dirname);
 const STATE_FILE = path.join(AGENTS_DIR, "state.json");
 const SITE_URL = "https://www.praveentechworld.com";
-const SITE_DESC = "tech blog covering Android tips, Windows fixes, AI productivity, privacy, automation, and career growth";
+const SITE_DESC = "technical knowledge base covering Windows troubleshooting, website setup with Google Search Console and Google Analytics, web hosting guides, and AI tools for website owners";
 
 // ─── Pre-compiled discovery lists per category ─────────────────────────────
 

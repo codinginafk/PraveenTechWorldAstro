@@ -47,6 +47,18 @@ const RULES = {
   L2: { id: "L2", gate: "Author & Links", name: "No generic link text", desc: "Avoid 'click here', 'read more', 'this article'", threshold: {} },
   L3: { id: "L3", gate: "Author & Links", name: "Internal links target existing articles", desc: "All internal hrefs point to published pages", threshold: {} },
   L4: { id: "L4", gate: "Author & Links", name: "External links security", desc: "All external links use target=_blank + rel=noopener", threshold: {} },
+
+  // LLM Citation Gates (M1-M10) — based on OppAlerts LLM Ranking Factors research
+  M1: { id: "M1", gate: "LLM Citation", name: "External authority citations", desc: "At least 1 link to .gov, .edu, or official documentation (Microsoft, official docs)", threshold: { min: 1 } },
+  M2: { id: "M2", gate: "LLM Citation", name: "Original data or unique research", desc: "Article includes specific numbers, statistics, or personal testing results", threshold: {} },
+  M3: { id: "M3", gate: "LLM Citation", name: "Comprehensive single-topic depth", desc: "Article completely answers one query rather than shallow coverage of multiple topics", threshold: { min: 1500 } },
+  M4: { id: "M4", gate: "LLM Citation", name: "Structured FAQ for direct answers", desc: "FAQ section with real questions LLMs can extract for direct answers", threshold: { min: 3 } },
+  M5: { id: "M5", gate: "LLM Citation", name: "Neutral authoritative tone", desc: "No promotional language, superlatives, or biased claims. LLMs avoid biased sources.", threshold: {} },
+  M6: { id: "M6", gate: "LLM Citation", name: "Step-by-step precision", desc: "Instructions include exact button names, menu paths, keyboard shortcuts", threshold: {} },
+  M7: { id: "M7", gate: "LLM Citation", name: "Decision summary or TL;DR", desc: "Article ends with a clear summary, decision framework, or next-step recommendation", threshold: {} },
+  M8: { id: "M8", gate: "LLM Citation", name: "Content freshness signal", desc: "publishDate or lastUpdated is within 6 months for evergreen, 1 month for news", threshold: {} },
+  M9: { id: "M9", gate: "LLM Citation", name: "H2 headings answer specific queries", desc: "Each H2 heading should match a question a user would search for", threshold: {} },
+  M10: { id: "M10", gate: "LLM Citation", name: "Syndication-ready hook", desc: "First 50 chars can standalone as a social/Reddit preview that drives clicks", threshold: {} },
 };
 
 // ---- Helper Functions ----
@@ -422,6 +434,136 @@ export function validateArticle(filePath, existingArticlePaths = []) {
       // Can't check rel from markdown — skip; checked at build level
     }
   }
+
+  // ---- M1: External authority citations (at least 1 .gov, .edu, or official docs) ----
+  const authorityDomains = [".gov", ".edu", "microsoft.com", "docs.microsoft.com", "learn.microsoft.com", "support.microsoft.com", "kernel.org", "ietf.org", "w3.org"];
+  const hasAuthorityCitation = externalLinks.some(l => authorityDomains.some(d => l.url.includes(d)));
+  if (!hasAuthorityCitation) {
+    failures.push({ gate: "M1", rule: "External authority citations", message: "No .gov, .edu, or official Microsoft/docs link found — LLMs prioritize authoritative citations" });
+  }
+
+  // ---- M2: Original data or unique research ----
+  const dataPatterns = [/tested\s+with/i, /measured/i, /observed\s+that/i, /found\s+that/i, /according\s+to\s+my/i, /i\s+(tested|tried|verified|confirmed)/i, /\d+%\s+(faster|slower|improved|reduced)/i, /seconds?\s+(to|for)/i, /\d+ms/i, /\d+\.\d+\s*(GHz|GB|MB|ms)/i];
+  const dataPatternHits = dataPatterns.filter(p => p.test(bodyText));
+  if (dataPatternHits.length < 2) {
+    failures.push({ gate: "M2", rule: "Original data or unique research", message: `Only ${dataPatternHits.length} data patterns found — LLMs cite content with specific testing results` });
+  }
+
+  // ---- M3: Comprehensive single-topic depth (body length already checked in C2) ----
+  // Re-check: article must focus deeply on one topic, validated by word count already
+
+  // ---- M4: Structured FAQ for direct answers ----
+  if (!bodyText.toLowerCase().includes("faq") && !bodyText.toLowerCase().includes("frequently asked")) {
+    warnings.push({ gate: "M4", rule: "Structured FAQ", message: "No FAQ section found — LLMs extract Q&A pairs for direct answers" });
+  }
+
+  // ---- M5: Neutral authoritative tone ----
+  const promotionalWords = ["revolutionary", "game-changing", "incredible", "amazing", "best", "perfect", "ultimate", "secret", "guaranteed", "hacks?"];
+  const promoHits = promotionalWords.filter(w => new RegExp(w, "i").test(bodyText));
+  if (promoHits.length > 0) {
+    failures.push({ gate: "M5", rule: "Neutral authoritative tone", message: `Promotional language found — LLMs penalize biased sources: ${promoHits.join(", ")}` });
+  }
+
+  // ---- M6: Step-by-step precision ----
+  const precisionPatterns = [/(click|select|press|navigate|open|go to|tap)\s+\w+/i, />\s/, /keyboard\s+shortcut/i, /Ctrl\s*\+/i, /Win\s*\+/i, /Alt\s*\+/i, /Settings\s*>/i, /right-click/i, /context\s+menu/i];
+  const precisionHits = precisionPatterns.filter(p => p.test(bodyText));
+  if (precisionHits.length < 3) {
+    failures.push({ gate: "M6", rule: "Step-by-step precision", message: `Only ${precisionHits.length} precision signals found — LLMs prefer exact navigation paths` });
+  }
+
+  // ---- M7: Decision summary or TL;DR ----
+  const summaryPatterns = [/(TL;DR|tl;dr|tldr|summary|in\s+summary|to\s+sum\s+up|in\s+short|in\s+brief|key\s+takeaways?|bottom\s+line|final\s+thoughts?|wrapping\s+up|conclusion)/i];
+  const hasSummary = summaryPatterns.some(p => p.test(bodyText));
+  if (!hasSummary) {
+    warnings.push({ gate: "M7", rule: "Decision summary or TL;DR", message: "No summary/conclusion section found — LLMs extract tl;dr for featured snippets" });
+  }
+
+  // ---- M8: Content freshness signal ----
+  if (publishDate) {
+    const pub = new Date(publishDate);
+    const now = new Date();
+    const monthsDiff = (now.getFullYear() - pub.getFullYear()) * 12 + (now.getMonth() - pub.getMonth());
+    const isNews = tags.some(t => /update|patch|fix|hotfix|breaking/i.test(t)) || bodyText.toLowerCase().includes("kb5") || bodyText.toLowerCase().includes("update");
+    if (isNews && monthsDiff > 1) {
+      failures.push({ gate: "M8", rule: "Content freshness for news", message: `Article is ${monthsDiff} months old — news/update topics need freshness within 1 month` });
+    } else if (!isNews && monthsDiff > 6) {
+      failures.push({ gate: "M8", rule: "Content freshness for evergreen", message: `Article is ${monthsDiff} months old — evergreen LLM citations prefer content updated within 6 months` });
+    }
+  }
+
+  // ---- M9: H2 headings answer specific queries ----
+  const h2Headings = headings.filter(h => h.startsWith("##") && !h.startsWith("###"));
+  const questionPatterns = [/\?/, /how\s+to/i, /what\s+(is|are|does|can)/i, /why\s+(is|does|isn't|can't)/i, /can\s+(i|you)/i, /where\s+(is|are|can)/i, /which/i];
+  const queryHeadingHits = h2Headings.filter(h => questionPatterns.some(p => p.test(h)));
+  if (queryHeadingHits.length < Math.ceil(h2Headings.length * 0.5)) {
+    warnings.push({ gate: "M9", rule: "H2 headings answer specific queries", message: `Only ${queryHeadingHits.length}/${h2Headings.length} H2s match user query patterns — LLMs extract heading-matched answers` });
+  }
+
+  // ---- M10: Syndication-ready hook ----
+  const firstChars = bodyText.replace(/<[^>]+>/g, "").trim().substring(0, 50);
+  const hookPatterns = [/struggling/i, /frustrated/i, /can't/i, /wont/i, /doesn't/i, /not\s+working/i, /error/i, /fix/i, /solved/i, /how\s+to/i, /\d+\s+(ways?|tips?|fixes?|steps?|methods?)/i];
+  const hasHook = hookPatterns.some(p => p.test(firstChars));
+  if (!hasHook) {
+    failures.push({ gate: "M10", rule: "Syndication-ready hook", message: `First 50 chars don't hook the reader: "${firstChars}..." — needs urgency/question keyword` });
+  }
+
+  // ---- P1: Pillar category validation ----
+  const validPillars = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites"];
+  if (category && !validPillars.includes(category)) {
+    failures.push({ gate: "P1", rule: "Pillar category", message: `Category "${category}" is not a valid pillar. Must be one of: ${validPillars.join(", ")}` });
+  }
+
+  // ---- P2: Hub page exists for pillar ----
+  const pillarHubMap = { "website-setup": "website-setup", "windows-fixes": "windows-troubleshooting", "hosting-infra": "web-hosting-guides", "ai-websites": "ai-for-websites" };
+  if (category && validPillars.includes(category)) {
+    const expectedHub = pillarHubMap[category];
+    if (expectedHub) {
+      const hubDir = path.join(ROOT_DIR, "src/content/hubs");
+      const hubExists = fs.existsSync(hubDir) && fs.readdirSync(hubDir).some(f => f.startsWith(expectedHub));
+      if (!hubExists) {
+        failures.push({ gate: "P2", rule: "Pillar hub page", message: `Hub page "${expectedHub}" does not exist in src/content/hubs/. Create it before adding more ${category} articles.` });
+      }
+    }
+  }
+
+  // ---- Q1: Problem-based title check ----
+  const titleLower = (title || "").toLowerCase();
+  const problemPatterns = [/fix/, /error/, /not.working/, /won.t/, /can.t/, /doesn.t/, /failed/, /stuck/, /how\s+to/, /\d+\s+(fixes|ways|tips|steps|methods)/i];
+  const isProblemTitle = problemPatterns.some(p => p.test(titleLower));
+  if (!isProblemTitle) {
+    failures.push({ gate: "Q1", rule: "Problem-based title", message: `Title "${title}" is not problem-based. Use format: "[Problem] Not Working? [N] Fixes" or "How to Fix [Problem]"` });
+  }
+
+  // ---- Q2: Sprint cluster alignment ----
+  const pillarId = article.pillarId || category || "";
+  if (pillarId && validPillars.includes(pillarId)) {
+    // Article aligns with a valid pillar
+  }
+
+  // ---- Q3: Internal link count (minimum 3 for cluster depth) ----
+  if (internalLinks.length < 3) {
+    failures.push({ gate: "Q3", rule: "Internal links for cluster depth", message: `Only ${internalLinks.length} internal links found — minimum 3 for cluster building` });
+  }
+
+  // ---- Q4: Evergreen check (no dead-end dates) ----
+  const yearPatterns = [/2024/, /2025/];
+  const hasOldYear = yearPatterns.some(p => p.test(titleLower) || p.test(bodyText));
+  if (hasOldYear) {
+    failures.push({ gate: "Q4", rule: "Evergreen freshness", message: "Article references 2024 or 2025 — unlikely to be searched next year. Update to current year or remove year reference." });
+  }
+
+  // ---- Sprint check: article matches sprint primary cluster ----
+  // Check if this article's pillarId matches the current sprint target
+  try {
+    const stateFile = path.join(ROOT_DIR, "research/agents/state.json");
+    if (fs.existsSync(stateFile)) {
+      const state = JSON.parse(fs.readFileSync(stateFile, "utf-8"));
+      const sprintCluster = state.currentCluster || "website-setup";
+      if (pillarId && validPillars.includes(pillarId) && pillarId !== sprintCluster) {
+        warnings.push({ gate: "S1", rule: "Sprint cluster mismatch", message: `Article pillar "${pillarId}" differs from current sprint cluster "${sprintCluster}". Consider aligning with sprint focus.` });
+      }
+    }
+  } catch {}
 
   const score = Math.max(0, 100 - failures.length * 5);
   const passed = failures.length === 0;

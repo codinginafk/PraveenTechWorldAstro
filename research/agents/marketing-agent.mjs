@@ -10,7 +10,7 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 const ARTICLES_DIR = path.resolve(__dirname, "../../src/content/articles");
 const REPORTS_DIR = path.resolve(__dirname, "../reports");
 const STATE_FILE = path.join(__dirname, "state.json");
-const ALL_PILLARS = ["ai-tools","ai-workflows","productivity","windows-fixes","android-fixes","career-growth","automation","privacy","security","free-software"];
+const ALL_PILLARS = ["website-setup","windows-fixes","hosting-infra","ai-websites"];
 
 const GOALS_DIR = path.join(REPORTS_DIR, "goals");
 const DAILY_GOALS_DIR = path.join(GOALS_DIR, "daily");
@@ -87,7 +87,7 @@ export async function runMarketing() {
   // Competitor trends
   let competitorNote = "";
   try {
-    const url = "https://news.google.com/rss/search?q=tech+tips+guide+how+to+2026+AI+privacy+productivity+Windows+Android&hl=en-US&gl=US&ceid=US:en";
+    const url = "https://news.google.com/rss/search?q=Windows+troubleshooting+Google+Search+Console+website+setup+2026&hl=en-US&gl=US&ceid=US:en";
     const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
     const xml = await res.text();
     const titles = [...xml.matchAll(/<title>(.*?)<\/title>/g)].slice(1, 6).map((m) => m[1]);

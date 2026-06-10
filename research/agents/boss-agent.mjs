@@ -7,120 +7,220 @@ import { buildReport, writeReport, getReportPath } from "./lib/report.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RESEARCH_DIR = path.resolve(__dirname, "../research");
 const ARTICLES_DIR = path.resolve(__dirname, "../../src/content/articles");
+const VALID_PILLARS = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites"];
 
-const MISSIONS = [
-  "FOCUS PRIORITY: Windows troubleshooting and system repair articles. Write about reinstalling, resetting, fixing blue screens, driver issues, viruses, slow performance, gaming FPS. These have highest ROI for clicks.",
-  "Articles must answer a real question a human would search for when their PC breaks.",
-  "Content must be diagnostic and technical — prioritize clarity over fluff.",
-  "Pillar balance is SUSPENDED for windows-fixes. Write as many Windows articles as needed.",
-  "Every article must use the structured SEO template: Direct Answer, When It Works/Doesn't Work, Step-by-Step, Decision Summary.",
-];
-
-const PILLARS = ["ai-tools", "ai-workflows", "productivity", "windows-fixes", "android-fixes", "career-growth", "automation", "privacy", "security", "free-software"];
+// Scoring weights (out of 10)
+const SCORING = {
+  IMPRESSIONS_WEIGHT: 0.40,  // Already getting GSC impressions → 40%
+  SUPPORTS_CLUSTER_WEIGHT: 0.30, // Strengthens existing cluster → 30%
+  LOW_COMPETITION_WEIGHT: 0.20,  // Low competition → 20%
+  EVERGREEN_WEIGHT: 0.10,       // Will be searched next year → 10%
+};
 
 function countPillarDistribution() {
-  if (!fs.existsSync(ARTICLES_DIR)) return {};
-  const files = fs.readdirSync(ARTICLES_DIR).filter((f) => f.endsWith(".mdx"));
-  const counts = {};
-  for (const f of files) {
+  const counts = { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0 };
+  if (!fs.existsSync(ARTICLES_DIR)) return counts;
+  for (const f of fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx"))) {
     try {
       const content = fs.readFileSync(path.join(ARTICLES_DIR, f), "utf-8");
-      const match = content.match(/category:\s*(\S+)/);
-      if (match) {
-        const cat = match[1];
-        counts[cat] = (counts[cat] || 0) + 1;
-      }
-    } catch { /* skip */ }
+      const pillarMatch = content.match(/pillarId:\s*(\S+)/);
+      const catMatch = content.match(/category:\s*(\S+)/);
+      const id = pillarMatch?.[1] || catMatch?.[1] || "";
+      if (counts[id] !== undefined) counts[id]++;
+    } catch {}
   }
   return counts;
 }
 
-function pillarIsBalanced(pillar) {
-  const dist = countPillarDistribution();
-  const total = Object.values(dist).reduce((a, b) => a + b, 0);
-  if (total === 0) return true;
-  const count = dist[pillar] || 0;
-  return (count / total) <= 0.4;
+function checkHubPages() {
+  const hubDir = path.resolve(__dirname, "../../src/content/hubs");
+  if (!fs.existsSync(hubDir)) return {};
+  return Object.fromEntries(fs.readdirSync(hubDir).filter(f => f.endsWith(".mdx")).map(f => [f.replace(/\.mdx$/, ""), true]));
 }
 
-export async function runBoss(scoredTopics, { articlesToday = 0, articlesTotal = 0, goalsMet = [], goalsMissed = [] } = {}) {
-  log("[Boss/CEO Agent] Starting review...");
-  ensureDir(path.join(RESEARCH_DIR, "approved"));
+// FOUR QUESTION FILTER
+function applyFourQuestionFilter(title, snippet, clusterId) {
+  const lower = ((title || "") + " " + (snippet || "")).toLowerCase();
 
-  if (!scoredTopics || scoredTopics.length === 0) {
-    log("[Boss/CEO] No topics to review.");
-    return [];
+  // Q1: Which cluster does this belong to?
+  let detectedCluster = null;
+  for (const p of VALID_PILLARS) {
+    if (lower.includes(p.replace(/-/g, " ")) || lower.includes(p)) {
+      detectedCluster = p;
+      break;
+    }
+  }
+  // Heuristic cluster detection
+  if (/search console|analytics|sitemap|indexing|verification|tracking/i.test(lower)) detectedCluster = "website-setup";
+  else if (/windows|error|fix|reinstall|reset|recovery|boot|driver|crash|bsod/i.test(lower)) detectedCluster = "windows-fixes";
+  else if (/hosting|domain|dns|ssl|cloudflare|github pages/i.test(lower)) detectedCluster = "hosting-infra";
+  else if (/ai.*blog|ai.*seo|ai.*content|ai.*keyword/i.test(lower)) detectedCluster = "ai-websites";
+
+  if (!detectedCluster) {
+    return { pass: false, reason: "Q1: No valid cluster. REJECT." };
   }
 
-  // Filter: only pass >= 7 overall score
-  const pass = scoredTopics.filter((t) => (t.overallScore || 0) >= 7);
-
-  if (pass.length === 0) {
-    log("[Boss/CEO] No topics scored high enough. Relaxing threshold to 6.");
-    // Relax to 6 if none pass
-    pass.push(...scoredTopics.filter((t) => (t.overallScore || 0) >= 6));
+  if (clusterId && detectedCluster !== clusterId) {
+    return { pass: false, reason: `Q1: Topic belongs to "${detectedCluster}" not current sprint cluster "${clusterId}". REJECT.` };
   }
 
-  // Pick up to 2, respecting pillar balance (except windows-fixes which is priority)
+  // Q2: Does it strengthen an existing cluster?
+  // (Checked by checking if we already have articles in this cluster)
+  const existingCount = countPillarDistribution()[detectedCluster] || 0;
+  if (existingCount === 0 && detectedCluster !== clusterId) {
+    // Don't start a new cluster mid-sprint unless it's the sprint's secondary
+  }
+
+  // Q3: Can it link to at least 3 existing articles?
+  // (Deferred to generation time — checked when generating internal links)
+
+  // Q4: Will people search this next year?
+  const trendyPatterns = [/2024|2025/, /news$/, /announced/, /released/, /launch/, /vs\s+\w+\s+\d/];
+  const isTrendy = trendyPatterns.some(p => p.test(lower));
+  if (isTrendy && /2024|2025/.test(lower)) {
+    return { pass: false, reason: "Q4: Year-specific (2024/2025) — unlikely to be searched next year. REJECT." };
+  }
+
+  // Check for off-strategy topics
+  const offStrategy = ["android phone", "iphone", "resume", "fashion", "health", "crypto", "nft", "playstation", "linux"];
+  if (offStrategy.some(t => lower.includes(t))) {
+    return { pass: false, reason: "Off-strategy topic. REJECT." };
+  }
+
+  return { pass: true, cluster: detectedCluster };
+}
+
+// SCORING FRAMEWORK — 40/30/20/10
+function scoreTopic(title, snippet, clusterId, context) {
+  const lower = ((title || "") + " " + (snippet || "")).toLowerCase();
+
+  // Factor 1: Already Getting Impressions (40%)
+  let impressionsScore = 0;
+  if (context.gscMomentum && context.gscMomentum[clusterId]) {
+    const momentum = context.gscMomentum[clusterId];
+    if (momentum.totalImpressions > 100) impressionsScore = 10;
+    else if (momentum.totalImpressions > 50) impressionsScore = 8;
+    else if (momentum.totalImpressions > 10) impressionsScore = 6;
+    else if (momentum.totalImpressions > 0) impressionsScore = 4;
+  }
+  // If GSC shows this specific query getting impressions, bonus
+  if (context.gscQueries) {
+    const queryMatch = context.gscQueries.some(q => lower.includes(q.toLowerCase()));
+    if (queryMatch) impressionsScore = Math.max(impressionsScore, 9);
+  }
+
+  // Factor 2: Can Support Existing Articles (30%)
+  const clusterCount = context.pillarDistribution?.[clusterId] || 0;
+  let supportScore = 0;
+  if (clusterCount > 20) supportScore = 10; // Large cluster — every new article adds depth
+  else if (clusterCount > 10) supportScore = 8;
+  else if (clusterCount > 5) supportScore = 6;
+  else if (clusterCount > 0) supportScore = 4;
+  else supportScore = 2; // First article in cluster
+
+  // Factor 3: Low Competition (20%)
+  // Problem-based titles have lower competition
+  const isProblemTitle = /fix|error|not working|won.t|can.t|doesn.t|failed|stuck|how to/i.test(lower);
+  const isListicle = /best|top|vs|review|comparison|alternative/i.test(lower);
+  let competitionScore = 0;
+  if (isProblemTitle) competitionScore = 9;
+  else if (!isListicle) competitionScore = 6;
+  else competitionScore = 2;
+
+  // Factor 4: Evergreen (10%)
+  const isYearSped = /2026|2027/.test(title);
+  const isEvergreen = !/2024|2025/.test(title) && !lower.includes("news") && !lower.includes("announced");
+  let evergreenScore = isEvergreen ? (isYearSped ? 8 : 10) : 2;
+
+  // Compute weighted total
+  const total = (
+    impressionsScore * SCORING.IMPRESSIONS_WEIGHT +
+    supportScore * SCORING.SUPPORTS_CLUSTER_WEIGHT +
+    competitionScore * SCORING.LOW_COMPETITION_WEIGHT +
+    evergreenScore * SCORING.EVERGREEN_WEIGHT
+  );
+
+  return {
+    total: Math.round(total * 10) / 10,
+    breakdown: {
+      impressions: impressionsScore,
+      supportsCluster: supportScore,
+      lowCompetition: competitionScore,
+      evergreen: evergreenScore,
+    },
+  };
+}
+
+export async function runBoss(candidates, context) {
+  log("[Boss Agent] Scoring and filtering candidates...");
+  const pillarDist = countPillarDistribution();
+  const hubs = checkHubPages();
+  const currentCluster = context.currentCluster || "website-setup";
+
+  // Build GSC query list if available
+  const gscQueries = [];
+  if (context.gscMomentum) {
+    for (const [cluster, data] of Object.entries(context.gscMomentum)) {
+      if (data.topQuery) gscQueries.push(data.topQuery.query);
+    }
+  }
+
   const approved = [];
-  const pillarCounts = {};
-  for (const topic of pass) {
-    const pillar = topic.pillarFit || "unknown";
-    if (!PILLARS.includes(pillar)) continue;
-    if (pillar !== "windows-fixes" && !pillarIsBalanced(pillar)) {
-      log(`  Skipping: ${topic.topic?.title?.slice(0, 50)}... (${pillar} at limit)`);
+  const rejected = [];
+
+  for (const c of candidates) {
+    const title = c.seoTitle || c.topic?.title || "";
+    const snippet = c.topic?.snippet || "";
+    const topicCluster = c.pillarId || currentCluster;
+
+    // Q1-Q4 Filter
+    const filterResult = applyFourQuestionFilter(title, snippet, topicCluster);
+    if (!filterResult.pass) {
+      rejected.push({ title, reason: filterResult.reason });
       continue;
     }
-    if (approved.length >= 2) break;
-    approved.push(topic);
-    pillarCounts[pillar] = (pillarCounts[pillar] || 0) + 1;
+
+    const detectedCluster = filterResult.cluster || topicCluster;
+
+    // Score using 40/30/20/10 framework
+    const score = scoreTopic(title, snippet, detectedCluster, {
+      ...context,
+      pillarDistribution: pillarDist,
+      gscQueries,
+    });
+
+    // Reject if score < 5
+    if (score.total < 5) {
+      rejected.push({ title, reason: `Score ${score.total}/10 — too low. Breakdown: ${JSON.stringify(score.breakdown)}` });
+      continue;
+    }
+
+    approved.push({
+      ...c,
+      bossScore: score.total,
+      scoreBreakdown: score.breakdown,
+      pillarId: detectedCluster,
+      hubSlug: hubs[detectedCluster.replace(/-/g, "")] ? detectedCluster.replace(/-/g, "") : null,
+    });
+
+    log(`  APPROVED (${score.total}/10): ${title.slice(0, 60)}`);
   }
 
-  log(`  Approved: ${approved.length} topics`);
-
-  // Write approved topics
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  const approvedPath = path.join(RESEARCH_DIR, "approved", `${timestamp}.json`);
-  fs.writeFileSync(approvedPath, JSON.stringify(approved, null, 2), "utf-8");
-
-  // Write report.md
-  const supplyChainIssues = [];
-    if (pass.length < 2) supplyChainIssues.push(`Low topic quality: only ${pass.length} topics passed SEO threshold.`);
-  if (articlesToday === 0) supplyChainIssues.push("No articles published yet today.");
-
-  const improvements = [];
-  if (pass.length > 0 && approved.length === 0) {
-    improvements.push("All passing topics hit pillar imbalance (non-Windows). Consider focusing on Windows-fixes topics.");
+  for (const r of rejected) {
+    log(`  REJECTED: ${r.title.slice(0, 50)} — ${r.reason.slice(0, 80)}`);
   }
 
-  const report = buildReport({
-    articlesToday,
-    articlesTotal,
-    topicsApproved: approved.length,
-    topicsRejected: pass.length - approved.length,
-    supplyChainIssues,
-    improvements,
-    goalsMet,
-    goalsMissed,
-  });
-  writeReport(report);
-
-  log("[Boss/CEO] Report written.");
+  approved.sort((a, b) => b.bossScore - a.bossScore);
+  log(`[Boss Agent] Approved ${approved.length}/${candidates.length} candidates`);
   return approved;
 }
 
-// CLI
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const compDir = path.join(RESEARCH_DIR, "competitive");
-  if (!fs.existsSync(compDir)) {
-    console.error("No competitive analysis found. Run seo-analysis first.");
-    process.exit(1);
+  const topicsFile = process.argv[2];
+  if (topicsFile) {
+    const data = JSON.parse(fs.readFileSync(topicsFile, "utf-8"));
+    runBoss(data.topics || [], {}).catch(console.error);
+  } else {
+    console.log("Usage: node boss-agent.mjs <topics-file.json>");
   }
-  const files = fs.readdirSync(compDir).filter((f) => f.endsWith(".json")).sort().reverse();
-  if (files.length === 0) {
-    console.error("No SEO analysis files found.");
-    process.exit(1);
-  }
-  const latest = JSON.parse(fs.readFileSync(path.join(compDir, files[0]), "utf-8"));
-  runBoss(latest).catch(console.error);
 }

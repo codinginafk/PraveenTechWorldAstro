@@ -168,7 +168,7 @@ function checkBossApproval(approved) {
   if (!Array.isArray(approved)) return { issues: ["approved is not an array"], warnings: [] };
   if (approved.length === 0) return { issues: ["No topics approved by Boss"], warnings: [] };
 
-  const validPillars = ["ai-tools", "ai-workflows", "productivity", "windows-fixes", "android-fixes", "career-growth", "automation", "privacy", "security", "free-software"];
+  const validPillars = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites"];
   const invalidPillar = approved.filter((a) => a.pillarFit && !validPillars.includes(a.pillarFit));
   if (invalidPillar.length > 0) issues.push(`${invalidPillar.length} approved topics have invalid pillarFit: ${invalidPillar.map((a) => a.pillarFit).join(", ")}`);
 

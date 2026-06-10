@@ -71,6 +71,7 @@ export function parseArticle(filePath) {
     faq: fm.faq,
     featured: fm.featured || false,
     readingTime: fm.readingTime || "",
+    pillarId: fm.pillarId || "",
     slug,
     body,
     file: path.basename(filePath),

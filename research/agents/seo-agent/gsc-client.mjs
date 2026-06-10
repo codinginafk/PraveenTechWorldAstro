@@ -203,6 +203,43 @@ export async function checkUrlIndexed(urlPath) {
   };
 }
 
+export async function getGscPerformance(daysBack = 7) {
+  log("[GSC Client] Fetching Search Analytics data...");
+  try {
+    const serviceAccountPath = getServiceAccountPath();
+    if (!fs.existsSync(serviceAccountPath)) {
+      log("  No service account key found. Skipping.");
+      return null;
+    }
+    const { google } = await import("googleapis");
+    const auth = new google.auth.GoogleAuth({
+      keyFile: serviceAccountPath,
+      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
+    });
+    const webmasters = await google.webmasters({ version: "v3", auth });
+
+    const startDate = new Date(Date.now() - daysBack * 86400000).toISOString().split("T")[0];
+    const endDate = new Date().toISOString().split("T")[0];
+
+    const response = await webmasters.searchanalytics.query({
+      siteUrl: GSC_SITE_URL,
+      requestBody: {
+        startDate,
+        endDate,
+        dimensions: ["query"],
+        rowLimit: 25,
+      },
+    });
+
+    const rows = response.data.rows || [];
+    log(`  Got ${rows.length} query rows from GSC`);
+    return { rows, startDate, endDate };
+  } catch (err) {
+    log(`  GSC API error: ${err.message}`);
+    return null;
+  }
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const cmd = process.argv[2] || "ping";
   const actions = {
@@ -210,6 +247,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     indexnow: pingIndexNow,
     pingomatic: pingPingomatic,
     submit: submitSitemapViaGscApi,
+    performance: getGscPerformance,
   };
   const action = actions[cmd] || actions.ping;
   action().catch((err) => {

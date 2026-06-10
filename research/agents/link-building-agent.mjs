@@ -100,9 +100,9 @@ async function checkResourcePages() {
 
 async function generateLLMSuggestions() {
   log("[LinkBuilding] Getting LLM suggestions for guest post + resource sites...");
-  const systemPrompt = `You are a link-building strategist. Suggest 10 specific websites that accept guest posts about tech/Android/Windows/AI/privacy topics. For each site, provide: name, URL, and topic focus. Format as JSON array of objects with keys: name, url, topic.`;
+  const systemPrompt = `You are a link-building strategist. Suggest 10 specific websites that accept guest posts about Windows troubleshooting, website setup (Google Search Console, Google Analytics), web hosting, and AI for website owners. For each site: name, URL, topic focus. Format as JSON array: [{name, url, topic}].`;
 
-  const userPrompt = `I run a tech blog at praveentechworld.com covering Android tips, Windows fixes, AI productivity, privacy, automation, and career growth. Suggest 10 sites that would accept a guest post on these topics.`;
+  const userPrompt = `My site praveentechworld.com covers Windows troubleshooting, website setup with Search Console and Analytics, web hosting guides, and AI tools for website owners. Suggest 10 sites that accept guest posts on these topics.`;
 
   try {
     const result = await callLLM(systemPrompt, userPrompt, { temperature: 0.5, maxTokens: 2048 });
@@ -143,7 +143,7 @@ async function generateGrowthTactics() {
   log("[LinkBuilding] Generating free growth tactics via LLM...");
   const state = loadState();
   const contactedCount = (state.contacted || []).length;
-  const systemPrompt = "You are a growth marketing expert for a tech blog. Suggest 5 free or low-cost link-building and growth tactics specifically for a new tech blog (praveentechworld.com) that publishes guides on Android, Windows, AI, privacy, automation, and career growth. Focus on actionable, specific tactics. Return as a numbered list with a brief explanation for each.";
+  const systemPrompt = "You are a growth marketing expert for a knowledge base. Suggest 5 free or low-cost link-building and growth tactics specifically for praveentechworld.com, which publishes guides on Windows troubleshooting, website setup (Search Console, Analytics), web hosting, and AI for website owners. Focus on actionable, specific tactics. Return as a numbered list with a brief explanation for each.";
   const userPrompt = `The blog has ${(state.opportunities || []).length} link opportunities found and has contacted ${contactedCount} sites so far. Suggest the next 5 best growth tactics to prioritize.`;
   try {
     return await callLLM(systemPrompt, userPrompt, { temperature: 0.7, maxTokens: 2048 });
@@ -156,7 +156,7 @@ async function generateGrowthTactics() {
 async function generateOutreachEmail(siteUrl, siteTitle) {
   const systemPrompt = "You are an outreach specialist. Write a short, personalized guest post pitch email (max 150 words). Be friendly, specific about the value you provide, and suggest 2 article topics. Sign as \"Praveen from praveentechworld.com\"";
 
-  const userPrompt = `Write a guest post pitch for ${siteTitle} (${siteUrl}). Topics I can write about: Android tips, Windows fixes, AI productivity, privacy guides, automation, career growth in tech.`;
+  const userPrompt = `Write a guest post pitch for ${siteTitle} (${siteUrl}). Topics I can write about: Windows troubleshooting, website setup with Google tools, web hosting guides, and using AI to grow websites.`;
   try {
     return await callLLM(systemPrompt, userPrompt, { temperature: 0.7, maxTokens: 1024 });
   } catch (err) {
