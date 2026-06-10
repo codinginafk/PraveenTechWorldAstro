@@ -4,8 +4,10 @@ import { fileURLToPath } from "url";
 import { log } from "./shared.mjs";
 import { parseArticle } from "./syndication.mjs";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const SITE_URL = "https://www.praveentechworld.com";
-const AGENTS_DIR = path.resolve(import.meta.dirname, "..");
+const AGENTS_DIR = path.resolve(__dirname, "..");
 const OUTPUT_DIR = path.join(AGENTS_DIR, "linkedin-posts");
 
 function ensureDir(dir) {
@@ -134,7 +136,7 @@ export async function publishToLinkedIn(post) {
 }
 
 export function generateLinkedInPostForLatest() {
-  const articlesDir = path.resolve(import.meta.dirname, "../../src/content/articles");
+  const articlesDir = path.resolve(__dirname, "../../../src/content/articles");
   if (!fs.existsSync(articlesDir)) {
     log("[LinkedIn] Articles directory not found");
     return null;
@@ -162,7 +164,7 @@ export async function runLinkedInSyndication() {
 
   const linkedInSyndicated = state.linkedInSyndicated || [];
 
-  const articlesDir = path.resolve(import.meta.dirname, "../../src/content/articles");
+  const articlesDir = path.resolve(__dirname, "../../../src/content/articles");
   if (!fs.existsSync(articlesDir)) return [];
 
   const files = fs.readdirSync(articlesDir)
