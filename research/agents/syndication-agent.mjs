@@ -105,6 +105,23 @@ export async function runSyndication() {
     }
   }
 
+  // Post to Twitter/X via Buffer
+  const bufferToken = process.env.BUFFER_ACCESS_TOKEN || process.env.BUFFER_API_KEY;
+  if (bufferToken) {
+    try {
+      const { postArticleToTwitter } = await import("./lib/buffer-client.mjs");
+      const post = await postArticleToTwitter(article);
+      if (post) {
+        log(`  Buffer/Twitter: "${article.title}"`);
+        results.push({ platform: "buffer", file, ok: true });
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    } catch (err) {
+      log(`  Buffer/Twitter FAILED: ${file} — ${err.message}`);
+      results.push({ platform: "buffer", file, ok: false, error: err.message });
+    }
+  }
+
   const bloggerToken = process.env.BLOGGER_ACCESS_TOKEN;
   const bloggerBlogId = process.env.BLOGGER_BLOG_ID;
   if (bloggerToken && bloggerBlogId) {
