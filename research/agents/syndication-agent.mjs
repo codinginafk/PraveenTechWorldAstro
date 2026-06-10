@@ -72,7 +72,7 @@ export async function runSyndication() {
     return { ok: true, syndicated: 0, total: 0 };
   }
 
-  post to Dev.to
+  // post to Dev.to
   if (devtoKey) {
     try {
       const post = await devtoPost(article, devtoKey);
