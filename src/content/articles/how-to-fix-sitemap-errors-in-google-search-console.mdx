@@ -1,0 +1,151 @@
+---
+title: "How to Fix Sitemap Errors in Google Search Console"
+description: "Complete guide to fixing every Google Search Console sitemap error: Couldn't fetch, Has errors, URLs not indexed, and more. Step-by-step fixes with screenshots."
+imageCredit: "Photo by Peaky Frames on Unsplash"
+coverImage: "https://images.unsplash.com/photo-1732017968601-f46d9badf229?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxzaXRlbWFwJTIwWE1MfGVufDB8fHx8MTc4MTA4NjQzNHww&ixlib=rb-4.1.0&w=1200&h=600&fit=crop"
+imageAlt: "Computer screen showing XML sitemap code on a desk"
+publishDate: 2026-06-10
+author: praveen
+category: website-setup
+pillarId: website-setup
+tags:
+  - google search console
+  - sitemap
+  - website indexing
+  - seo
+  - technical seo
+seoTitle: "How to Fix Sitemap Errors in Google Search Console"
+socialHook: "Your sitemap says Has errors in GSC but you are not sure what is wrong. Here is every error type and exactly how to fix it, in the order you should check."
+faq:
+  - question: "Why does Google Search Console say Couldn't fetch for my sitemap?"
+    answer: "This means Googlebot tried to download your sitemap but could not access it. Check that the sitemap URL is correct, the file is at the right path, and your server is not blocking Googlebot's IP addresses. Also verify that your sitemap is not password-protected."
+  - question: "How long after submitting a sitemap does Google crawl it?"
+    answer: "Google typically crawls a newly submitted sitemap within a few hours to a few days. If it has been over a week and the status still shows Pending or Couldn't fetch, there is likely an accessibility issue with your sitemap file."
+  - question: "Can I submit multiple sitemaps to Google Search Console?"
+    answer: "Yes. You can submit multiple sitemaps and use a sitemap index file to organize them. Each sitemap can have up to 50,000 URLs and be up to 50MB (uncompressed). If you have more than 50,000 URLs, create a sitemap index that points to multiple sitemap files."
+  - question: "Should I include noindex pages in my sitemap?"
+    answer: "No. Never include pages with noindex tags in your sitemap. This sends Google confusing signals. If a page has a noindex directive, remove it from your sitemap until you are ready for it to be indexed."
+  - question: "Does fixing sitemap errors automatically improve rankings?"
+    answer: "Not directly. Fixing sitemap errors ensures Google can find and crawl your pages. This is a prerequisite for ranking, not a ranking booster itself. But if Google cannot find your pages due to sitemap errors, they cannot rank at all."
+---
+You open Google Search Console and see a red error next to your sitemap. Couldn't fetch. Has errors. URLs not indexed. It is frustrating because you know your site is live. You can visit it in your browser. But Google keeps telling you something is wrong.
+
+I have submitted sitemaps for dozens of sites and hit every error in the book. Here is every sitemap error GSC shows, what it actually means, and exactly how to fix each one.
+
+## Direct Answer
+
+Sitemap errors in GSC mean Google tried to read your sitemap file but ran into a problem. The fix depends on the error type. Couldn't fetch means Google cannot access the file. Has errors means the file is malformed. URLs not indexed means Google found the sitemap but chose not to include some pages. Each has a different fix, and I cover all of them below.
+
+## Error 1: Couldn't Fetch
+
+This is the most common sitemap error. It means Googlebot tried to download your sitemap file and got nothing back.
+
+Here is what to check:
+
+First, type your sitemap URL directly into a browser. Go to `https://www.yoursite.com/sitemap.xml` and see if the XML loads. If it shows a 404 page, your sitemap file does not exist at that path. Move it to the correct location or update the path in GSC.
+
+If the XML loads in your browser but GSC still says Couldn't fetch, the issue is likely a server block. Googlebot might be blocked by your firewall, CDN, or server config. Check your server logs for requests from Googlebot's IP ranges. If you use Cloudflare, make sure the security level is not blocking Googlebot.
+
+Another common cause: your sitemap is behind a password-protected staging site. If your site requires a login to access, Googlebot cannot get in. Make sure the sitemap is publicly accessible.
+
+## Error 2: Has Errors
+
+If GSC says Has errors but does not give you much detail, the sitemap file itself has a formatting problem. Open the sitemap URL in your browser and view the raw XML.
+
+Common structural errors include:
+
+- Missing closing tags. Every `<url>` tag must have a `</url>` closing tag.
+- Invalid XML characters. Certain characters like & < > " and ' must be escaped as `&amp;` `&lt;` `&gt;` etc.
+- Wrong namespace. The sitemap XML must start with the correct namespace declaration: `xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"`.
+- Encoding issues. Save your sitemap as UTF-8 without BOM.
+
+You can use an XML validator like validator.w3.org to check your sitemap file. Paste your sitemap URL into the validator and it will tell you exactly which line has the error.
+
+## Error 3: URLs Not Indexed
+
+This is a tricky one. Your sitemap submitted fine, the status shows Success, but the Index Coverage report shows that many URLs from your sitemap are not indexed.
+
+Google looks at every URL in your sitemap and decides whether to index it. If your sitemap includes pages that are low quality, duplicate, or blocked by noindex tags, Google will skip them.
+
+Check each non-indexed URL using the URL Inspection tool in GSC. The tool will tell you exactly why the page was not indexed. Common reasons:
+
+- Page has a noindex tag. Remove the tag and request indexing.
+- Page is a duplicate of another page. Add a canonical URL pointing to the original.
+- Page is blocked by robots.txt. Check your robots.txt file and allow the path.
+- Page is too new. Google has not crawled it yet. Request indexing manually.
+
+## Error 4: Sitemap is Too Large
+
+GSC has strict limits on sitemap files. Each sitemap can contain a maximum of 50,000 URLs and be no larger than 50MB uncompressed (or 10MB when gzipped).
+
+If your sitemap exceeds either limit, Google will stop processing it. The fix is to split your sitemap into multiple files and use a sitemap index file to organize them.
+
+For example, create separate sitemaps for your blog posts, your product pages, and your category pages. Then create a sitemap index file that references all of them:
+
+```
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://www.yoursite.com/sitemap-posts.xml</loc>
+  </sitemap>
+  <sitemap>
+    <loc>https://www.yoursite.com/sitemap-pages.xml</loc>
+  </sitemap>
+</sitemapindex>
+```
+
+Submit just the sitemap index file to GSC instead of the individual files.
+
+## Error 5: Sitemap Contains Noindex URLs
+
+This is a logic error that GSC will warn you about. If your sitemap includes URLs that have a noindex robots meta tag, Google sees this as a contradiction. You are telling Google to both include and exclude the page.
+
+Go through your sitemap and remove any URL that has a noindex directive. Wait for Google to recrawl the sitemap and the warnings will clear.
+
+## Error 6: Redirect in Sitemap
+
+Every URL in your sitemap should return a 200 status code. If any URL redirects (301, 302) to another page, GSC will flag it.
+
+Either update your sitemap with the final destination URL, or fix the redirect so the original URL returns 200. The sitemap should always contain the canonical version of each URL.
+
+## Error 7: Sitemap URL is Blocked by robots.txt
+
+Googlebot reads your robots.txt file before attempting to crawl your sitemap. If your robots.txt blocks the `Sitemap:` path or the directory where your sitemap lives, Googlebot cannot access it.
+
+Check your robots.txt file at `https://www.yoursite.com/robots.txt`. It should not disallow any paths that your sitemap is in. You should also explicitly declare your sitemap in robots.txt by adding a line like:
+
+```
+Sitemap: https://www.yoursite.com/sitemap.xml
+```
+
+This gives Google an additional way to discover your sitemap.
+
+## Error 8: Sitemap Dates in the Future
+
+Every `<lastmod>` date in your sitemap should be in the past. If your sitemap generator accidentally sets future dates, Google may get confused about when the page was actually updated.
+
+Fix your sitemap generator configuration to use actual last-modified dates. If you are not sure, omit the `<lastmod>` tag entirely. GSC does not require it.
+
+## Decision Summary
+
+If your sitemap shows Couldn't fetch: Check file path, server access, and firewall rules.
+
+If your sitemap shows Has errors: Validate the XML structure with an online validator.
+
+If your sitemap shows URLs not indexed: Check each URL with the URL Inspection tool.
+
+If your sitemap was never submitted: Submit it now from the Sitemaps section in GSC.
+
+## When This Fix Works
+
+These fixes work when the problem is with the sitemap file itself, the server configuration, or the GSC property setup. If you follow the steps above for the specific error you are seeing, your sitemap should show a Success status within a few days.
+
+## When This Does NOT Work
+
+If you fix the error and resubmit but GSC still shows the same error after 7 days, the issue could be a Google-side bug. This is rare but happens. Try removing the sitemap entirely, waiting 24 hours, and submitting it as a new sitemap.
+
+## Related Guides
+
+- [Google Search Console Not Showing Data? 8 Fixes](/blog/google-search-console-not-showing-data-8-fixes)
+- [How to Set Up Google Search Console for Your New Website](/blog/how-to-set-up-google-search-console-for-your-new-website)
+- [Technical SEO Checklist for Beginners](/blog/technical-seo-checklist-for-beginners-fix-these-issues-to-rank-better)
+- [SEO Basics: How to Rank Higher on Google in 2026](/blog/seo-basics-how-to-rank-higher-on-google-in-2026)
