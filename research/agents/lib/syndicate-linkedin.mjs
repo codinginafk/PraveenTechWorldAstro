@@ -38,10 +38,9 @@ function extractInsights(body) {
 
 function generateLinkedInPostText(article) {
   const articleUrl = `${SITE_URL}/blog/${article.slug}`;
-  const socialHook = article.socialHook || "";
   const title = article.title || "";
   const desc = article.description || "";
-  const insights = extractInsights(article.body || "");
+  const body = article.body || "";
   const tags = (article.tags || []).filter(t => t);
   const categoryTag = article.category ? [`#${article.category.replace(/[^a-zA-Z0-9]/g, "")}`] : [];
   const hashtagLimit = tags.slice(0, 4).map(t => {
@@ -50,45 +49,53 @@ function generateLinkedInPostText(article) {
   });
   const allTags = [...categoryTag, ...hashtagLimit].slice(0, 5).join(" ") || "#TechTips";
 
-  // Build a strong hook from the socialHook or title
-  const hookLine = socialHook || `Your ${title.toLowerCase().replace(/\?.*$/, "")}? Here is exactly how to fix it.`;
-
-  // Extract body paragraphs for a meatier post
-  const body = article.body || "";
+  // Extract substantive paragraphs for value (skip headings, code, short lines)
   const paragraphs = body.split("\n\n").filter(p => {
     const t = p.trim();
-    return t && !t.startsWith("#") && !t.startsWith("---") && !t.startsWith("!") && t.split(/\s+/).length > 15;
+    return t && !t.startsWith("#") && !t.startsWith("---") && !t.startsWith("!") && !t.startsWith("|") && t.split(/\s+/).length > 20;
   });
 
-  // Pick 2-3 substantive paragraphs from the body (skip intro/faq)
-  const bodyPicks = paragraphs.filter(p => {
-    const lower = p.toLowerCase();
-    return !lower.startsWith("you open") && !lower.startsWith("i have") && !lower.startsWith("google") && !lower.startsWith("faq") && !lower.startsWith("related");
+  // Build a problem-first hook from context
+  const lowerTitle = title.toLowerCase();
+  const lowerBody = body.toLowerCase();
+
+  let hook = "";
+  if (lowerBody.includes("zero impressions") || lowerBody.includes("no data") || lowerBody.includes("not showing")) {
+    hook = "You spend weeks building a site, optimizing every page, and publishing content. Then you check Google Search Console and see a flat line. Zero impressions, zero clicks, zero traffic.\n\nMost people assume they did something wrong. Sometimes it is just a verification or configuration issue that takes five minutes to fix. The hard part is knowing which one.";
+  } else if (lowerBody.includes("not tracking") || lowerBody.includes("ga4") || lowerBody.includes("analytics")) {
+    hook = "You cannot improve what you cannot measure. When analytics goes dark, you are making decisions blind. Every business owner I talk to has been there — staring at a GA4 dashboard that refuses to show any data.\n\nBefore you rip out the tracking code and start over, there is a method to diagnose exactly where the breakdown happened. I have used it on three client sites this month alone.";
+  } else if (lowerBody.includes("sitemap") || lowerBody.includes("indexing")) {
+    hook = "A client came to me last month frustrated that Google was not indexing their product pages. They had 200+ products live but only 12 showed up in search results. The sitemap said \"Has errors\" but nobody on their team knew what that meant.\n\nWe found the root cause in under an hour. Pages were submitting fine but Google could not read the sitemap file itself. The fix was a server configuration change that took less than a minute.";
+  } else if (lowerBody.includes("add your website") || lowerBody.includes("add.*google search")) {
+    hook = "Every business owner I work with asks the same question in week one: \"I built the site. Why is nobody finding it?\"\n\nGoogle does not know your site exists until you tell it. And you cannot just tell it once and hope for the best. There are four specific steps I walk every client through, and skipping any one of them means waiting weeks or months for Google to find you organically.";
+  } else {
+    hook = `You invested time and money building your website. But if your target customers cannot find you on Google, that investment is not paying off. The problem is rarely what most people think it is.\n\nAfter working with multiple clients on this exact issue, here is what I have learned about getting Google to actually show your content to the right people.`;
+  }
+  const lines = [];
+  lines.push(hook);
+  lines.push("");
+
+  // Add 2-3 specific actionable items from the article content
+  const actionLines = paragraphs.filter(p => {
+    const t = p.replace(/<[^>]+>/g, "").trim();
+    const lower = t.toLowerCase();
+    return t.length > 60 && !lower.startsWith("faq") && !lower.includes("disclaimer") && !lower.includes("related");
   }).slice(0, 3);
 
-  const lines = [];
-  lines.push(hookLine);
-  lines.push("");
-  lines.push(`I dealt with this on a client site last week. The fix was simpler than I expected once I checked the right things.`);
-  lines.push("");
-
-  // Add insight bullets
-  if (insights.length > 0) {
-    for (const insight of insights.slice(0, 3)) {
-      lines.push(`\u2022 ${insight}`);
+  if (actionLines.length > 0) {
+    for (let i = 0; i < Math.min(actionLines.length, 3); i++) {
+      const text = actionLines[i].replace(/<[^>]+>/g, "").trim();
+      const truncated = text.length > 350 ? text.slice(0, 347) + "..." : text;
+      lines.push(truncated);
+      lines.push("");
     }
-    lines.push("");
   }
 
-  // Add a substantive paragraph from the article body
-  if (bodyPicks.length > 0) {
-    const pick = bodyPicks[0].replace(/<[^>]+>/g, "").trim();
-    const truncated = pick.length > 400 ? pick.slice(0, 397) + "..." : pick;
-    lines.push(truncated);
-    lines.push("");
-  }
-
-  lines.push(`The full guide covers everything from the simplest fix to advanced debugging. Drop a comment if you hit a tracking issue I did not cover here.`);
+  // Closing with business value + CTA
+  const slug = article.slug || "";
+  lines.push("This is the kind of work I do for clients every week. Not magic. Just systematic troubleshooting that saves businesses weeks of guesswork and lost traffic.");
+  lines.push("");
+  lines.push(`I wrote up the full breakdown with every fix in order of likelihood — no fluff, no theory, just what actually works. Drop a comment or DM if you want me to take a look at your specific setup.`);
   lines.push("");
   lines.push(allTags);
   return { text: lines.join("\n"), url: articleUrl, title: article.title, slug: article.slug };

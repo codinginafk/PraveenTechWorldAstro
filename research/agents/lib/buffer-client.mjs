@@ -133,27 +133,60 @@ export async function getPosts(channelId = "6a2969198f1d11f9b2705f85", limit = 1
   return data.data?.posts?.edges?.map(e => e.node) || [];
 }
 
-// Tweet text generation (same as syndicate-twitter)
+// Tweet text generation — value-first: the tweet itself teaches something
 function generateTweetText(article) {
   const siteUrl = "https://www.praveentechworld.com";
-  const socialHook = article.socialHook || "";
   const title = article.title || "";
   const slug = article.slug || "";
+  const body = article.body || "";
   const articleUrl = `${siteUrl}/blog/${slug}`;
+  const lower = title.toLowerCase() + " " + body.toLowerCase().slice(0, 500);
   const tags = (article.tags || []).slice(0, 2).map(t => `#${t.replace(/[^a-zA-Z0-9]/g, "")}`).join(" ");
 
-  if (socialHook) {
-    const text = `${socialHook} ${articleUrl} ${tags}`.trim();
-    if (text.length <= 280) return text;
-    const maxHookLen = 280 - articleUrl.length - tags.length - 3;
-    const truncated = socialHook.length > maxHookLen ? socialHook.slice(0, maxHookLen - 1) + "…" : socialHook;
-    return `${truncated} ${articleUrl} ${tags}`.trim();
+  // URL counts as ~23 chars on Twitter, leave room: 280 - 23(url) - 15(tags) - 5(spaces) = ~237
+  const maxText = 237;
+
+  // Pick a value-first tweet based on article content
+  let tweet = "";
+
+  if (lower.includes("zero") || lower.includes("no data") || lower.includes("not showing")) {
+    tweet = `GSC showing zeros? 90% of the time it is one of three things: (1) wrong property type, (2) verification dropped, or (3) DNS change broke the connection. Check these before touching anything else.`;
+  } else if (lower.includes("sitemap") && lower.includes("error")) {
+    tweet = `Sitemap "Couldn't fetch" error usually means your server blocks Googlebot. Check robots.txt first. If that is clean, your server might be rate-limiting crawlers. A quick .htaccess fix solves it.`;
+  } else if (lower.includes("add.*google") || lower.includes("add your website") || lower.includes("get indexed")) {
+    tweet = `New site not on Google? You do not need to submit to 100 search engines. Two steps: (1) verify in Search Console, (2) submit sitemap.xml. Google indexes you within 24-72h after that.`;
+  } else if (lower.includes("ga4") || lower.includes("analytics") || lower.includes("tracking")) {
+    tweet = `GA4 showing zero users but you know people visit? Your measurement ID might have changed during a site migration. Check your G-XXXXXX code matches what is actually in your site header.`;
+  } else if (lower.includes("windows") || lower.includes("update") || lower.includes("error")) {
+    tweet = `Windows update stuck? Run "sfc /scannow" from an admin command prompt. Catches 80% of update-related corruption. If that fails, DISM /Online /Cleanup-Image /RestoreHealth usually finishes the job.`;
+  } else if (lower.includes("password") || lower.includes("security")) {
+    tweet = `Your password manager is only as secure as your master password. Use a passphrase (4+ random words) instead of a short complex string. Easier to remember, harder to crack.`;
+  } else if (lower.includes("backlink") || lower.includes("link building")) {
+    tweet = `Backlinks from sites your actual customers read matter more than DA 90 spam links. One relevant link from a niche industry blog beats 50 directory submissions. Quality over quantity, always.`;
+  } else if (lower.includes("speed") || lower.includes("performance") || lower.includes("slow")) {
+    tweet = `Site speed tip most people miss: lazy load below-the-fold images AND defer non-critical CSS. Two lines of code can drop your LCP by 40%. Google PageSpeed Insights will show you exactly what to defer.`;
+  } else if (lower.includes("seo") || lower.includes("rank")) {
+    tweet = `Ranking tip: Google prioritizes pages that answer the query immediately. Put your answer in the first 100 words, not buried after 3 paragraphs of intro. Front-load value, back-load context.`;
+  } else {
+    // Fallback: pull a useful sentence from the article body
+    const sentences = body.match(/[A-Z][^.!?]*[.!?]/g) || [];
+    const useful = sentences.filter(s => s.split(" ").length > 8 && s.split(" ").length < 25 && !s.toLowerCase().includes("disclaimer") && !s.toLowerCase().includes("this article") && !s.toLowerCase().includes("click here"));
+    if (useful.length > 0) {
+      tweet = useful[0].trim();
+    } else {
+      tweet = title;
+    }
   }
 
-  const text = `${title} ${articleUrl} ${tags}`.trim();
-  if (text.length <= 280) return text;
-  const maxTitleLen = 280 - articleUrl.length - tags.length - 3;
-  const truncated = title.length > maxTitleLen ? title.slice(0, maxTitleLen - 1) + "…" : title;
+  // Fit within character limit
+  const full = `${tweet} ${articleUrl} ${tags}`.trim();
+  if (full.length <= 280) return full;
+
+  // Truncate tweet text to fit
+  const urlLength = 23; // Twitter treats all URLs as 23 chars
+  const tagsLength = tags ? tags.length + 1 : 0;
+  const available = 280 - urlLength - tagsLength;
+  const truncated = tweet.length > available ? tweet.slice(0, available - 1) + "…" : tweet;
   return `${truncated} ${articleUrl} ${tags}`.trim();
 }
 
