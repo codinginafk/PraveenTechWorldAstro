@@ -23,7 +23,7 @@ function extractMeta(html, urlPath) {
   }
 
   // Meta description
-  const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i);
+        const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i) || html.match(/<meta\s+name='description'\s+content='([^']*)'/i);
   const desc = descMatch ? descMatch[1].trim() : "";
   if (!desc) {
     findings.push({ type: "missing_description", severity: "HIGH", page: urlPath, message: "Page is missing meta description" });
@@ -161,7 +161,7 @@ export async function runPageAudit() {
           if (!titleMap[t]) titleMap[t] = [];
           titleMap[t].push(urlPath);
         }
-        const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i);
+  const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i) || html.match(/<meta\s+name='description'\s+content='([^']*)'/i);
         if (descMatch) {
           const d = descMatch[1].trim().toLowerCase();
           if (!descMap[d]) descMap[d] = [];
