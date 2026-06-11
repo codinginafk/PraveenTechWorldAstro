@@ -1,0 +1,149 @@
+---
+title: "How to Fix Windows 11 Update Error 0x800f081f"
+description: "Fix Windows 11 update error 0x800f081f with DISM and SFC scans. Step-by-step guide to resolve CBS corruption and get your updates working again."
+imageCredit: "Photo by Towfiqu barbhuiya on Unsplash"
+coverImage: "https://images.unsplash.com/photo-1633265486064-086b219458ec?w=1200&h=600&fit=crop"
+imageAlt: "How to Fix Windows 11 Update Error 0x800f081f troubleshooting guide with step by step instructions"
+publishDate: 2026-06-11
+author: praveen
+category: windows-fixes
+tags:
+  - windows 11
+  - update error
+  - "0x800f081f"
+  - DISM
+  - SFC scan
+  - windows-fixes
+seoTitle: "Fix Windows 11 Update Error 0x800f081f"
+socialHook: "Fix Windows 11 update error 0x800f081f with DISM and SFC scans"
+faq:
+  - question: "What causes Windows 11 update error 0x800f081f?"
+    answer: "Error 0x800f081f is caused by corruption in the Component Based Servicing component on your system. This happens when Windows update files become damaged, when a previous update was interrupted, when disk space runs low during an update, or when third-party antivirus software blocks update file extraction."
+  - question: "Can I fix error 0x800f081f without losing my files?"
+    answer: "Yes. All the methods in this guide including DISM, SFC, and Windows Update Troubleshooter are safe and do not delete your personal files. The in-place upgrade repair install is the only method that resembles a reset, and even that preserves your files and applications."
+  - question: "Why does DISM say source files could not be found?"
+    answer: "This means the default repair source on your system is also corrupted. Use the Windows installation ISO as the repair source instead. Mount the ISO and run DISM with the /LimitAccess and /Source parameters pointing to the install.wim file in the ISO sources folder."
+  - question: "Should I run SFC or DISM first?"
+    answer: "Run SFC scan first. SFC is faster and fixes corrupted system files. After SFC completes, run DISM to fix the component store health. Running them in this order ensures system file integrity before repairing the servicing stack."
+  - question: "Does resetting Windows Update components fix error 0x800f081f?"
+    answer: "Often, yes. Resetting the SoftwareDistribution and Catroot2 folders clears out corrupted update cache files that can cause this error. Combined with DISM and SFC, a full update component reset resolves 0x800f081f in most cases without needing a repair install."
+---
+## Windows Update Error 0x800f081f: What It Means
+
+You click Check for Updates. Windows downloads the update, starts installing, and then stops. The error code 0x800f081f appears with a message about the update not installing. You restart, try again, and get the same result.
+
+This error means Windows cannot complete the update because the Component Based Servicing component on your system is corrupted. CBS is the part of Windows that handles update installation. When it breaks, no update can install until you fix it.
+
+The good news is this is a known issue with clear solutions. You do not need to reinstall Windows. You do not need to be a system administrator. You just need to run the right repair tools in the right order.
+
+## Step 1: Run the Windows Update Troubleshooter
+
+Start with the built-in troubleshooter because it is fast and sometimes fixes the problem immediately. Open Settings, go to System and then Troubleshoot. Click Other trouble-shooters and select Windows Update. Run the troubleshooter and apply any fixes it suggests.
+
+This tool checks for common issues like incorrect update service settings, corrupted update files, and connectivity problems. It will not fix deep system corruption, but it clears the surface-level issues that might be interfering with the other repair tools you will run next.
+
+If the troubleshooter finds and fixes something, restart your system and try the update again. If it finds nothing or the error persists, move to Step 2.
+
+## Step 2: Run SFC Scan to Check System Files
+
+System File Checker scans your Windows system files for corruption and replaces damaged files with cached copies. This is the first deep repair tool to run.
+
+Open Command Prompt as administrator. Click Start, type cmd, right-click Command Prompt, and select Run as administrator. Type the following command and press Enter:
+
+`sfc /scannow`
+
+The scan takes 5 to 15 minutes. Do not close the Command Prompt window while it runs. When it finishes, it tells you whether it found and repaired corruption.
+
+If SFC found corruption but could not fix it, or if the error persists after SFC repairs, move to Step 3. SFC repairs system files but does not fix the underlying component store health that CBS relies on.
+
+For general update troubleshooting across all error codes, see our [Windows 11 update errors guide](/blog/how-to-fix-windows-11-update-errors-in-2026-step-by-step-troubleshooting-guide).
+
+## Step 3: Run DISM to Repair the Component Store
+
+DISM is the tool that fixes the component store itself. If CBS is corrupted, SFC cannot fully repair system files because it depends on the component store for clean copies. DISM fixes the source.
+
+In the same administrator Command Prompt, run these three commands in order:
+
+`DISM /Online /Cleanup-Image /CheckHealth`
+
+This checks whether the component store reports any corruption. It does not make changes.
+
+`DISM /Online /Cleanup-Image /ScanHealth`
+
+This scans the component store for corruption. It takes 5 to 10 minutes.
+
+`DISM /Online /Cleanup-Image /RestoreHealth`
+
+This repairs the component store using Windows Update as the repair source. It takes 10 to 30 minutes depending on the extent of corruption.
+
+If DISM completes successfully, restart your system and run `sfc /scannow` again. This ensures system files are repaired against the now-healthy component store.
+
+If DISM fails with an error about not finding the source files, you need to provide a repair source manually. Download the Windows 11 installation ISO from Microsoft. Mount it by right-clicking and selecting Mount. Note the drive letter. Then run:
+
+`DISM /Online /Cleanup-Image /RestoreHealth /Source:D:\sources\install.wim /LimitAccess`
+
+Replace D with your mounted ISO drive letter.
+
+## Step 4: Reset Windows Update Components
+
+If SFC and DISM complete successfully but the error persists, the Windows Update components themselves may be corrupted. Resetting them clears out the damaged cache and resets update services.
+
+Stop the update services by running these commands in administrator Command Prompt:
+
+`net stop wuauserv`
+`net stop cryptSvc`
+`net stop bits`
+`net stop msiserver`
+
+Rename the SoftwareDistribution and Catroot2 folders to clear the cache:
+
+`ren C:\Windows\SoftwareDistribution SoftwareDistribution.old`
+`ren C:\Windows\System32\catroot2 Catroot2.old`
+
+Restart the update services:
+
+`net start wuauserv`
+`net start cryptSvc`
+`net start bits`
+`net start msiserver`
+
+Close the Command Prompt and restart your system. Open Windows Update and try the update again.
+
+## Step 5: Run an In-Place Upgrade Repair Install
+
+If none of the above works, the system corruption may be too deep for the usual tools. An in-place upgrade install repairs Windows while keeping your files and installed applications.
+
+Download the Windows 11 Installation Assistant from Microsoft's official site. Run it and select Upgrade this PC now. The process takes about an hour. It reinstalls Windows while preserving your personal files, settings, and most applications.
+
+This is not a full reset. You keep everything on your system. The installation replaces system files with fresh copies from the installation media, effectively fixing component store corruption that DISM could not resolve.
+
+After the upgrade completes, check for updates again. Error 0x800f081f should be resolved.
+
+If you are experiencing other issues with specific Windows updates, check our guide on [Windows 11 KB5089573 errors](/blog/windows-11-kb5089573-update-errors-slow-internet-fix).
+
+## Preventing This Error in the Future
+
+Once you fix error 0x800f081f, take steps to prevent it from returning. Keep at least 20 GB of free space on your system drive. Update installers need room to extract and apply files. Low disk space is a common cause of component store corruption.
+
+Run SFC and DISM scans monthly as preventive maintenance. A quick monthly scan catches corruption early before it causes update failures. Add it to your calendar as a reminder.
+
+Avoid interrupting Windows updates. Let them complete fully before shutting down. If you need to restart during an update, use the restart button in Windows Update rather than the power button on your PC.
+
+Keep your antivirus software updated. Some third-party antivirus programs interfere with update installations by scanning update files during extraction. If updates fail repeatedly, try temporarily disabling your antivirus and running the update.
+
+## FAQ
+
+**Q: What causes Windows 11 update error 0x800f081f?**
+**A:** Error 0x800f081f is caused by corruption in the Component Based Servicing component on your system. This happens when Windows update files become damaged, when a previous update was interrupted, when disk space runs low during an update, or when third-party antivirus software blocks update file extraction.
+
+**Q: Can I fix error 0x800f081f without losing my files?**
+**A:** Yes. All the methods in this guide including DISM, SFC, and Windows Update Troubleshooter are safe and do not delete your personal files. The in-place upgrade repair install is the only method that resembles a reset, and even that preserves your files and applications.
+
+**Q: Why does DISM say source files could not be found?**
+**A:** This means the default repair source on your system is also corrupted. Use the Windows installation ISO as the repair source instead. Mount the ISO and run DISM with the /LimitAccess and /Source parameters pointing to the install.wim file in the ISO sources folder.
+
+**Q: Should I run SFC or DISM first?**
+**A:** Run SFC scan first. SFC is faster and fixes corrupted system files. After SFC completes, run DISM to fix the component store health. Running them in this order ensures system file integrity before repairing the servicing stack.
+
+**Q: Does resetting Windows Update components fix error 0x800f081f?**
+**A:** Often, yes. Resetting the SoftwareDistribution and Catroot2 folders clears out corrupted update cache files that can cause this error. Combined with DISM and SFC, a full update component reset resolves 0x800f081f in most cases without needing a repair install.
