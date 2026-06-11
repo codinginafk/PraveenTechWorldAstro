@@ -152,6 +152,17 @@ async function downloadImage(url) {
 async function uploadImageToLinkedIn(accessToken, personUrn, imageBuffer) {
   const author = `urn:li:person:${personUrn}`;
 
+  // Convert SVG to PNG (LinkedIn doesn't accept SVG)
+  let pngBuffer;
+  try {
+    const sharp = (await import("sharp")).default;
+    pngBuffer = await sharp(imageBuffer).resize(1200, 630).png().toBuffer();
+    log("[LinkedIn API] SVG converted to PNG");
+  } catch (convErr) {
+    log(`[LinkedIn API] PNG conversion failed, trying raw: ${convErr.message}`);
+    pngBuffer = imageBuffer;
+  }
+
   // Step 1: Register the image upload
   log("[LinkedIn API] Registering image upload...");
   const registerRes = await fetch("https://api.linkedin.com/rest/images?action=initializeUpload", {
@@ -180,15 +191,15 @@ async function uploadImageToLinkedIn(accessToken, personUrn, imageBuffer) {
     throw new Error("Image registration response missing uploadUrl or image URN");
   }
 
-  // Step 2: Upload the image binary
-  log("[LinkedIn API] Uploading image binary...");
+  // Step 2: Upload the PNG binary
+  log("[LinkedIn API] Uploading PNG image binary...");
   const uploadRes = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "image/svg+xml",
+      "Content-Type": "image/png",
     },
-    body: imageBuffer,
+    body: pngBuffer,
   });
 
   if (!uploadRes.ok) {
