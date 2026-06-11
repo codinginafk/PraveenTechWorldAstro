@@ -104,7 +104,7 @@ function extractOgTags(html, urlPath) {
   } else {
     const canonicalUrl = canonicalMatch[1];
     const expectedCanonical = `${SEO_CONFIG.siteUrl}${urlPath}`;
-    if (canonicalUrl !== expectedCanonical && canonicalUrl !== expectedCanonical + "/") {
+    if (canonicalUrl !== expectedCanonical && canonicalUrl !== expectedCanonical + "/" && canonicalUrl + "/" !== expectedCanonical) {
       findings.push({ type: "canonical_mismatch", severity: "HIGH", page: urlPath, message: `Canonical URL mismatch: "${canonicalUrl}" vs expected "${expectedCanonical}"` });
     }
   }
