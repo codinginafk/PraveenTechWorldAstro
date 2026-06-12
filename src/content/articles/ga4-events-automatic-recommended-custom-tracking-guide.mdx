@@ -1,0 +1,124 @@
+---
+title: "GA4 Events: Automatic, Recommended, and Custom Events Explained"
+description: "Learn the difference between automatic, recommended, and custom GA4 events. How to track button clicks, form submissions, file downloads, and scroll depth without writing code from scratch."
+imageCredit: "Photo by Carlos Muza on Unsplash"
+coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=600&fit=crop"
+imageAlt: "Google Analytics 4 data dashboard on a laptop screen"
+publishDate: 2026-06-12
+author: praveen
+category: website-setup
+tags:
+  - GoogleAnalytics
+  - GA4
+  - Events
+  - WebAnalytics
+  - Tracking
+socialHook: "Not all GA4 events are created equal. Here is what each type does."
+---
+
+I spent my first month with GA4 confused about events. There were events that showed up automatically, events I was supposed to create myself, and events Google recommended but did not enforce. I did not know which ones to use or when.
+
+After working through it, the breakdown is simpler than it seems. GA4 has three categories of events: automatic, recommended, and custom. Each serves a different purpose.
+
+## Automatic Events: The Freebies
+
+Automatic events fire without any configuration. Install the GA4 tag and these start working:
+- `page_view` — every page load
+- `session_start` — each new session
+- `first_visit` — first time a user visits your site
+- `user_engagement` — page is in focus for 10+ seconds
+
+These cover the basics. You get page view counts and session data without touching any code. If you have enhanced measurement enabled (which you should), you also get `scroll`, `outbound_click`, `site_search`, `video_start`, and `file_download` events.
+
+Automatic events cannot be modified. You cannot add custom parameters to them or change how they fire. They are the foundation of your GA4 data, and everything else builds on top of them.
+
+If you are not seeing these events, check your enhanced measurement settings in Admin > Data Streams > your web stream. For more on getting the basics right, see the [GA4 page tracking guide](/blog/google-analytics-4-page-tracking-how-it-works).
+
+## Recommended Events: The Template
+
+Recommended events are predefined events that Google suggests for specific industries and use cases. They have standardized names and parameters that unlock built-in reports.
+
+If you run an ecommerce site, Google recommends events like:
+- `view_item` — someone viewed a product
+- `add_to_cart` — product added to cart
+- `purchase` — completed transaction
+- `remove_from_cart` — product removed
+
+If you run a content or lead generation site, Google recommends:
+- `generate_lead` — form submission
+- `sign_up` — account creation
+- `share` — content shared via social
+
+Using recommended events has two advantages. First, GA4's built-in reports automatically populate with your data when you use the correct event names. Second, your data is standardized, meaning you can compare your metrics against industry benchmarks without manual mapping.
+
+The key difference from custom events: you are supposed to implement these yourself via code or Google Tag Manager. They do not fire automatically. But the names and parameters are predefined by Google.
+
+For more on using GA4 data effectively, the [analytics strategy guide](/blog/google-analytics-strategy-how-to-use-ga4-data-to-make-better-decisions) covers how to structure your measurement approach.
+
+## Custom Events: Your Own Rules
+
+Custom events are events you define yourself. You choose the name, you choose the parameters, you choose when they fire. This is where GA4 becomes truly flexible.
+
+I use custom events for things specific to my site:
+- `article_read` — fires when a reader scrolls past 75% of an article
+- `tool_used` — tracks when someone opens a free tool on my site
+- `newsletter_signup` — fires on email form submission (since I want extra parameters beyond the default)
+
+Custom events have one rule: do not use names that conflict with automatic or recommended events. For example, do not create a custom event called `page_view` because that name is reserved. Google ignores custom events that clash with reserved names.
+
+Each custom event can carry up to 25 parameters. Parameters are extra data points attached to the event, like article title, tool name, or signup source. These parameters make your reports useful instead of just showing "an event happened."
+
+If you are new to setting up custom events, the [GA4 content strategy guide](/blog/how-to-use-google-analytics-4-to-improve-your-content-strategy) walks through practical examples.
+
+## How to Choose the Right Event Type
+
+Here is a simple decision framework:
+- If Google tracks it automatically with enhanced measurement, use the automatic event
+- If Google has a recommended event for your action (like `purchase` or `generate_lead`), use the recommended event name
+- If your action is unique to your site, create a custom event
+
+Most sites should rely primarily on automatic and recommended events. Custom events fill the gaps for site-specific tracking. Do not create custom events for things Google already tracks.
+
+## Implementing Events with Google Tag Manager
+
+The easiest way to implement recommended and custom events is through Google Tag Manager (GTM). Add a GTM tag that fires on the action you want to track, and configure the event name and parameters in the tag.
+
+For example, to track a button click as a recommended `generate_lead` event:
+1. Create a new tag in GTM
+2. Choose "GA4 Event" as the tag type
+3. Set event name to `generate_lead`
+4. Add parameters like `value` and `currency`
+5. Set the trigger to fire when someone clicks the button
+
+GTM handles the code injection, so you do not need to edit your site's source files. This is why GTM and GA4 are usually set up together.
+
+## Common Mistakes
+
+**Creating custom events for automatic events.** I see people creating custom `scroll` events when enhanced measurement already tracks scrolls. Check what enhanced measurement covers before writing any custom code.
+
+**Wrong event names.** A typo in an event name means that data ends up in a separate event instead of the report you expected. GA4 does not validate event names, so a `purchse` event (missing the 'a') creates a new event instead of populating the purchase report.
+
+**Too many custom events.** I started with 12 custom events and quickly realized I was tracking things I never looked at. Start with 3 to 5 custom events aligned with your core goals. Add more only when you have a specific question that existing events cannot answer.
+
+**Missing parameters.** An event without parameters tells you something happened but not what or where. Every custom event should include at least a `name` or `id` parameter that identifies the specific item or action.
+
+For a complete walkthrough of GA4 from the ground up, start with the [Google Analytics for beginners guide](/blog/google-analytics-for-beginners-how-to-track-your-website-traffic).
+
+## Frequently Asked Questions
+
+**Q: Can I modify automatic events?**
+A: No. Automatic events fire with predefined names and parameters. You cannot change them. If you need different data, create a custom event that fires alongside the automatic event.
+
+**Q: How many custom events can I create?**
+A: GA4 allows up to 500 unique event names per property. In practice, most sites should use far fewer. More events mean more noise, not more insight.
+
+**Q: Do recommended events work without GTM?**
+A: Yes. You can send recommended events directly from your website code using the `gtag()` function or the Google Analytics Measurement Protocol. GTM just makes management easier.
+
+**Q: What happens if I use the wrong event name?**
+A: GA4 stores the event as-is. It does not check for typos or correct invalid names. The data still appears in your reports but not in the expected location. Always test new events in the Realtime report before relying on them.
+
+**Q: Can I rename an event after creating it?**
+A: No. GA4 does not support renaming events. You can delete unused events from the admin panel, but the historical data under the old name remains. Test event names carefully before deploying them in production.
+
+For more practical tips on improving your GA4 setup, read the [GA4 tips and improvements guide](/blog/google-analytics-tips-10-practical-ga4-improvements). If your data looks wrong, the [GA4 troubleshooting guide](/blog/ga4-not-tracking-visitors-12-troubleshooting-steps) covers the most common problems.
