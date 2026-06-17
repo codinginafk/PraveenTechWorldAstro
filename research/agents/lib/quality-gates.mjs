@@ -436,7 +436,7 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   }
 
   // ---- M1: External authority citations (at least 1 .gov, .edu, or official docs) ----
-  const authorityDomains = [".gov", ".edu", "microsoft.com", "docs.microsoft.com", "learn.microsoft.com", "support.microsoft.com", "kernel.org", "ietf.org", "w3.org"];
+  const authorityDomains = [".gov", ".edu", "microsoft.com", "docs.microsoft.com", "learn.microsoft.com", "support.microsoft.com", "support.google.com", "developers.google.com", "kernel.org", "ietf.org", "w3.org"];
   const hasAuthorityCitation = externalLinks.some(l => authorityDomains.some(d => l.url.includes(d)));
   if (!hasAuthorityCitation) {
     failures.push({ gate: "M1", rule: "External authority citations", message: "No .gov, .edu, or official Microsoft/docs link found — LLMs prioritize authoritative citations" });

@@ -39,7 +39,7 @@ function checkHubPages() {
 }
 
 // FOUR QUESTION FILTER
-function applyFourQuestionFilter(title, snippet, clusterId) {
+function applyFourQuestionFilter(title, snippet, clusterId, pillarId) {
   const lower = ((title || "") + " " + (snippet || "")).toLowerCase();
 
   // Q1: Which cluster does this belong to?
@@ -55,6 +55,11 @@ function applyFourQuestionFilter(title, snippet, clusterId) {
   else if (/windows|error|fix|reinstall|reset|recovery|boot|driver|crash|bsod/i.test(lower)) detectedCluster = "windows-fixes";
   else if (/hosting|domain|dns|ssl|cloudflare|github pages/i.test(lower)) detectedCluster = "hosting-infra";
   else if (/ai.*blog|ai.*seo|ai.*content|ai.*keyword/i.test(lower)) detectedCluster = "ai-websites";
+
+  // If heuristic failed, trust explicit pillarId or pillarFit from LLM scoring
+  if (!detectedCluster) {
+    if (pillarId && VALID_PILLARS.includes(pillarId)) detectedCluster = pillarId;
+  }
 
   if (!detectedCluster) {
     return { pass: false, reason: "Q1: No valid cluster. REJECT." };
@@ -173,8 +178,9 @@ export async function runBoss(candidates, context) {
     const snippet = c.topic?.snippet || "";
     const topicCluster = c.pillarId || currentCluster;
 
-    // Q1-Q4 Filter
-    const filterResult = applyFourQuestionFilter(title, snippet, topicCluster);
+    // Q1-Q4 Filter (pass pillarId/pillarFit from LLM scoring as fallback for heuristic)
+    const pillarId = c.pillarId || c.pillarFit || null;
+    const filterResult = applyFourQuestionFilter(title, snippet, topicCluster, pillarId);
     if (!filterResult.pass) {
       rejected.push({ title, reason: filterResult.reason });
       continue;

@@ -111,7 +111,7 @@ export async function fetchJSON(url) {
 export async function callLLM(systemPrompt, userPrompt, opts = {}) {
   const apiKey = process.env.LLM_API_KEY;
   const baseUrl = process.env.LLM_BASE_URL || "https://opencode.ai/zen/v1";
-  const model = process.env.LLM_MODEL || "mimo-v2.5-free";
+  const model = process.env.LLM_MODEL || "nex-agi/nex-n2-pro:free";
 
   if (!apiKey) {
     console.warn("  [callLLM] No LLM_API_KEY in env. Faking response.");
@@ -135,7 +135,7 @@ export async function callLLM(systemPrompt, userPrompt, opts = {}) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(opts.timeout ?? 120000),
+    signal: AbortSignal.timeout(opts.timeout ?? 240000),
   });
 
   if (!res.ok) {

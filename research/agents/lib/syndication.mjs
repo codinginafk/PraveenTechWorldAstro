@@ -222,9 +222,33 @@ export async function linkedinPost(article, accessToken) {
     log("[LinkedIn] No LINKEDIN_ACCESS_TOKEN in .env — skipping");
     return null;
   }
-  log("[LinkedIn] API requires OAuth 2.0 setup — see comments in syndication.mjs for instructions");
-  log(`[LinkedIn] Would post: "${article.title}"`);
-  return null;
+  if (!article || !article.slug) {
+    log("[LinkedIn] Invalid article object — missing slug");
+    return null;
+  }
+  const filePath = path.join(ARTICLES_DIR, `${article.slug}.mdx`);
+  if (!fs.existsSync(filePath)) {
+    log(`[LinkedIn] Article file not found: ${filePath}`);
+    return null;
+  }
+  try {
+    const { generateLinkedInPostForArticle, publishToLinkedIn } = await import("./syndicate-linkedin.mjs");
+    const post = generateLinkedInPostForArticle(filePath);
+    if (!post) {
+      log(`[LinkedIn] Failed to generate post for: ${article.slug}`);
+      return null;
+    }
+    const result = await publishToLinkedIn(post, { svgPath: post.svgFile });
+    if (result) {
+      log(`[LinkedIn] Published: ${result.postUrl}`);
+      return result;
+    }
+    log("[LinkedIn] publishToLinkedIn returned null (rate limited or error)");
+    return null;
+  } catch (err) {
+    log(`[LinkedIn] Post failed: ${err.message}`);
+    return null;
+  }
 }
 
 // ─── Blogger ────────────────────────────────────────────────────────────
