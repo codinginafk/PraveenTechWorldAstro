@@ -1,0 +1,162 @@
+---
+title: "Sitemap URLs Are Blocked by Robots.txt? Clean Up Your Sitemap and Resubmit It in GSC"
+description: "If Google Search Console says your sitemap URLs are blocked by robots.txt, it means your sitemap is pointing Google to URLs that robots."
+coverImage: "https://images.unsplash.com/photo-1625296276188-1d149bdaf560?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxTaXRlbWFwJTIwVVJMcyUyMEJsb2NrZWR8ZW58MHx8fHwxNzgxNzkwNjIzfDA&ixlib=rb-4.1.0&w=1200&h=600&fit=crop"
+imageAlt: "a computer screen with the number 99 on it"
+imageCredit: "Photo by Justin Morgan on Unsplash"
+publishDate: 2026-06-18
+author: praveen
+category: website-setup
+tags:
+  - website-setup
+  - seo
+  - website
+  - tutorial
+seoTitle: "Sitemap URLs Are Blocked by Robots.txt? Cle..."
+socialHook: "New in our website setup series: Sitemap URLs Are Blocked by Robots.txt? Clean Up Your Sitemap and Resubmit It in"
+pillarId: website-setup
+---
+## Direct Answer
+
+If Google Search Console says your sitemap URLs are blocked by robots.txt, it means your sitemap is pointing Google to URLs that robots.txt currently disallows. The clean fix is to remove blocked, duplicate, private, or non-canonical URLs from the sitemap, then edit robots.txt only when a useful page is blocked by mistake. After that, test the affected URLs in GSC and resubmit the sitemap.
+
+## Explanation
+
+Your XML sitemap is not an indexing command. It is a list of URLs you want Googlebot to find. robots.txt is a crawl rule file at yourdomain.com/robots.txt. When a Disallow pattern matches a URL in the sitemap, Googlebot can’t crawl that URL, even if the URL is listed in the sitemap.
+
+Google Search Central says robots.txt rules control what Googlebot can crawl, so a URL in a sitemap can still be blocked if robots.txt disallows it: [Google Search Central robots.txt documentation](https://developers.google.com/search/docs/crawling-indexing/robots/intro).
+
+I usually see this happen after a CMS change, a migration, or an SEO plugin update. The sitemap starts adding tag pages, author pages, search result pages, staging pages, PDF files, or old URLs that should not be there.
+
+A common example is a sitemap that includes `/tag/seo-tips/`, while robots.txt has this rule:
+
+```text
+Disallow: /tag/
+```
+
+That URL is in the sitemap, but Googlebot is told not to crawl it. The fix is usually to remove `/tag/seo-tips/` from the sitemap.
+
+Another common example is a live page under `/blog/`, while robots.txt has this rule:
+
+```text
+Disallow: /blog/
+```
+
+In that case, the sitemap may be fine, but robots.txt is too broad. I would edit robots.txt and let Google crawl the real blog pages.
+
+If you are still setting up the property, start with .
+
+## When This Fix Works
+
+This fix works when your sitemap contains pages you actually want Google to crawl, but robots.txt blocks them by mistake. For example, `/services/web-design/` is a real service page, but robots.txt has `Disallow: /services/`.
+
+It also works when your sitemap has junk URLs that should never be in the sitemap. Tag pages, search result pages, staging URLs, and noindex pages are common examples.
+
+It works after a site migration too. If your old sitemap still lists `/2022/old-post/` and robots.txt blocks `/2022/`, cleaning the sitemap will remove the conflict.
+
+It works best when you fix both sides: remove bad sitemap URLs and correct robots.txt rules that are too broad.
+
+## When This Does NOT Work
+
+This fix does not work if the page is private and should stay private. If the URL is an admin page, internal file, staging page, or private document, keep the robots.txt rule and remove the URL from the sitemap.
+
+It does not work if the page has a noindex tag and you want it indexed. You need to remove the noindex tag first, then allow Googlebot to crawl the page.
+
+It does not work if the server returns 403, 401, or 500 errors. That is a server or permission issue, not a sitemap conflict.
+
+It does not work if the canonical URL points somewhere else. In that case, Google may ignore the submitted URL and choose the canonical version instead. For that issue, see .
+
+It does not work if the sitemap file itself is broken. If your sitemap returns 404, 500, or invalid XML, GSC cannot process it correctly.
+
+## Step-by-Step instructions
+
+1. Open Google Search Console and select the correct property.
+
+Go to [Google Search Console](https://search.google.com/search-console/). Pick the exact property for your site. If you have both `https://example.com` and `https://www.example.com`, use the one that matches your live site.
+
+2. Go to the **Sitemaps** report.
+
+In the left sidebar, click **Sitemaps** under **Indexing**. Look at the submitted sitemap row and check the status. If it says “Success” but blocked URLs are still showing, open the **Pages** report next.
+
+3. Export the blocked URLs from GSC.
+
+In the left sidebar, click **Pages**. Scroll to the section called **Why pages aren’t indexed**. Look for entries such as “Blocked by robots.txt” or “Submitted URL blocked by robots.txt.” Click the row, then use the export button on the top right side of the table.
+
+In my experience, start with the first 50 URLs. That is enough to find the pattern without getting lost in a 10,000 URL sitemap.
+
+4. Inspect a few blocked URLs.
+
+Go back to the left sidebar and click **URL Inspection**. Paste one blocked URL into the search box at the top of the screen. Click **TEST LIVE URL**. Then open **View crawled page** if it appears.
+
+This tells you how Googlebot sees the URL right now. If the live test says the page is blocked by robots.txt, you have a real crawl rule conflict.
+
+5. Open your robots.txt file.
+
+Open a new browser tab and go to `https://yourdomain.com/robots.txt`. Replace `yourdomain.com` with your real domain. If the file returns 404, Google treats it as if there are no robots.txt rules, so the issue may be in the sitemap instead.
+
+6. Match the blocked URL against the Disallow rules.
+
+Use `Ctrl+F` on Windows or `Cmd+F` on Mac to search inside robots.txt. If the blocked URL is `/blog/red-widget/`, search for `/blog/`, `/red-widget/`, and any wildcard rules like `/*`.
+
+Look for rules like these:
+
+```text
+User-agent: *
+Disallow: /blog/
+Disallow: /tag/
+Disallow: /*?s=
+```
+
+If your sitemap contains `/blog/red-widget/`, the `Disallow: /blog/` rule is the problem.
+
+7. Decide which side is wrong.
+
+Ask one simple question: should Google crawl this URL or not? If the answer is yes, edit robots.txt. If the answer is no, remove the URL from the sitemap.
+
+Do not allow everything just to clear the warning. That can make Google crawl junk pages, private files, or duplicate content.
+
+8. Fix robots.txt only for useful pages.
+
+If a real page is blocked, edit the rule in your hosting file manager, CMS editor, or security plugin. For WordPress users, this guide is useful: .
+
+For example, change this:
+
+```text
+Disallow: /blog/
+```
+
+to this:
+
+```text
+Allow: /blog/
+```
+
+Or remove the `Disallow: /blog/` line if you do not need it.
+
+9. Remove bad URLs from the sitemap.
+
+Your sitemap should include indexable, canonical, public URLs. Remove tag pages, search pages, staging URLs, author archives, noindex pages, private PDFs, and old URLs that redirect.
+
+If you use an SEO plugin, change the sitemap settings there. In Yoast, check **Yoast SEO** > **Settings** > **Site features** > **XML sitemaps**. In Rank Math, check **Rank Math SEO** > **Sitemap Settings**.
+
+10. Regenerate the sitemap.
+
+After changing the sitemap settings, regenerate the sitemap. Many plugins do this automatically. If your site uses a static sitemap file, generate a fresh one and upload it to the same location, such as `/sitemap.xml`.
+
+If you need help with sitemap errors beyond robots.txt, read .
+
+11. Check the sitemap in your browser.
+
+Open `
+
+## Related Guides
+
+-  — Browse all guides in this category
+-  — If your new website fails Core Web Vitals before publishing, fix the loading path first: compress th
+-  — If GA4 Realtime shows users but standard reports are blank, the tag is probably firing, but GA4 has 
+-  — If GA4 traffic looks wrong after website setup, check three things first: Consent Mode, GA4 data fil
+
+
+### Related Guides
+- [Ga4 Data Delayed Or Missing After Installation Check Measurement Id Consent And ](/blog/ga4-data-delayed-or-missing-after-installation-check-measurement-id-consent-and-)
+- [Ga4 Events Automatic Recommended Custom Tracking Guide](/blog/ga4-events-automatic-recommended-custom-tracking-guide)
