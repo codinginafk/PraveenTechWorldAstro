@@ -1,13 +1,100 @@
 ---
-title: Google Analytics 4 Page Tracking: How GA4 Tracks Page Views
-description: Tracking Ga4 - Learn how Google Analytics 4 tracks page views, how page_view events work, and what changed from Universal Analytics. Practical setup tips included.
-imageCredit: Photo by Lukas Blazek on Unsplash
-coverImage: https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=600&fit=crop
-imageAlt: analytics dashboard showing data charts on a laptop screen
+title: "Google Analytics 4 Page Tracking: How GA4 Tracks Page Views"
+seoTitle: "Google Analytics 4 Page Tracking"
+description: "Tracking Ga4 - Learn how Google Analytics 4 tracks page views, how page_view events work, and what changed from Universal Analytics. Practical setup tips included."
+imageCredit: "Photo by Lukas Blazek on Unsplash"
+coverImage: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=600&fit=crop"
+imageAlt: "analytics dashboard showing data charts on a laptop screen"
 publishDate: 2026-06-12
 author: praveen
 category: website-setup
-tags: 
-socialHook: GA4 tracks pages differently from UA. Here is what changed.
-seoTitle: Google Analytics 4 Page Tracking
+tags:
+  - GoogleAnalytics
+  - GA4
+  - PageTracking
+  - WebAnalytics
+  - SEO
+socialHook: "GA4 tracks pages differently from UA. Here is what changed."
 ---
+
+When I moved from Universal Analytics to GA4, the first thing I noticed was that my page view numbers looked different. Not wrong, just different. It took me a while to understand why.
+
+GA4 handles page tracking in a fundamentally different way. Universal Analytics counted page views as separate hits. GA4 treats them as events. This changes how you interpret the data.
+
+## Page Views Are Now Events
+
+In Universal Analytics, a page view was a special type of hit. You had a dedicated pageview tracking code, and it showed up in its own report section. In GA4, everything is an event. A page view is just a `page_view` event.
+
+This matters because events in GA4 have parameters. When someone loads a page, GA4 sends a `page_view` event with details like:
+- `page_location` — the full URL
+- `page_title` — the browser tab title
+- `page_referrer` — where they came from
+
+You can use these parameters in reports and custom analyses in ways that UA never allowed.
+
+## Enhanced Measurement Covers Most Needs
+
+GA4 includes enhanced measurement, which means you get page tracking without adding any code. If you have the basic GA4 tag installed, page views are tracked automatically.
+
+To check if enhanced measurement is on:
+
+1. Go to Admin > Data Streams in GA4
+2. Click your web data stream
+3. Look for "Enhanced measurement" — it should show as enabled
+4. Inside, verify that "Page views" is checked
+
+If you see zero page view data, start with the [GA4 troubleshooting guide](/blog/ga4-not-tracking-visitors-12-troubleshooting-steps) before digging into configuration.
+
+## How Sessions and Page Views Work Together
+
+This is where GA4 differs most from Universal Analytics.
+
+In UA, a session was a strict 30-minute window. Every page view within that window belonged to the same session. If someone opened a page, left for 35 minutes, and came back, it was a new session.
+
+GA4 uses a different model. A session ends after 30 minutes of inactivity, but page views are tracked independently. One session can include multiple page views. One page view can start a new session.
+
+The practical result: your total page view count in GA4 will be close to what UA showed, but session counts may differ. This is normal. Compare GA4 data to GA4 data over time, not to your old UA numbers.
+
+## Page Tracking for Single Page Applications
+
+If your site uses JavaScript to load content without full page reloads (like React, Vue, or other frameworks), GA4's automatic page tracking may not catch every "page view." This is because the browser does not send a new page load event — it just swaps content.
+
+The fix is to send custom `page_view` events in your SPA router. Every time the URL changes, call:
+
+```
+gtag('event', 'page_view', {
+  page_location: window.location.href,
+  page_title: document.title
+})
+```
+
+I had to do this on a client project built with Next.js. Without it, GA4 showed about 60% of actual page views.
+
+## Common Page Tracking Problems
+
+**Duplicate page views.** If you see double counts, check that you do not have the GA4 tag installed twice. This happens when you add it manually AND through Google Tag Manager, or when you have both a plugin and manual code.
+
+**Missing page titles.** If your reports show "(not set)" for page titles, the `page_title` parameter is not being populated. Check that your page has a proper title tag and that the GA4 tag fires after the title is set.
+
+**Wrong page paths.** If URLs look strange in reports, your site may be using hash-based routing or query parameters that confuse GA4. Use the `page_path` parameter override in your tracking code to clean up URLs.
+
+For an overview of using GA4 data to make better decisions, see the [GA4 content strategy guide](/blog/how-to-use-google-analytics-4-to-improve-your-content-strategy). If your numbers look completely off, the [GA4 for beginners guide](/blog/google-analytics-for-beginners-how-to-track-your-website-traffic) covers the basics.
+
+## Frequently Asked Questions
+
+**Q: Why does GA4 show fewer page views than Universal Analytics?**
+A: GA4 filters out spam and bot traffic more aggressively than UA did. It also treats sessions differently. A 5-15% difference is normal. If the gap is larger, check for implementation issues like missing enhanced measurement or duplicate tags.
+
+**Q: Can I track PDF downloads as page views in GA4?**
+A: GA4 treats file downloads as separate events, not page views. Enhanced measurement automatically tracks downloads as `file_download` events. You can report on these separately or create a custom exploration that combines page views and downloads.
+
+**Q: Does GA4 track page scrolls as part of page views?**
+A: No. Scrolls are tracked as separate `scroll` events via enhanced measurement. A page view fires once when the page loads. Scroll tracking shows you how far people actually read. Both are useful but they measure different things.
+
+**Q: How long does it take for page view data to appear in GA4 reports?**
+A: Standard reports update within a few hours. Real-time reports show data instantly. If you set up tracking today, expect to see meaningful data in 24 to 48 hours. Processing delays are normal.
+
+**Q: Can I use both UA and GA4 page tracking at the same time?**
+A: Yes, and you should during the transition. They use separate tracking codes and do not interfere with each other. Running both side by side lets you compare data and build a history in GA4 before UA stops processing new data.
+
+For more on tracking and measuring website performance, read the [technical SEO checklist](/blog/technical-seo-checklist-for-beginners-fix-these-issues-to-rank-better) and the [website speed optimization guide](/blog/website-speed-optimization-why-it-matters-for-seo-and-how-to-fix-it).
