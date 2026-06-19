@@ -1,6 +1,5 @@
 import path from "path";
 import fs from "fs";
-import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 import { log, callLLM, ensureDir } from "./lib/shared.mjs";
 import { writeGoal, writeWeeklyGoal, appendToReport, getReportPath } from "./lib/report.mjs";
@@ -10,6 +9,7 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 const ARTICLES_DIR = path.resolve(__dirname, "../../src/content/articles");
 const REPORTS_DIR = path.resolve(__dirname, "../reports");
 const STATE_FILE = path.join(__dirname, "state.json");
+const ANALYTICS_FILE = path.join(__dirname, "analytics-data.json");
 const ALL_PILLARS = ["website-setup","windows-fixes","hosting-infra","ai-websites"];
 
 const GOALS_DIR = path.join(REPORTS_DIR, "goals");
@@ -25,6 +25,11 @@ function saveState(state) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
 }
 
+function loadAnalytics() {
+  try { return JSON.parse(fs.readFileSync(ANALYTICS_FILE, "utf-8")); }
+  catch { return null; }
+}
+
 async function runSystemHealth() {
   const issues = [];
   try {
@@ -36,7 +41,7 @@ async function runSystemHealth() {
     if (!fs.existsSync(ARTICLES_DIR) || fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx")).length === 0)
       issues.push("No articles in content directory");
     const gcpKey = process.env.GOOGLE_SERVICE_ACCOUNT_PATH || path.join(ROOT_DIR, "gcp-service-account.json");
-    if (!fs.existsSync(gcpKey)) issues.push("GCP service account key missing — GSC submissions disabled");
+    if (!fs.existsSync(gcpKey)) issues.push("GCP service account key missing");
   } catch (err) {
     issues.push(`Health check error: ${err.message}`);
   }
@@ -44,18 +49,80 @@ async function runSystemHealth() {
   return { allOk, issues };
 }
 
+// Read article frontmatter
+function readArticleFrontmatter(file) {
+  try {
+    const c = fs.readFileSync(path.join(ARTICLES_DIR, file), "utf-8");
+    const fm = c.match(/---([\s\S]*?)---/)?.[1] || "";
+    return {
+      title: fm.match(/title:\s*"(.+?)"/)?.[1] || "",
+      description: fm.match(/description:\s*"(.+?)"/)?.[1] || "",
+      seoTitle: fm.match(/seoTitle:\s*"(.+?)"/)?.[1] || "",
+      socialHook: fm.match(/socialHook:\s*"(.+?)"/)?.[1] || "",
+      category: fm.match(/category:\s*(\S+)/)?.[1]?.replace(/^"/,"").replace(/"$/,"") || "",
+      tags: [...fm.matchAll(/^\s*-\s*(.+)$/gm)]?.filter(m => !m[0].startsWith("---")).map(m => m[1].replace(/"/g,"")) || [],
+    };
+  } catch { return null; }
+}
+
 // ─── Marketing Analysis ─────────────────────────────────────────────────────
 
 export async function runMarketing() {
-  log("[Marketing Agent] Starting daily analysis — GOING HARD...");
+  log("[Marketing Agent] Starting daily analysis...");
 
   const allArticles = fs.existsSync(ARTICLES_DIR)
     ? fs.readdirSync(ARTICLES_DIR).filter((f) => f.endsWith(".mdx"))
     : [];
   const totalArticles = allArticles.length;
   const state = loadState();
+  const analytics = loadAnalytics();
 
-  // Score last 5 articles
+  // ────────────────────────────────────────────────────────────────────────
+  // 1. Gather GSC performance data for every article
+  // ────────────────────────────────────────────────────────────────────────
+  const gscMap = {};
+  let totalImpressions = 0;
+  let totalClicks = 0;
+  if (analytics?.gscData) {
+    for (const row of analytics.gscData) {
+      const url = row.keys?.[0] || "";
+      const slug = url.replace(/https:\/\/[^\/]+\/blog\//, "").replace(/https:\/\/[^\/]+/, "/");
+      gscMap[slug] = { clicks: row.clicks || 0, impressions: row.impressions || 0, ctr: row.ctr || 0, position: row.position || 0 };
+      if (slug.startsWith("/blog/")) {
+        totalImpressions += row.impressions || 0;
+        totalClicks += row.clicks || 0;
+      }
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 2. Identity articles with GSC data — find zero-click articles
+  // ────────────────────────────────────────────────────────────────────────
+  const articlePerformances = [];
+  const zeroClickArticles = [];
+  const articlesWithClicks = [];
+
+  for (const file of allArticles) {
+    const fm = readArticleFrontmatter(file);
+    const slug = file.replace(/\.mdx$/, "");
+    const perf = gscMap[slug] || gscMap[`/blog/${slug}`] || null;
+    if (perf) {
+      articlePerformances.push({ file, title: fm?.title || slug, slug, ...perf });
+      if (perf.clicks === 0 && perf.impressions > 0) {
+        zeroClickArticles.push({ file, title: fm?.title || slug, slug, impressions: perf.impressions, position: perf.position });
+      }
+      if (perf.clicks > 0) {
+        articlesWithClicks.push({ file, title: fm?.title || slug, slug, clicks: perf.clicks, ctr: perf.ctr });
+      }
+    }
+  }
+
+  // Sort zero-click by impressions descending (biggest missed opportunity first)
+  zeroClickArticles.sort((a, b) => b.impressions - a.impressions);
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 3. Score last 5 articles (using LLM)
+  // ────────────────────────────────────────────────────────────────────────
   const last5 = allArticles.sort().reverse().slice(0, 5);
   let qualityScore = 7;
   if (last5.length > 0) {
@@ -72,7 +139,9 @@ export async function runMarketing() {
     } catch { /* keep default */ }
   }
 
-  // Check pillar distribution
+  // ────────────────────────────────────────────────────────────────────────
+  // 4. Check pillar distribution
+  // ────────────────────────────────────────────────────────────────────────
   const pillarCounts = {};
   for (const f of allArticles) {
     const c = fs.readFileSync(path.join(ARTICLES_DIR, f), "utf-8");
@@ -84,144 +153,134 @@ export async function runMarketing() {
   }
   const weakPillars = ALL_PILLARS.filter((p) => !pillarCounts[p] && allArticles.length > 0);
 
-  // Competitor trends
-  let competitorNote = "";
-  try {
-    const url = "https://news.google.com/rss/search?q=Windows+troubleshooting+Google+Search+Console+website+setup+2026&hl=en-US&gl=US&ceid=US:en";
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    const xml = await res.text();
-    const titles = [...xml.matchAll(/<title>(.*?)<\/title>/g)].slice(1, 6).map((m) => m[1]);
-    competitorNote = titles.length ? `Hot competitors: ${titles.slice(0, 3).join("; ")}` : "";
-  } catch { /* skip */ }
+  // ────────────────────────────────────────────────────────────────────────
+  // 5. Generate engagement-focused recommendations from GSC data
+  // ────────────────────────────────────────────────────────────────────────
+  const recommendations = [];
 
-  // ─── HARD DAILY GOALS ──────────────────────────────────────────────────
+  // 5a: Articles with high impressions but zero clicks → need title/description rewrite
+  const topZeroClick = zeroClickArticles.slice(0, 5);
+  if (topZeroClick.length > 0) {
+    recommendations.push("ZERO-CLICK FIXES NEEDED:");
+    for (const a of topZeroClick) {
+      recommendations.push(`  - "${a.title}" has ${a.impressions} impressions at position ${a.position.toFixed(0)} with 0 clicks. Rewrite meta description + title for CTR.`);
+    }
+  }
+
+  // 5b: Overall site stats
+  const siteCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(1) : "0.0";
+  recommendations.push(`SITE CTR: ${siteCTR}% (${totalClicks} clicks / ${totalImpressions} impressions)`);
+  if (parseFloat(siteCTR) < 2) {
+    recommendations.push("  CRITICAL: Site CTR is below 2%. Every article needs a rewritten meta description with a clear value proposition and CTA.");
+  }
+
+  // 5c: Best performing articles — analyse what works
+  if (articlesWithClicks.length > 0) {
+    const best = articlesWithClicks.sort((a, b) => b.ctr - a.ctr)[0];
+    recommendations.push(`BEST CTR: "${best.title}" — ${(best.ctr * 100).toFixed(1)}% CTR. Analyze what this article's title/description does differently.`);
+  } else {
+    recommendations.push("CRITICAL: Zero articles have generated a single click from search. Every article needs a full title + description rewrite.");
+  }
+
+  // 5d: Syndication engagement
+  const linkedInCount = state.linkedInPostLog?.filter(p => p.status === "published")?.length || 0;
+  const bufferCount = state.bufferPostLog?.length || 0;
+  const bloggerCount = state.bloggerPostLog?.length || 0;
+  recommendations.push(`SYNDICATION: LinkedIn=${linkedInCount}, Buffer=${bufferCount}, Blogger=${bloggerCount}, Dev.to=${(state.devtoPosts?.length || 0)}`);
+  recommendations.push("  Posts are broadcasts. Start conversations: reply to every comment, ask questions in posts, tag relevant people.");
+
+  // 5e: Content gap — articles with position < 20 that get zero clicks
+  const closeButNoCigar = zeroClickArticles.filter(a => a.position < 20);
+  if (closeButNoCigar.length > 0) {
+    recommendations.push("CLOSE RANKERS (position < 20, 0 clicks): These are the LOWEST HANGING FRUIT.");
+    for (const a of closeButNoCigar) {
+      recommendations.push(`  - "${a.title}" at position ${a.position.toFixed(0)} — update meta description with compelling value prop`);
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // 6. Generate platform-specific social content for best/worst performing article
+  // ────────────────────────────────────────────────────────────────────────
+  let bestCandidateTitle = "";
+  let bestCandidateSlug = "";
+  if (zeroClickArticles.length > 0) {
+    const target = zeroClickArticles[0];
+    bestCandidateTitle = target.title;
+    bestCandidateSlug = target.slug;
+  }
+
+  // Write engagement-focused recommendations to the daily report
   const today = new Date().toISOString().split("T")[0];
   const syndicatedCount = state.syndicated?.length || 0;
-  const pillarGapStr = weakPillars.length ? weakPillars.join(", ") : "none";
 
   const goals = [
-    `PUBLISH: Hit daily quota of 5 articles — ${state.articlesPublishedToday || 0}/5 done so far`,
-    `QUALITY: Every new article must score >= 8/10 (current rolling avg: ${qualityScore}/10)`,
-    `WINDOWS PRIORITY: Focus all writing on Windows troubleshooting + system repair — maximum CTR potential`,
-    `SYNDICATION: Push every new article to Dev.to + LinkedIn + Medium within 1 hour of publish`,
-    `INDEXING: Submit sitemap to GSC + ping IndexNow for every new article (ensure < 1h to indexed)`,
-    `BACKLINKS: Find and catalog 5+ guest post / resource page opportunities daily`,
-    `COMPETE: Ensure our last 3 articles beat competitors on word count (1800+ words) + depth`,
-    `NO ZERO-CLICK: Every article gets a strong socialHook + meta description for CTR`,
-  ];
-  if (competitorNote) goals.push(`INTEL: ${competitorNote} — we need to match or out-cover these`);
-  if (weakPillars.length > 0 && !weakPillars.includes("windows-fixes")) goals.push(`NOTE: Non-Windows pillars can wait — focus on Windows troubleshooting for now`);
-
-  // HARD weekly goals
-  const now = new Date();
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  const weekStr = weekStart.toISOString().split("T")[0];
-
-  const weeklyHardGoals = [
-    "PUBLISH 15+ Windows troubleshooting articles this week (pillar balance suspended)",
-    "SYNDICATE every article to Dev.to, LinkedIn, and Medium within 1h of publish",
-    "ACHIEVE avg quality score >= 8 across all new articles this week",
-    "FOCUS exclusively on Windows fixes — do not write non-Windows content this week",
-    "SUBMIT sitemap to GSC daily via API",
-    "DISCOVER and outreach to 10+ guest post / resource page opportunities",
-    "ENSURE every article passes quality gates with score >= 75/100",
-    "BUILD 3+ backlinks from guest posts or resource pages",
+    `ZERO-CLICK AUDIT: ${zeroClickArticles.length} articles have impressions but 0 clicks. Fix has highest ROI.`,
+    `TOP FIX: "${zeroClickArticles[0]?.title}" (${zeroClickArticles[0]?.impressions} impressions, ${zeroClickArticles[0]?.position}) — rewrite description NOW`,
+    `SITE CTR: ${siteCTR}% — target is 3%+. Every article needs a new meta description.`,
+    `LINKEDIN: Stop generic posts. Start with an engineering problem, share a specific config, end with a question.`,
+    `TWITTER/X: Use Buffer to post 2x/day. Don't just link-drop — share a tip from the article.`,
+    `ENGAGEMENT: Reply to every comment within 2 hours. Ask questions in your own posts.`,
+    `BACKLINKS: Guest post on 1 tech site this week — one quality backlink beats 10 more articles.`,
   ];
 
-  // ─── WRITE GOALS ───────────────────────────────────────────────────────
+  // Write a focused action plan
   const goalContent = [
-    `# 🚀 HARD MARKETING GOALS — ${today}`,
-    `**Generated:** ${new Date().toISOString()}`,
-    `**Total articles on site:** ${totalArticles}`,
-    `**Published today:** ${state.articlesPublishedToday || 0}`,
-    `**Syndicated total:** ${syndicatedCount}`,
-    `**Quality score avg:** ${qualityScore}/10`,
-    `**Pillars with 0 content:** ${weakPillars.length || "none"}`,
-    `**System health:** ${(await runSystemHealth()).allOk ? "ALL OK" : "ISSUES FOUND — see below"}`,
+    `# Marketing Action Plan — ${today}`,
+    `**Site CTR:** ${siteCTR}% (${totalClicks} clicks / ${totalImpressions} impressions)`,
+    `**Total articles:** ${totalArticles} | **Syndicated:** ${syndicatedCount}`,
+    `**Zero-click articles:** ${zeroClickArticles.length}`,
+    `**Articles with any clicks:** ${articlesWithClicks.length}`,
     "",
-    "## 🔴 HARD DAILY GOALS (non-negotiable)",
-    ...goals.map((g, i) => `- [ ] **${i + 1}.** ${g}`),
+    ...recommendations,
     "",
-    "## Pillar Distribution (current)",
+    "## Immediate Actions (today)",
+    ...goals.map((g, i) => `- [ ] ${g}`),
+    "",
+    "## Pillar Distribution",
     ...Object.entries(pillarCounts)
       .sort((a, b) => b[1] - a[1])
-      .map(([p, c]) => `- ${p}: ${c} articles (${(c / totalArticles * 100).toFixed(0)}%)`),
+      .map(([p, c]) => `- ${p}: ${c} articles`),
     "",
-    "## 🆘 Pillars at Zero — Must Fix",
-    weakPillars.length
-      ? weakPillars.map((p) => `- [ ] **${p}** — create 1 article this week`).join("\n")
-      : "All 10 pillars have content ✅",
-    "",
-    "## Competitor Intelligence",
-    competitorNote || "Unable to fetch — check Google News RSS",
-    "",
-    "---",
-    "*Auto-generated by Marketing Agent (hard mode)*",
-  ].join("\n");
+    weakPillars.length ? `## Missing Pillars\n${weakPillars.map(p => `- [ ] **${p}**`).join("\n")}` : "",
+  ].filter(Boolean).join("\n");
 
-  // Write to all accessible locations
   ensureDir(DAILY_GOALS_DIR);
   ensureDir(WEEKLY_GOALS_DIR);
   writeGoal(today, goalContent);
 
-  const weeklyContent = [
-    `# 🚀 HARD WEEKLY GOALS — Week of ${weekStr}`,
-    `**Generated:** ${new Date().toISOString()}`,
-    `**Total articles:** ${totalArticles}`,
-    `**Week start:** ${weekStr}`,
-    "",
-    "## This Week's Hard Targets",
-    ...weeklyHardGoals.map((g, i) => `- [ ] **${i + 1}.** ${g}`),
-    "",
-    `## Weak Pillars (needing content this week): ${pillarGapStr}`,
-    "",
-    "*Auto-generated by Marketing Agent (hard mode)*",
-  ].join("\n");
-  writeWeeklyGoal(weekStr, weeklyContent);
-
-  // ─── ALSO WRITE TO BOSS REPORT (so dev-agent reads it) ────────────────
-  const improvementLines = goals.map((g) => `- ${g}`);
-  appendToReport("Marketing Agent — Hard Goals", [
+  // Write to boss report so dev-agent reads it
+  appendToReport("Marketing Agent — Engagement Analysis", [
     `Marketing agent ran at ${new Date().toISOString()}`,
-    `**Total articles:** ${totalArticles} | **Quality:** ${qualityScore}/10 | **Syndicated:** ${syndicatedCount}`,
-    `**Focus:** Windows troubleshooting (pillar balance suspended for CTR push)`,
-    `**System health:** ${(await runSystemHealth()).allOk ? "OK" : "ISSUES"}`,
+    `**Site CTR:** ${siteCTR}% (${totalClicks}/${totalImpressions})`,
+    `**Zero-click articles:** ${zeroClickArticles.length}`,
+    ...recommendations,
     "",
-    "### Marginal Improvements Needed",
-    ...improvementLines,
-    "",
-    "### Dev Agent: Implement These Now",
-    "- If Windows topic available → prioritize generation immediately (highest CTR potential)",
-    "- If quality < 8 → increase LLM temperature or add more research context",
-    "- If syndication not keeping up → check Dev.to/LinkedIn API keys",
-    "- If GSC not pinged → run node seo-agent/gsc-client.mjs ping",
-    "",
-    "*Auto-pushed by Marketing Agent*",
+    "### Dev Agent Actions",
+    "- Rewrite meta descriptions for top 5 zero-click articles (highest impressions first)",
+    "- Add socialHook with question to engage audience",
+    "- If any article has position < 20 with zero clicks → PRIORITY FIX",
   ].join("\n"));
 
-  // ─── System Health ─────────────────────────────────────────────────────
-  const sysHealth = await runSystemHealth();
+  // ── Update state ──
   state.lastMarketingDate = today;
   saveState(state);
 
-  log(`[Marketing Agent] HARD GOALS written for ${today}`);
-  log(`  Quality: ${qualityScore}/10, Pillar gaps: ${pillarGapStr}`);
-  log(`  System: ${sysHealth.allOk ? "ALL OK ✅" : `ISSUES: ${sysHealth.issues.join("; ")}`}`);
-  log(`  Goals written to: ${path.join(DAILY_GOALS_DIR, `${today}.md`)} and boss report`);
+  log(`[Marketing Agent] Analysis complete`);
+  log(`  Site CTR: ${siteCTR}% (${totalClicks}/${totalImpressions})`);
+  log(`  Zero-click articles: ${zeroClickArticles.length}`);
+  log(`  Recommendations: ${recommendations.length}`);
 
   return {
     totalArticles,
     qualityScore,
     pillarCounts,
     weakPillars,
-    goals,
-    competitorNote,
-    systemHealth: sysHealth,
+    zeroClickArticles,
+    articlesWithClicks,
+    siteCTR: parseFloat(siteCTR),
   };
 }
 
-// CLI
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runMarketing().catch(console.error);
 }
