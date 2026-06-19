@@ -63,13 +63,13 @@ function generateLinkedInPostText(article) {
   if (lowerBody.includes("zero impressions") || lowerBody.includes("no data") || lowerBody.includes("not showing")) {
     hook = "You spend weeks building a site, optimizing every page, and publishing content. Then you check Google Search Console and see a flat line. Zero impressions, zero clicks, zero traffic.\n\nMost people assume they did something wrong. Sometimes it is just a verification or configuration issue that takes five minutes to fix. The hard part is knowing which one.";
   } else if (lowerBody.includes("not tracking") || lowerBody.includes("ga4") || lowerBody.includes("analytics")) {
-    hook = "You cannot improve what you cannot measure. When analytics goes dark, you are making decisions blind. Every business owner I talk to has been there — staring at a GA4 dashboard that refuses to show any data.\n\nBefore you rip out the tracking code and start over, there is a method to diagnose exactly where the breakdown happened. I have used it on three client sites this month alone.";
+    hook = "You cannot improve what you cannot measure. When analytics goes dark, you are making decisions blind. I have been there — staring at a GA4 dashboard that refuses to show any data.\n\nBefore you rip out the tracking code and start over, there is a method to diagnose exactly where the breakdown happened. I wrote down every step I used so you do not have to figure it out from scratch.";
   } else if (lowerBody.includes("sitemap") || lowerBody.includes("indexing")) {
-    hook = "A client came to me last month frustrated that Google was not indexing their product pages. They had 200+ products live but only 12 showed up in search results. The sitemap said \"Has errors\" but nobody on their team knew what that meant.\n\nWe found the root cause in under an hour. Pages were submitting fine but Google could not read the sitemap file itself. The fix was a server configuration change that took less than a minute.";
+    hook = "I spent weeks wondering why Google was not showing my content in search results. The sitemap said \"Has errors\" but I had no idea what that meant.\n\nTurns out the fix was a server configuration change that took less than a minute. The hard part was figuring out which setting to change. I wrote a guide so you can skip the trial and error.";
   } else if (lowerBody.includes("add your website") || lowerBody.includes("add.*google search")) {
-    hook = "Every business owner I work with asks the same question in week one: \"I built the site. Why is nobody finding it?\"\n\nGoogle does not know your site exists until you tell it. And you cannot just tell it once and hope for the best. There are four specific steps I walk every client through, and skipping any one of them means waiting weeks or months for Google to find you organically.";
+    hook = "I built my site and waited for Google to find it. Nothing happened for weeks. Google does not know your site exists until you tell it.\n\nThere are specific steps to get Google to notice your site, and skipping any one of them means waiting weeks or months for Google to find you organically. I learned this the hard way so you do not have to.";
   } else {
-    hook = `You invested time and money building your website. But if your target customers cannot find you on Google, that investment is not paying off. The problem is rarely what most people think it is.\n\nAfter working with multiple clients on this exact issue, here is what I have learned about getting Google to actually show your content to the right people.`;
+    hook = `I built this site from scratch and learned what actually works for getting Google to show your content. Most guides skip the part where things go wrong. Here is what I figured out after spending months testing different approaches.`;
   }
   const lines = [];
   lines.push(hook);
@@ -91,11 +91,9 @@ function generateLinkedInPostText(article) {
     }
   }
 
-  // Closing with business value + CTA
+  // Closing with value + CTA
   const slug = article.slug || "";
-  lines.push("This is the kind of work I do for clients every week. Not magic. Just systematic troubleshooting that saves businesses weeks of guesswork and lost traffic.");
-  lines.push("");
-  lines.push(`I wrote up the full breakdown with every fix in order of likelihood — no fluff, no theory, just what actually works. Drop a comment or DM if you want me to take a look at your specific setup.`);
+  lines.push("I wrote up the full breakdown with every fix in order of likelihood — no fluff, no theory, just what actually works based on my own experience testing these methods on this site.");
   lines.push("");
   lines.push(allTags);
   return { text: lines.join("\n"), url: articleUrl, title: article.title, slug: article.slug };
@@ -191,11 +189,21 @@ async function uploadImageToLinkedIn(accessToken, personUrn, imageBuffer) {
   }
 
   const registerData = await registerRes.json();
-  const uploadUrl = registerData.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
-  const imageUrn = registerData.value?.image;
+  log(`[LinkedIn API] Register response keys: ${Object.keys(registerData).join(", ")}`);
+  if (registerData.value) log(`[LinkedIn API] value keys: ${Object.keys(registerData.value).join(", ")}`);
+
+  // Try multiple response shapes across API versions
+  const uploadUrl = registerData.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl
+    || registerData.value?.uploadUrl
+    || registerData.uploadUrl
+    || registerData.value?.uploadMechanism?.uploadUrl;
+  const imageUrn = registerData.value?.image
+    || registerData.image
+    || registerData.value?.urn;
 
   if (!uploadUrl || !imageUrn) {
-    throw new Error("Image registration response missing uploadUrl or image URN");
+    const dump = JSON.stringify(registerData).slice(0, 500);
+    throw new Error(`Image registration response missing uploadUrl or image URN. Response: ${dump}`);
   }
 
   // Step 2: Upload the PNG binary
@@ -328,7 +336,6 @@ export async function publishToLinkedIn(post, options = {}) {
           title: post.title || "PraveenTechWorld",
         },
       };
-      body.content.media.description = "PraveenTechWorld guide";
     } else {
       body.content = {
         article: {

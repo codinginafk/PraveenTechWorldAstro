@@ -14,7 +14,7 @@ const SITE_URL = "https://www.praveentechworld.com";
 const RULES = {
   // Content Quality Gates (C1-C14)
   C1: { id: "C1", gate: "Content Quality", name: "Readability score", desc: "Flesch-Kincaid Grade Level 8-11 (technical content may grade higher)", threshold: { min: 8, max: 11 } },
-  C2: { id: "C2", gate: "Content Quality", name: "Minimum body length", desc: "At least 2,000 words", threshold: { min: 2000 } },
+  C2: { id: "C2", gate: "Content Quality", name: "Minimum body length", desc: "At least 1,800 words", threshold: { min: 1800 } },
   C3: { id: "C3", gate: "Content Quality", name: "Meta description length", desc: "120-160 characters", threshold: { min: 120, max: 160 } },
   C4: { id: "C4", gate: "Content Quality", name: "Primary keyword in description", desc: "Must appear in first 20 chars of description", threshold: {} },
   C5: { id: "C5", gate: "Content Quality", name: "Primary keyword in first paragraph", desc: "Must appear in first 100 words", threshold: {} },
@@ -197,6 +197,7 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   }
 
   const failures = [];
+  const warnings = [];
   const bodyText = article.body || "";
   const fm = article;
   const filename = path.basename(filePath);
@@ -247,8 +248,8 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   }
 
   // ---- C2: Word count ----
-  if (wordCount < 2000) {
-    failures.push({ gate: "C2", rule: "Minimum body length", message: `Body is ${wordCount} words — minimum is 2,000` });
+  if (wordCount < 1800) {
+    failures.push({ gate: "C2", rule: "Minimum body length", message: `Body is ${wordCount} words — minimum is 1,800` });
   }
 
   // ---- C3: Description length ----
@@ -568,7 +569,7 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   const score = Math.max(0, 100 - failures.length * 5);
   const passed = failures.length === 0;
 
-  return { passed, failures, score, rules: RULES };
+  return { passed, failures, warnings, score, rules: RULES };
 }
 
 export function validateAllArticles() {

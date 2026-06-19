@@ -24,7 +24,7 @@ if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
 :: Step 3: Start preview server in background
 echo [3/4] Starting preview server on %SITE_URL%...
-start /B npx astro preview --port 3000
+start /B node serve-static.cjs
 
 :: Wait for server to be ready (poll until HTTP 200)
 echo [3/4] Waiting for preview server to respond...

@@ -143,8 +143,9 @@ function generateTweetText(article) {
   const lower = title.toLowerCase() + " " + body.toLowerCase().slice(0, 500);
   const tags = (article.tags || []).slice(0, 2).map(t => `#${t.replace(/[^a-zA-Z0-9]/g, "")}`).join(" ");
 
-  // URL counts as ~23 chars on Twitter, leave room: 280 - 23(url) - 15(tags) - 5(spaces) = ~237
-  const maxText = 237;
+  // X Premium supports up to 4000 chars; using 800
+  const MAX_TWEET = 800;
+  const maxText = MAX_TWEET - 23 - 15 - 5;
 
   // Pick a value-first tweet based on article content
   let tweet = "";
@@ -180,12 +181,12 @@ function generateTweetText(article) {
 
   // Fit within character limit
   const full = `${tweet} ${articleUrl} ${tags}`.trim();
-  if (full.length <= 280) return full;
+  if (full.length <= MAX_TWEET) return full;
 
   // Truncate tweet text to fit
   const urlLength = 23; // Twitter treats all URLs as 23 chars
   const tagsLength = tags ? tags.length + 1 : 0;
-  const available = 280 - urlLength - tagsLength;
+  const available = MAX_TWEET - urlLength - tagsLength;
   const truncated = tweet.length > available ? tweet.slice(0, available - 1) + "…" : tweet;
   return `${truncated} ${articleUrl} ${tags}`.trim();
 }

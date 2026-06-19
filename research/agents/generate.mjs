@@ -102,7 +102,7 @@ const RULES = [
   "Avoid these phrases: 'In today's digital world', 'In this article', 'It is important to note', 'It's worth noting', 'In conclusion', 'To summarize'.",
   "Use specific numbers and real examples. Not 'many people' but '73% of office workers'.",
   "FAQ should be 3-5 real questions with genuine answers at the end using **Q:** and **A:** format naturally.",
-  "Target length: 1800-2500 words. Every paragraph must teach something useful.",
+  "YOU MUST write 2200-2800 words. Count your paragraphs - you need at least 25. If your article is short, keep writing. Do not stop at 500 words.",
   "Include E-E-A-T signals: first-hand experience with specific examples, detailed technical accuracy, transparent honest advice.",
   "Target Grade 8-10 reading level. Clear, direct sentences.",
   "Include at least 2 contextual internal links to other PraveenTechWorld articles.",
@@ -136,7 +136,7 @@ export async function generateArticle({ title, description, category, tags, seoT
 Follow these rules exactly:
 ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
 
-  const depth = depthInstruction || "Write at least 1500 words with clear step-by-step instructions.";
+  const depth = depthInstruction || "Write at least 2000 words. CRITICAL: You MUST write 2000+ words. Each section needs full paragraphs, not bullet points. Write detailed step-by-step instructions with real examples.";
 
   let researchSection = "";
   if (researchContext) {

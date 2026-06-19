@@ -9,7 +9,13 @@ export function getNewArticles(syndicated) {
   if (!fs.existsSync(ARTICLES_DIR)) return [];
   const files = fs.readdirSync(ARTICLES_DIR).filter((f) => f.endsWith(".mdx"));
   const syndicatedSet = new Set(syndicated || []);
-  return files.filter((f) => !syndicatedSet.has(f));
+  return files
+    .filter((f) => !syndicatedSet.has(f))
+    .sort((a, b) => {
+      const aTime = fs.statSync(path.join(ARTICLES_DIR, a)).mtimeMs;
+      const bTime = fs.statSync(path.join(ARTICLES_DIR, b)).mtimeMs;
+      return bTime - aTime; // newest first
+    });
 }
 
 export function parseArticle(filePath) {
