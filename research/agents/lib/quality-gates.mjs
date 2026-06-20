@@ -15,7 +15,7 @@ const RULES = {
   // Content Quality Gates (C1-C14)
   C1: { id: "C1", gate: "Content Quality", name: "Readability score", desc: "Flesch-Kincaid Grade Level 8-11 (technical content may grade higher)", threshold: { min: 8, max: 11 } },
   C2: { id: "C2", gate: "Content Quality", name: "Minimum body length", desc: "At least 1,800 words", threshold: { min: 1800 } },
-  C3: { id: "C3", gate: "Content Quality", name: "Meta description length", desc: "120-160 characters", threshold: { min: 120, max: 160 } },
+  C3: { id: "C3", gate: "Content Quality", name: "Meta description length", desc: "120-160 characters (schema max 165)", threshold: { min: 120, max: 160 } },
   C4: { id: "C4", gate: "Content Quality", name: "Primary keyword in description", desc: "Must appear in first 20 chars of description", threshold: {} },
   C5: { id: "C5", gate: "Content Quality", name: "Primary keyword in first paragraph", desc: "Must appear in first 100 words", threshold: {} },
   C6: { id: "C6", gate: "Content Quality", name: "Keyword in H2 heading", desc: "At least one H2 contains a primary keyword", threshold: {} },
@@ -193,7 +193,44 @@ function checkHookQuality(firstParagraph) {
 export function validateArticle(filePath, existingArticlePaths = []) {
   const article = parseArticle(filePath);
   if (!article) {
-    return { passed: false, failures: [{ gate: "Parse", rule: "Parse", message: `Could not parse article: ${filePath}` }], score: 0, rules: RULES };
+    return { passed: false, failures: [{ gate: "Parse", rule: "Frontmatter parse", message: `Could not parse article frontmatter — check YAML syntax: ${filePath}` }], score: 0, rules: RULES };
+  }
+
+  // ---- Schema validation: catch Vercel-breaking frontmatter issues ----
+  const schemaFailures = [];
+
+  // Check description length against Astro schema (max 165)
+  const desc = (article.description || "").trim();
+  if (desc.length > 165) {
+    schemaFailures.push({ gate: "SCHEMA", rule: "Description too long", message: `Description is ${desc.length} chars — Astro schema max is 165` });
+  }
+
+  // Check tags are all strings
+  const tags = Array.isArray(article.tags) ? article.tags : [];
+  for (let i = 0; i < tags.length; i++) {
+    if (typeof tags[i] !== "string") {
+      schemaFailures.push({ gate: "SCHEMA", rule: "Tag type", message: `tags[${i}] is type "${typeof tags[i]}", expected "string". Value: ${JSON.stringify(tags[i])} — ensure all tags are quoted strings` });
+    }
+  }
+
+  // Check common string fields aren't accidentally numbers
+  const stringFields = ["title", "seoTitle", "socialHook", "coverImage", "imageAlt", "imageCredit", "author", "category"];
+  for (const field of stringFields) {
+    if (article[field] !== undefined && typeof article[field] !== "string") {
+      schemaFailures.push({ gate: "SCHEMA", rule: `Field type: ${field}`, message: `${field} is type "${typeof article[field]}", expected "string". Value: ${JSON.stringify(article[field])}` });
+    }
+  }
+
+  // Check publishDate is a valid date
+  if (article.publishDate) {
+    const pd = new Date(article.publishDate);
+    if (isNaN(pd.getTime())) {
+      schemaFailures.push({ gate: "SCHEMA", rule: "Invalid date", message: `publishDate "${article.publishDate}" is not a valid date` });
+    }
+  }
+
+  if (schemaFailures.length > 0) {
+    return { passed: false, failures: schemaFailures, warnings: [], score: 0, rules: RULES };
   }
 
   const failures = [];
@@ -255,8 +292,8 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   // ---- C3: Description length ----
   if (description.length < 120) {
     failures.push({ gate: "C3", rule: "Meta description length", message: `Description is ${description.length} chars — minimum 120` });
-  } else if (description.length > 155) {
-    failures.push({ gate: "C3", rule: "Meta description length", message: `Description is ${description.length} chars — maximum 155` });
+  } else if (description.length > 160) {
+    failures.push({ gate: "C3", rule: "Meta description length", message: `Description is ${description.length} chars — maximum 160` });
   }
 
   // ---- C4: Primary keyword in description first 20 chars ----
