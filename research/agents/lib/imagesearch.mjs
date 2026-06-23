@@ -180,6 +180,9 @@ export function extractKeywords(title, tags, category) {
     "windows-fixes": ["Windows 11 error screen", "Windows update", "computer"],
     "hosting-infra": ["web hosting dashboard", "server rack", "cloud hosting"],
     "ai-websites": ["artificial intelligence", "AI tools", "ChatGPT"],
+    "ai-automation": ["Python code", "automation script", "terminal command"],
+    "it-operations": ["server room", "database dashboard", "network infrastructure"],
+    "build-in-public": ["developer coding", "side project", "learning in public"],
   };
   if (catMap[category]) catMap[category].forEach(w => kws.push(w));
   kws.push("technology", "digital");

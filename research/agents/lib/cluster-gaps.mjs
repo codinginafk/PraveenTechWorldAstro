@@ -40,6 +40,24 @@ const CLUSTER_TEMPLATES = {
     { type: "ai-workflow", pattern: /ai.*workflow|ai.*automate|ai.*productivity/i },
     { type: "ai-tools", pattern: /ai.*tool|ai.*app|best.*ai/i },
   ],
+  "ai-automation": [
+    { type: "script", pattern: /python|script|automation|cli|tool/i },
+    { type: "prompt", pattern: /prompt|deepseek|opencode|llm/i },
+    { type: "pipeline", pattern: /pipeline|etl|data.*flow|workflow/i },
+    { type: "api", pattern: /api|integration|webhook|endpoint/i },
+  ],
+  "it-operations": [
+    { type: "database", pattern: /database|sql|query|audit|erp/i },
+    { type: "sysadmin", pattern: /server|backup|network|infrastructure|admin/i },
+    { type: "security", pattern: /security|audit|compliance|access/i },
+    { type: "migration", pattern: /migration|upgrade|transition|deploy/i },
+  ],
+  "build-in-public": [
+    { type: "experiment", pattern: /experiment|trial|attempt|battle.log/i },
+    { type: "failure", pattern: /fail|broke|wrong|error|hallucinat/i },
+    { type: "lesson", pattern: /lesson|learned|discovered|realized/i },
+    { type: "process", pattern: /process|workflow|approach|method/i },
+  ],
 };
 
 export function identifyGapsInCluster(clusterId, researchClusters) {

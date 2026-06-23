@@ -29,6 +29,16 @@ const SPRINTS = [
     dailyTarget: 3,
     days: 30,
   },
+  {
+    id: "month2-ai-automation",
+    primaryCluster: "ai-automation",
+    secondaryCluster: "it-operations",
+    targets: { "ai-automation": 8, "it-operations": 4, "build-in-public": 3 },
+    mix: { "ai-automation": 0.50, "it-operations": 0.25, "build-in-public": 0.20, "website-setup": 0.05 },
+    dailyTarget: 2,
+    days: 30,
+    startAfter: "month1-website-setup",
+  },
 ];
 
 const CYCLE_EVERY_MS = 4 * 60 * 60 * 1000; // 4 hours (3 articles/day = every 4 hours)
@@ -43,7 +53,7 @@ function loadState() {
 function getFreshState() {
   return {
     sprint: { id: "month1-website-setup", startedAt: new Date().toISOString(), dayOfSprint: 1 },
-    sprintProgress: { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0 },
+    sprintProgress: { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0, "ai-automation": 0, "it-operations": 0, "build-in-public": 0 },
     articlesPublishedToday: 0,
     lastPublishDate: null,
     lastGscCheck: null,
@@ -51,7 +61,7 @@ function getFreshState() {
     lastResearchDate: null,
     sessionStart: new Date().toISOString(),
     dailyQuota: 3,
-    pillarCounts: { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0 },
+    pillarCounts: { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0, "ai-automation": 0, "it-operations": 0, "build-in-public": 0 },
   };
 }
 
@@ -85,7 +95,7 @@ function isDuplicateTitle(newTitle, existingTitles) {
 }
 
 function getPillarDistribution() {
-  const counts = { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0 };
+  const counts = { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0, "ai-automation": 0, "it-operations": 0, "build-in-public": 0 };
   if (!fs.existsSync(ARTICLES_DIR)) return counts;
   for (const f of fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx"))) {
     try {
@@ -110,13 +120,16 @@ async function checkGscMomentum() {
       return null;
     }
     // Map queries to clusters
-    const clusterQueries = { "website-setup": [], "windows-fixes": [], "hosting-infra": [], "ai-websites": [] };
+    const clusterQueries = { "website-setup": [], "windows-fixes": [], "hosting-infra": [], "ai-websites": [], "ai-automation": [], "it-operations": [], "build-in-public": [] };
     const clusterMap = {
       "search console": "website-setup", "google analytics": "website-setup", "analytics": "website-setup",
       "sitemap": "website-setup", "indexing": "website-setup", "verification": "website-setup",
       "windows": "windows-fixes", "error": "windows-fixes", "fix": "windows-fixes",
       "hosting": "hosting-infra", "domain": "hosting-infra", "dns": "hosting-infra", "ssl": "hosting-infra",
-      "ai": "ai-websites", "chatgpt": "ai-websites",
+      "ai": "ai-automation", "chatgpt": "ai-websites",
+      "automation": "ai-automation", "script": "ai-automation", "python": "ai-automation",
+      "database": "it-operations", "erp": "it-operations", "sql": "it-operations", "server": "it-operations",
+      "experiment": "build-in-public", "learned": "build-in-public", "build in public": "build-in-public",
     };
     for (const row of data.rows) {
       const query = (row.keys?.[0] || "").toLowerCase();
@@ -193,7 +206,7 @@ function getExistingClusterArticles(clusterId) {
 // Pre-generation check: Q1-Q4 filter
 function checkArticleAgainstFilter(title, clusterId, existingArticles) {
   // Q1: Which cluster does this belong to?
-  if (!clusterId || !["website-setup", "windows-fixes", "hosting-infra", "ai-websites"].includes(clusterId)) {
+  if (!clusterId || !["website-setup", "windows-fixes", "hosting-infra", "ai-websites", "ai-automation", "it-operations", "build-in-public"].includes(clusterId)) {
     return { pass: false, failReason: "Q1: No valid cluster — REJECT" };
   }
   // Q2: Does it strengthen an existing cluster?
@@ -252,7 +265,7 @@ async function generateFromTopic(topic, existingTitles, sourceArticles, clusters
     relatedClusterArticles: sameClusterArticles.slice(0, 5),
   };
 
-  const hubSlugMap = { "website-setup": "website-setup", "windows-fixes": "windows-troubleshooting", "hosting-infra": "web-hosting-guides", "ai-websites": "ai-for-websites" };
+  const hubSlugMap = { "website-setup": "website-setup", "windows-fixes": "windows-troubleshooting", "hosting-infra": "web-hosting-guides", "ai-websites": "ai-for-websites", "ai-automation": "ai-automation", "it-operations": "it-operations", "build-in-public": "build-in-public" };
   const hubSlug = hubSlugMap[clusterId] || "website-setup";
   const hasHub = fs.existsSync(HUB_DIR) && fs.readdirSync(HUB_DIR).some(f => f.startsWith(hubSlug));
 
@@ -351,6 +364,12 @@ async function orchestratorCycle(state) {
     ? [/search console|analytics|sitemap|indexing|verification|tracking|ga4|seo tool|webmaster/i]
     : clusterForToday === "windows-fixes"
     ? [/windows|error|fix|reinstall|reset|recovery|boot|driver|crash|bsod/i]
+    : clusterForToday === "ai-automation"
+    ? [/automation|script|python|pipeline|workflow|deepseek|opencode|api|cli|bash/i]
+    : clusterForToday === "it-operations"
+    ? [/database|erp|sql|server|infrastructure|audit|backup|network|sysadmin|enterprise/i]
+    : clusterForToday === "build-in-public"
+    ? [/experiment|trial|error|failure|lesson|learned|process|prompt|build in public|behind the scenes/i]
     : [/hosting|domain|dns|ssl|cloudflare/i];
   const hasRelevantTopics = topics.some(t => {
     const text = ((t.title || "") + " " + (t.snippet || "")).toLowerCase();
@@ -384,7 +403,7 @@ async function orchestratorCycle(state) {
 EXISTING TITLES (DO NOT repeat these):
 ${existingTitlesList}
 
-${clusterForToday === "website-setup" ? 'Must be about: Google Search Console, Google Analytics, sitemap, indexing, website verification, GA4, SEO tools, webmaster tools, website performance, core web vitals, search analytics' : clusterForToday === "windows-fixes" ? 'Must be about: Windows updates, drivers, BSOD, boot errors, system restore, performance, disk cleanup, Windows security' : 'Must be about: hosting, domain, DNS, SSL, Cloudflare, web server, cPanel'}.
+${clusterForToday === "website-setup" ? 'Must be about: Google Search Console, Google Analytics, sitemap, indexing, website verification, GA4, SEO tools, webmaster tools, website performance, core web vitals, search analytics' : clusterForToday === "windows-fixes" ? 'Must be about: Windows updates, drivers, BSOD, boot errors, system restore, performance, disk cleanup, Windows security' : clusterForToday === "ai-automation" ? 'Must be about: AI-built scripts, Python automation, CLI tools, data pipelines, DeepSeek prompts, OpenCode experiments, workflow automation, IT task scripting' : clusterForToday === "it-operations" ? 'Must be about: database administration, ERP integration, system auditing, infrastructure, SQL queries, server management, backup strategies, enterprise IT' : clusterForToday === "build-in-public" ? 'Must be about: honest AI experiment logs, where AI code failed, prompt engineering lessons, build process, lessons learned from using AI as a developer' : 'Must be about: hosting, domain, DNS, SSL, Cloudflare, web server, cPanel'}.
 
 Return ONLY a valid JSON array. No markdown. No extra text. Example: [{ "title": "SEO Title Here", "snippet": "Short description" }]`;
 

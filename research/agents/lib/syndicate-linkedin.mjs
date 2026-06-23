@@ -110,6 +110,9 @@ function generateLinkedInImage(article) {
     "windows-fixes": { primary: "#7c3aed", bg: "#f5f3ff", accent: "#ede9fe" },
     "hosting-infra": { primary: "#059669", bg: "#ecfdf5", accent: "#d1fae5" },
     "ai-websites": { primary: "#d97706", bg: "#fffbeb", accent: "#fef3c7" },
+    "ai-automation": { primary: "#7c3aed", bg: "#f5f3ff", accent: "#ede9fe" },
+    "it-operations": { primary: "#0891b2", bg: "#ecfeff", accent: "#cffafe" },
+    "build-in-public": { primary: "#dc2626", bg: "#fef2f2", accent: "#fee2e2" },
   };
   const palette = colors[category] || { primary: "#2563eb", bg: "#f8f9fa", accent: "#e8f0fe" };
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400">

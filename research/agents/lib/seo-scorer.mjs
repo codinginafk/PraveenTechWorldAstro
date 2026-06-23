@@ -2,6 +2,7 @@ import { callLLM } from "./shared.mjs";
 
 const CONTENT_PILLARS = [
   "website-setup", "windows-fixes", "hosting-infra", "ai-websites",
+  "ai-automation", "it-operations", "build-in-public",
 ];
 
 const E_E_A_T_CRITERIA = [

@@ -15,6 +15,9 @@ const PILLAR_CATEGORIES = {
   "windows-fixes": "windows-fixes",
   "hosting-infra": "hosting-infra",
   "ai-websites": "ai-websites",
+  "ai-automation": "ai-automation",
+  "it-operations": "it-operations",
+  "build-in-public": "build-in-public",
 };
 
 const PILLAR_HUBS = {
@@ -22,6 +25,9 @@ const PILLAR_HUBS = {
   "windows-fixes": "windows-troubleshooting",
   "hosting-infra": "web-hosting-guides",
   "ai-websites": "ai-for-websites",
+  "ai-automation": "ai-automation",
+  "it-operations": "it-operations",
+  "build-in-public": "build-in-public",
 };
 
 function readArticleFrontmatter(filePath) {
@@ -89,6 +95,18 @@ const TITLE_PATTERNS = [
   "[TOPIC] Not [WORKING/UPDATING]? Here Is the Fix",
 ];
 
+// Narrative-style title patterns for new AI/IT Ops pillars
+const NARRATIVE_TITLE_PATTERNS = [
+  "I Built [TOOL] Using DeepSeek in [TIME] (And Where It Failed)",
+  "I Am Not a [DEVELOPER/ENGINEER], But I Used AI to [ACCOMPLISH TASK]",
+  "The Exact Prompt I Used to [AUTOMATE TASK] with OpenCode",
+  "How I Automated [BORING TASK] So I Never Have to Do It Again",
+  "I Asked AI to [BUILD SOMETHING] — Here Is What Went Wrong",
+  "[PROBLEM] Was Driving Me Crazy. So I Built a Script for It.",
+  "I Let DeepSeek Write My [SCRIPT/PIPELINE/TOOL]. Here Is the Code.",
+  "What Happened When I Prompted AI to [BUILD TASK]",
+];
+
 const RULES = [
   "Write as a real person with real experience. Use first person: 'In my experience', 'Here is what worked for me', 'I found that', 'The way I like to do this is'.",
   "Never use em dashes (—) or en dashes (–). Not in titles, not anywhere. Use a regular hyphen with spaces ( - ), use a colon (:), use a comma, or write two separate sentences.",
@@ -121,6 +139,33 @@ const RULES = [
   "HUMANIZER: End with a specific next step or final recommendation, not a generic positive conclusion.",
 ];
 
+// Narrative-style rules for new AI/IT Ops pillars (ai-automation, it-operations, build-in-public)
+const NARRATIVE_RULES = [
+  "You are an IT Operations Lead who uses AI to build things. You do NOT write code from scratch — you prompt AI to write it for you. Your value is in the architecture and business logic, not the syntax.",
+  "Frame every article as a real experiment or battle log. Start with: What problem did I have? What did I ask the AI? What did it produce? Where did it fail? How did I fix it?",
+  "This is NOT a tutorial. This is a documented experiment. Readers should feel like they are watching you build in real time.",
+  "Include the EXACT prompt you used to get the AI to write the code. Put prompts in a code block with the label 'Prompt:' so readers can copy-paste them.",
+  "Be honest about where the AI failed. Readers love seeing AI break down because it validates their own experience. Example: 'DeepSeek output a perfect-looking function, but it used a library that doesnt exist.'",
+  "Use first person heavily. 'I', 'me', 'my', 'we'. The reader should feel like theyre watching over your shoulder.",
+  "Show the code the AI generated, then show what you had to fix. Use before/after code blocks.",
+  "Tone: Conversational, vulnerable, and direct. You are not an expert coder. You are an expert problem-solver using AI as your junior developer.",
+  "Keywords to include naturally: OpenCode, DeepSeek, prompt engineering, automation, Python script, CLI tool, pipeline, workflow.",
+  "DO NOT use 'expert', 'proven', 'definitive', 'ultimate' — those are old-site words. Use 'experimented', 'tried', 'discovered', 'learned', 'what worked for me'.",
+  "Structure: Problem → AI attempt → Where it broke → How I fixed it → Working result → The exact prompt you can use too.",
+  "Include a 'What I Learned' section at the end — this is the most clickable part for the build-in-public audience.",
+  "Include a section called 'The Exact Prompt' with the raw, unedited prompt you used so readers can replicate it.",
+  "Word count: 1500-2000 words is fine for narrative style. Depth matters more than length.",
+  "DO NOT include generic tutorial sections like 'When This Fix Works' or 'Alternatives' — this is not a reference guide, it is a story.",
+  "Do include: specific error messages, terminal output, file sizes, execution times, token counts, cost numbers. Real data builds trust.",
+  "Link to the actual code/scripts on a GitHub repo if applicable. Readers will fork it.",
+  "End with a question to the reader: 'What task would you automate with this approach?' — drives comments and engagement.",
+  "AEO RULE: The direct answer to the query MUST appear in the first 150 words of the article. This is non-negotiable. Voice search and AI answer engines extract the first clear answer they find.",
+  "AEO RULE: Write the opening answer as a standalone paragraph that could be lifted verbatim for a featured snippet or voice response. 2-4 sentences max. Start with: 'The short answer is...' or answer the question directly.",
+  "GEO RULE: Include specific numbers, token counts, file sizes, execution times, and cost data throughout. LLMs preferentially cite content with measurable, verifiable data points.",
+  "GEO RULE: Every H2 must be a question someone would ask (or start with 'How', 'What', 'Why', 'Can I'). LLMs extract H2-matched answers for SGE/Perplexity results.",
+  "GEO RULE: Include at least 2 internal links to other PraveenTechWorld articles using contextual anchor text. LLMs use internal linking structure to assess topical authority.",
+];
+
 function slug(text) {
   return text.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").slice(0, 80);
 }
@@ -131,12 +176,23 @@ export async function generateArticle({ title, description, category, tags, seoT
   const pillarCategory = PILLAR_CATEGORIES[pillarId] || category || "windows-fixes";
   const hubSlug = PILLAR_HUBS[pillarId] || null;
 
-  const sysPrompt = `You are an expert technical writer specializing in ${pillarCategory}. You write for PraveenTechWorld, a knowledge base that helps users build websites, grow websites, and solve Windows and IT problems. Every article should sound diagnostic, technical-but-readable, and authoritative.
+  // Use narrative style for new AI/IT Ops pillars, tutorial style for legacy pillars
+  const isNarrativePillar = ["ai-automation", "it-operations", "build-in-public"].includes(pillarId);
+  const activeRules = isNarrativePillar ? NARRATIVE_RULES : RULES;
+
+  const sysPrompt = isNarrativePillar
+    ? `You write for PraveenTechWorld, a site where an IT Operations Lead documents how he uses AI tools to build automation scripts, data pipelines, and IT tools without being a hardcore developer.
 
 Follow these rules exactly:
-${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
+${activeRules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`
+    : `You are an expert technical writer specializing in ${pillarCategory}. You write for PraveenTechWorld, a knowledge base that helps users build websites, grow websites, and solve Windows and IT problems. Every article should sound diagnostic, technical-but-readable, and authoritative.
 
-  const depth = depthInstruction || "Write at least 2000 words. CRITICAL: You MUST write 2000+ words. Each section needs full paragraphs, not bullet points. Write detailed step-by-step instructions with real examples.";
+Follow these rules exactly:
+${activeRules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
+
+  const depth = isNarrativePillar
+    ? "Write 1500-2000 words. Focus on depth and storytelling over length. Include the exact prompt used, where AI failed, and how you fixed it."
+    : "Write at least 2000 words. CRITICAL: You MUST write 2000+ words. Each section needs full paragraphs, not bullet points. Write detailed step-by-step instructions with real examples.";
 
   let researchSection = "";
   if (researchContext) {
@@ -155,6 +211,29 @@ ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
     }
   }
 
+  const narrativeStructure = isNarrativePillar ? `
+Use this article structure:
+1. The Problem (what task was driving me crazy, what prompted this)
+2. The AI Attempt (what I asked DeepSeek/OpenCode to do, include the EXACT prompt in a code block)
+3. Where It Broke (specific errors, unexpected outputs, hallucinations, missing libraries)
+4. What I Had to Fix (the human intervention, the debugging, the architectural decisions)
+5. The Working Result (final code/script, how to run it, what it outputs)
+6. What I Learned (key takeaways about prompting, AI limitations, workarounds)
+7. The Exact Prompt (reproducible for readers — raw, unedited)
+8. FAQ (3-5 real questions about this tool/approach)
+`
+  : `
+Use this exact article structure:
+1. Direct Answer (2-4 sentences, immediately answers the query, no fluff)
+2. Explanation (technical cause or mechanism)
+3. When This Fix Works
+4. When This Does NOT Work
+5. Step-by-Step instructions (numbered)
+6. Alternatives / Related Fixes (2-5, reinstall/reset as last resort)
+7. Decision Summary ("If X → do this. If Y → do that.")
+8. FAQ section with **Q:** and **A:** format (3-5 real questions)
+`;
+
   const userPrompt = `Write a complete article:
 
 TITLE: ${title}
@@ -166,19 +245,11 @@ ${researchSection}
 
 Return only the article body. No frontmatter. No --- separators. Start with the first heading (##).
 
-Use this exact article structure:
-1. Direct Answer (2-4 sentences, immediately answers the query, no fluff)
-2. Explanation (technical cause or mechanism)
-3. When This Fix Works
-4. When This Does NOT Work
-5. Step-by-Step instructions (numbered)
-6. Alternatives / Related Fixes (2-5, reinstall/reset as last resort)
-7. Decision Summary ("If X → do this. If Y → do that.")
-8. FAQ section with **Q:** and **A:** format (3-5 real questions)
+${narrativeStructure}
 
 ${depth}`;
 
-  let body = await callLLM(sysPrompt, userPrompt, { temperature: 0.7, maxTokens: 8192 });
+  let body = await callLLM(sysPrompt, userPrompt, { temperature: 0.7, maxTokens: 8192, timeout: 480000 });
   if (!body) {
     console.error("  Generation failed");
     return null;

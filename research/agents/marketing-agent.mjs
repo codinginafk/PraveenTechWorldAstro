@@ -3,6 +3,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { log, callLLM, ensureDir } from "./lib/shared.mjs";
 import { writeGoal, writeWeeklyGoal, appendToReport, getReportPath } from "./lib/report.mjs";
+import { runLinkBuilding } from "./link-building-agent.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "../..");
@@ -10,7 +11,7 @@ const ARTICLES_DIR = path.resolve(__dirname, "../../src/content/articles");
 const REPORTS_DIR = path.resolve(__dirname, "../reports");
 const STATE_FILE = path.join(__dirname, "state.json");
 const ANALYTICS_FILE = path.join(__dirname, "analytics-data.json");
-const ALL_PILLARS = ["website-setup","windows-fixes","hosting-infra","ai-websites"];
+const ALL_PILLARS = ["website-setup","windows-fixes","hosting-infra","ai-websites","ai-automation","it-operations","build-in-public"];
 
 const GOALS_DIR = path.join(REPORTS_DIR, "goals");
 const DAILY_GOALS_DIR = path.join(GOALS_DIR, "daily");
@@ -217,9 +218,10 @@ export async function runMarketing() {
     `ZERO-CLICK AUDIT: ${zeroClickArticles.length} articles have impressions but 0 clicks. Fix has highest ROI.`,
     `TOP FIX: "${zeroClickArticles[0]?.title}" (${zeroClickArticles[0]?.impressions} impressions, ${zeroClickArticles[0]?.position}) — rewrite description NOW`,
     `SITE CTR: ${siteCTR}% — target is 3%+. Every article needs a new meta description.`,
-    `LINKEDIN: Stop generic posts. Start with an engineering problem, share a specific config, end with a question.`,
-    `TWITTER/X: Use Buffer to post 2x/day. Don't just link-drop — share a tip from the article.`,
-    `ENGAGEMENT: Reply to every comment within 2 hours. Ask questions in your own posts.`,
+    `DEVT.O: Cross-post every new AI-automation or build-in-public article to Dev.to in the 'AI' and 'Python' tags.`,
+    `REDDIT r/sysadmin: Share IT automation scripts with the exact prompt used. Title: 'I built [X] using DeepSeek so I never have to [Y] again.'`,
+    `LINKEDIN: Lead with vulnerability. 'I am not a developer, but I used DeepSeek to...' — this narrative outperforms generic tips 3x.`,
+    `HACKER NEWS: Submit build-in-public articles that show AI failures, not just successes. HN loves the honest breakdown posts.`,
     `BACKLINKS: Guest post on 1 tech site this week — one quality backlink beats 10 more articles.`,
   ];
 
@@ -259,7 +261,28 @@ export async function runMarketing() {
     "- Rewrite meta descriptions for top 5 zero-click articles (highest impressions first)",
     "- Add socialHook with question to engage audience",
     "- If any article has position < 20 with zero clicks → PRIORITY FIX",
+    "- Cross-post new articles to Dev.to with 'AI', 'Python', 'automation' tags",
+    "- Post ai-automation and build-in-public articles to Reddit r/sysadmin and r/automation",
+    "- Share exact prompts used in articles — this is the main distribution angle",
   ].join("\n"));
+
+  // ── Run link-building outreach weekly ──
+  const lastLinkRun = state.lastLinkBuildingRun;
+  const oneWeek = 7 * 24 * 60 * 60 * 1000;
+  if (!lastLinkRun || Date.now() - new Date(lastLinkRun).getTime() > oneWeek) {
+    log("[Marketing] Running weekly link-building outreach...");
+    try {
+      const lbResult = await runLinkBuilding();
+      appendToReport("Marketing Agent — Link Building", [
+        `Link-building ran at ${new Date().toISOString()}`,
+        `Directories found: ${lbResult.directories}`,
+        `Resources found: ${lbResult.resources}`,
+        `Broken links detected: ${lbResult.broken}`,
+      ].join("\n"));
+    } catch (e) {
+      log(`[Marketing] Link-building agent error: ${e.message}`);
+    }
+  }
 
   // ── Update state ──
   state.lastMarketingDate = today;

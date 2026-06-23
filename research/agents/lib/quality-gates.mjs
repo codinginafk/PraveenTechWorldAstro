@@ -188,6 +188,75 @@ function checkHookQuality(firstParagraph) {
   return { pass: true };
 }
 
+// ---- Homepage validation ----
+
+export function validateHomepage(homepagePath = path.join(ROOT_DIR, "src/pages/index.astro")) {
+  const failures = [];
+
+  if (!fs.existsSync(homepagePath)) {
+    return { passed: false, failures: [{ gate: "H1", rule: "Homepage exists", message: `Homepage not found at ${homepagePath}` }], score: 0 };
+  }
+
+  const content = fs.readFileSync(homepagePath, "utf-8");
+
+  // Extract visible text content (strip Astro/HTML tags, template strings, JS)
+  const text = content
+    .replace(/---[\s\S]*?---\n/, "")
+    .replace(/<script[\s\S]*?<\/script>/g, "")
+    .replace(/<style[\s\S]*?<\/style>/g, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+  // seoTitle from frontmatter
+  const titleMatch = content.match(/title:\s*"([^"]+)"/);
+  const seoTitle = titleMatch ? titleMatch[1] : "";
+
+  // Description from frontmatter
+  const descMatch = content.match(/description:\s*"([^"]+)"/);
+  const description = descMatch ? descMatch[1] : "";
+
+  // H1 and H2 from JSX / HTML (multi-line support)
+  const h1Matches = [...content.matchAll(/<h1[^>]*>[\s\S]*?<\/h1>/g)];
+  const h2JsxMatches = [...content.matchAll(/<h2[^>]*>[\s\S]*?<\/h2>/g)];
+
+  // H1: Must exist and be descriptive
+  if (h1Matches.length === 0) {
+    failures.push({ gate: "H1", rule: "Homepage H1", message: "No H1 tag found on homepage" });
+  }
+
+  // Word count minimum
+  if (wordCount < 600) {
+    failures.push({ gate: "H2", rule: "Homepage content", message: `Homepage has ${wordCount} words — minimum 600 for thin content prevention` });
+  }
+
+  // Description length
+  if (!description) {
+    failures.push({ gate: "H3", rule: "Meta description", message: "No meta description found on homepage" });
+  } else if (description.length < 120) {
+    failures.push({ gate: "H3", rule: "Meta description", message: `Homepage description is ${description.length} chars — minimum 120` });
+  } else if (description.length > 160) {
+    failures.push({ gate: "H3", rule: "Meta description", message: `Homepage description is ${description.length} chars — maximum 160` });
+  }
+
+  // seoTitle length
+  if (!seoTitle) {
+    failures.push({ gate: "H4", rule: "SEO title", message: "No seo title found on homepage" });
+  } else if (seoTitle.length > 60) {
+    failures.push({ gate: "H4", rule: "SEO title", message: `SEO title is ${seoTitle.length} chars — maximum 60` });
+  }
+
+  // At least 4 H2 section headings (one per pillar)
+  if (h2JsxMatches.length < 4) {
+    failures.push({ gate: "H5", rule: "Homepage sections", message: `Only ${h2JsxMatches.length} H2 headings found — minimum 4 for pillar coverage` });
+  }
+
+  const score = Math.max(0, 100 - failures.length * 10);
+  const passed = failures.length === 0;
+  return { passed, failures, score };
+}
+
 // ---- Main validation function ----
 
 export function validateArticle(filePath, existingArticlePaths = []) {
@@ -206,10 +275,10 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   }
 
   // Check tags are all strings
-  const tags = Array.isArray(article.tags) ? article.tags : [];
-  for (let i = 0; i < tags.length; i++) {
-    if (typeof tags[i] !== "string") {
-      schemaFailures.push({ gate: "SCHEMA", rule: "Tag type", message: `tags[${i}] is type "${typeof tags[i]}", expected "string". Value: ${JSON.stringify(tags[i])} — ensure all tags are quoted strings` });
+  const articleTags = Array.isArray(article.tags) ? article.tags : [];
+  for (let i = 0; i < articleTags.length; i++) {
+    if (typeof articleTags[i] !== "string") {
+      schemaFailures.push({ gate: "SCHEMA", rule: "Tag type", message: `tags[${i}] is type "${typeof articleTags[i]}", expected "string". Value: ${JSON.stringify(articleTags[i])} — ensure all tags are quoted strings` });
     }
   }
 
@@ -248,6 +317,9 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   const publishDate = fm.publishDate || "";
   const author = fm.author || "";
   const category = fm.category || "";
+
+  // Narrative pillars get relaxed checks (ai-automation, it-operations, build-in-public)
+  const isNarrative = ["ai-automation", "it-operations", "build-in-public"].includes(category);
 
   // Generate final title tag: seoTitle + " | PTW"
   const suffix = " | PTW";
@@ -335,7 +407,7 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   // Skipped in single-article validation; run by orchestrator with history
 
   // ---- C10: Hook quality ----
-  if (!hookQuality.pass) {
+  if (!hookQuality.pass && !isNarrative) {
     failures.push({ gate: "C10", rule: "Personal hook or data point", message: hookQuality.reason });
   }
 
@@ -351,7 +423,7 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   }
 
   // ---- C13: Paragraph length ----
-  if (longParagraphs > 0) {
+  if (longParagraphs > 0 && !isNarrative) {
     failures.push({ gate: "C13", rule: "Paragraph length", message: `${longParagraphs} paragraph(s) exceed 5 sentences` });
   }
 
@@ -498,7 +570,7 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   // ---- M5: Neutral authoritative tone ----
   const promotionalWords = ["revolutionary", "game-changing", "incredible", "amazing", "best", "perfect", "ultimate", "secret", "guaranteed", "hacks?"];
   const promoHits = promotionalWords.filter(w => new RegExp(w, "i").test(bodyText));
-  if (promoHits.length > 0) {
+  if (promoHits.length > 0 && !isNarrative) {
     failures.push({ gate: "M5", rule: "Neutral authoritative tone", message: `Promotional language found — LLMs penalize biased sources: ${promoHits.join(", ")}` });
   }
 
@@ -537,22 +609,56 @@ export function validateArticle(filePath, existingArticlePaths = []) {
     warnings.push({ gate: "M9", rule: "H2 headings answer specific queries", message: `Only ${queryHeadingHits.length}/${h2Headings.length} H2s match user query patterns — LLMs extract heading-matched answers` });
   }
 
+  // ---- A1: AEO — Answer in first 10% of content ----
+  const first150Words = bodyText.replace(/<[^>]+>/g, "").trim().split(/\s+/).slice(0, 150).join(" ");
+  const aeoAnswerPatterns = [/\?\s*(the short answer|yes|no|here('s| is)|it depends|you can|you need|the easiest|simply|follow these|try|use|open|go to|click|press|install|download|run)/i, /^(the short answer|yes|no|the quickest|here's|here is|you'll want to|start by)/i];
+  const hasDirectAnswer = aeoAnswerPatterns.some(p => p.test(first150Words));
+  if (!hasDirectAnswer && !isNarrative) {
+    failures.push({ gate: "A1", rule: "AEO direct answer", message: "No direct answer found in first 150 words — AEO requires an immediate answer for voice/AI extraction" });
+  }
+
+  // ---- A2: AEO — Featured snippet structure ----
+  if (!isNarrative && bodyText.length > 500) {
+    const firstPara = bodyText.split("\n\n").find(p => { const t = p.trim().replace(/<[^>]+>/g, ""); return t.length > 50 && !t.startsWith("#"); }) || "";
+    const cleanPara = firstPara.replace(/<[^>]+>/g, "").trim();
+    if (cleanPara.length > 280) {
+      warnings.push({ gate: "A2", rule: "AEO snippet length", message: `Opening paragraph is ${cleanPara.length} chars (max 280 for featured snippets) — keep first para under 280 chars` });
+    }
+  }
+
+  // ---- G1: GEO — H2s as questions ----
+  const geoH2s = headings.filter(h => h.startsWith("##") && !h.startsWith("###"));
+  const questionH2Patterns = [/\?/, /^How\s+/, /^What\s+/, /^Why\s+/, /^Can\s+/, /^Do\s+/, /^Is\s+/, /^Should\s+/];
+  const queryH2Hits = geoH2s.filter(h => questionH2Patterns.some(p => p.test(h)));
+  if (queryH2Hits.length < Math.ceil(geoH2s.length * 0.4) && !isNarrative) {
+    failures.push({ gate: "G1", rule: "GEO H2 questions", message: `Only ${queryH2Hits.length}/${geoH2s.length} H2s are questions — LLMs extract Q&A from question-format headings` });
+  }
+
+  // ---- G2: GEO — Data density ----
+  const geoDataPatterns = [/\d+%\b/, /\d+\s*(ms|sec|min|hour|day|MB|GB|KB|bytes?|tokens?|requests?|calls?|rows?|records?|files?)/i, /\$\d+/, /\d{2,}/];
+  const geoDataHits = geoDataPatterns.filter(p => p.test(bodyText));
+  if (geoDataHits.length < 3 && !isNarrative) {
+    failures.push({ gate: "G2", rule: "GEO data density", message: `Only ${geoDataHits.length} data patterns found — LLMs need specific numbers for citation confidence` });
+  }
+
   // ---- M10: Syndication-ready hook ----
   const firstChars = bodyText.replace(/<[^>]+>/g, "").trim().substring(0, 50);
-  const hookPatterns = [/struggling/i, /frustrated/i, /can't/i, /wont/i, /doesn't/i, /not\s+working/i, /error/i, /fix/i, /solved/i, /how\s+to/i, /\d+\s+(ways?|tips?|fixes?|steps?|methods?)/i];
+  const tutorialHookPatterns = [/struggling/i, /frustrated/i, /can't/i, /wont/i, /doesn't/i, /not\s+working/i, /error/i, /fix/i, /solved/i, /how\s+to/i, /\d+\s+(ways?|tips?|fixes?|steps?|methods?)/i];
+  const narrativeHookPatterns = [/built|build/i, /deepseek|opencode|ai/i, /automated|automation/i, /experiment|tried|attempted/i, /learned|discovered/i, /fix|fix|error/i, /\?\s*$/i];
+  const hookPatterns = isNarrative ? narrativeHookPatterns : tutorialHookPatterns;
   const hasHook = hookPatterns.some(p => p.test(firstChars));
   if (!hasHook) {
     failures.push({ gate: "M10", rule: "Syndication-ready hook", message: `First 50 chars don't hook the reader: "${firstChars}..." — needs urgency/question keyword` });
   }
 
   // ---- P1: Pillar category validation ----
-  const validPillars = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites"];
+  const validPillars = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites", "ai-automation", "it-operations", "build-in-public"];
   if (category && !validPillars.includes(category)) {
     failures.push({ gate: "P1", rule: "Pillar category", message: `Category "${category}" is not a valid pillar. Must be one of: ${validPillars.join(", ")}` });
   }
 
   // ---- P2: Hub page exists for pillar ----
-  const pillarHubMap = { "website-setup": "website-setup", "windows-fixes": "windows-troubleshooting", "hosting-infra": "web-hosting-guides", "ai-websites": "ai-for-websites" };
+  const pillarHubMap = { "website-setup": "website-setup", "windows-fixes": "windows-troubleshooting", "hosting-infra": "web-hosting-guides", "ai-websites": "ai-for-websites", "ai-automation": "ai-automation", "it-operations": "it-operations", "build-in-public": "build-in-public" };
   if (category && validPillars.includes(category)) {
     const expectedHub = pillarHubMap[category];
     if (expectedHub) {
@@ -567,7 +673,9 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   // ---- Q1: Problem-based title check ----
   const titleLower = (title || "").toLowerCase();
   const problemPatterns = [/fix/, /error/, /not.working/, /won.t/, /can.t/, /doesn.t/, /failed/, /stuck/, /how\s+to/, /\d+\s+(fixes|ways|tips|steps|methods)/i];
-  const isProblemTitle = problemPatterns.some(p => p.test(titleLower));
+  const narrativeProblemPatterns = [/built|build/i, /automated|automation/i, /deepseek|opencode|ai/i, /script|tool|pipeline/i, /experiment|tried|attempted/i, /learned|discovered/i, /failed|broke|wrong|error/i, /i\s+(built|used|asked|tried|created|wrote|made)/i];
+  const patterns = isNarrative ? narrativeProblemPatterns : problemPatterns;
+  const isProblemTitle = patterns.some(p => p.test(titleLower));
   if (!isProblemTitle) {
     failures.push({ gate: "Q1", rule: "Problem-based title", message: `Title "${title}" is not problem-based. Use format: "[Problem] Not Working? [N] Fixes" or "How to Fix [Problem]"` });
   }

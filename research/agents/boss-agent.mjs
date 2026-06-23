@@ -7,7 +7,7 @@ import { buildReport, writeReport, getReportPath } from "./lib/report.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RESEARCH_DIR = path.resolve(__dirname, "../research");
 const ARTICLES_DIR = path.resolve(__dirname, "../../src/content/articles");
-const VALID_PILLARS = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites"];
+const VALID_PILLARS = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites", "ai-automation", "it-operations", "build-in-public"];
 
 const SCORING = {
   IMPRESSIONS_WEIGHT: 0.30,
@@ -19,7 +19,7 @@ const SCORING = {
 };
 
 function countPillarDistribution() {
-  const counts = { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0 };
+  const counts = { "website-setup": 0, "windows-fixes": 0, "hosting-infra": 0, "ai-websites": 0, "ai-automation": 0, "it-operations": 0, "build-in-public": 0 };
   if (!fs.existsSync(ARTICLES_DIR)) return counts;
   for (const f of fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx"))) {
     try {

@@ -11,7 +11,7 @@ const STATE_FILE = path.join(AGENTS_DIR, "state.json");
 const ARTICLES_DIR = path.resolve(__dirname, "../../src/content/articles");
 
 // Only syndicate articles in these pillar categories
-const ALLOWED_CATEGORIES = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites"];
+const ALLOWED_CATEGORIES = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites", "ai-automation", "it-operations", "build-in-public"];
 
 function loadState() {
   try {

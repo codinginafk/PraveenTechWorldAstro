@@ -23,6 +23,9 @@ const PILLAR_KEYWORDS = {
   "windows-fixes": ["windows 11", "windows update", "blue screen", "pc slow", "windows error", "microsoft"],
   "hosting-infra": ["web hosting", "vercel", "cloudflare", "domain", "dns", "ssl certificate", "server"],
   "ai-websites": ["chatgpt website", "ai content", "ai seo", "copilot", "gemini", "ai writing"],
+  "ai-automation": ["python script", "automation", "cli tool", "api workflow", "deepseek", "opencode", "data pipeline"],
+  "it-operations": ["database", "erp", "sql server", "sysadmin", "infrastructure", "backup strategy", "network admin"],
+  "build-in-public": ["build in public", "ai experiment", "learning in public", "coding diary", "side project", "developer journey"],
 };
 
 const WOEID_WORLD = 1;
@@ -275,7 +278,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log("    node twitter-research.mjs articles [pillar]     # Find shared articles");
     console.log("    node twitter-research.mjs analyze [pillar]      # Full analysis");
     console.log("");
-    console.log("  Pillars: website-setup, windows-fixes, hosting-infra, ai-websites");
+    console.log("  Pillars: website-setup, windows-fixes, hosting-infra, ai-websites, ai-automation, it-operations, build-in-public");
     console.log("  Regions: world, us, uk, india, canada, australia\n");
   }
 }

@@ -1,109 +1,61 @@
-# PraveenTechWorld Sprint-Based Content Strategy
+# PraveenTechWorld Content Strategy — AI-Leveraged Integrator
 
 ## Mission
 
-Build topic clusters, not random articles. Google rewards depth, not breadth. A site with 50 articles across 5 clusters will outrank a site with 100 random articles.
+Document how an IT Operations Lead uses AI (DeepSeek + OpenCode) to build automation scripts, data pipelines, and IT tools. This is a "build in public with AI" narrative — not a developer tutorial site.
 
-## Sprint Model — 30-Day Clusters
+## Pillars
 
-Instead of rotating pillars daily, we build ONE cluster at a time in 30-day sprints.
+| Pillar | Focus | Content Style |
+|--------|-------|--------------|
+| `ai-automation` | Python scripts, CLI tools, data pipelines built with AI | Experiment + code + prompt |
+| `it-operations` | Database auditing, ERP, sysadmin, infrastructure | Operations lead perspective |
+| `build-in-public` | Battle logs, AI failures, lessons learned | Vulnerable, honest narrative |
+| `website-setup` | Google Search Console, GA4, sitemaps (legacy) | Tutorial (existing content) |
+| `windows-fixes` | Windows troubleshooting (legacy) | Tutorial (existing content) |
+| `hosting-infra` | Hosting, DNS, SSL (legacy) | Tutorial (existing content) |
+| `ai-websites` | ChatGPT, AI tools (legacy) | Tutorial (existing content) |
 
-**Month 1 Sprint: Website Setup & Indexing (Primary) + Windows (Secondary)**
-- Search Console cluster: 10 articles
-- Analytics cluster: 10 articles
-- Indexing/Sitemap cluster: 10 articles
-- Bing Webmaster cluster: 5 articles
-- Windows Reinstallation: 5 articles
-- Windows Recovery: 5 articles
-- **Total: 45 articles**
+## Monthly Roadmap
 
-## Publishing Mix (Next 60 Days)
+### Phase 1: Foundation & Pivot (Jun-Aug 2026)
+- **Month 1**: First AI automation script post (database audit with DeepSeek)
+- **Month 2**: 14KB challenge documented as experiment
+- **Month 3**: E-commerce/AI bridge post
 
-| Category | Share |
-|----------|-------|
-| Website Setup & Indexing | 40% |
-| Windows Troubleshooting | 40% |
-| Hosting & Domains | 15% |
-| AI for Website Owners | 5% |
+### Phase 2: Tool Belt Expansion (Sep-Nov 2026)
+- **Month 4**: Financial data pipeline post
+- **Month 5**: API/integration post (OpenRouter cost tracker)
+- **Month 6**: Ops & Automation Playbook resource drop
 
-## Daily Workflow
+### Phase 3: Authority Engine (Dec 2026-Feb 2027)
+- **Month 7**: Tech landscape review from ops perspective
+- **Month 8**: Community problem solving (Reddit/SO solutions)
+- **Month 9**: Security & audit focus
 
-**Morning (before writing):**
-1. Check GSC queries — which pages gained impressions?
-2. Check which cluster has momentum
-3. Pick the next supporting article for that cluster
+### Phase 4: Monetization (Mar-May 2027)
+- **Month 10**: Local AI setup for enterprises guide
+- **Month 11**: Advanced ops architecture posts
+- **Month 12**: Advisory services page launch
 
-**Schedule:**
-- 2 articles/day minimum
-- 3 articles/day aggressive
-- Morning: Cluster anchor article
-- Evening: Supporting/closely related article
+## Writing Rules (New Pillars)
 
-Example Day 1:
-- How To Set Up Google Search Console
-- Google Search Console Verification Failed
+1. Frame every article as a real experiment or battle log
+2. Include the EXACT prompt you used to get the AI to write the code
+3. Be honest about where the AI failed — this is the most engaging part
+4. Show the code the AI generated, then show what you had to fix
+5. Narrative structure: Problem → AI attempt → Where it broke → Fix → Working result → Prompt
 
-Example Day 2:
-- How To Submit Sitemap To Google
-- How To Fix Sitemap Errors
+## Distribution
 
-## Topic Scoring Framework
-
-Before writing any article, score it:
-
-| Factor | Weight |
-|--------|--------|
-| Already Getting Impressions | 40% |
-| Can Support Existing Articles | 30% |
-| Low Competition | 20% |
-| Evergreen | 10% |
-
-Score 0-10. If score < 5, reject.
-
-## Four-Question Filter (Pre-Generation)
-
-Every article MUST pass all 4:
-
-1. **Which cluster does this belong to?** If none → REJECT
-2. **Does it strengthen an existing cluster?** If no → REJECT
-3. **Can it link to at least 3 existing articles?** If no → REJECT
-4. **Will people search this next year?** If no → usually REJECT
+- Dev.to (tags: AI, Python, automation, opensource)
+- Reddit r/sysadmin, r/automation, r/ITCareerQuestions
+- LinkedIn (lead with vulnerability, not expertise)
+- Hacker News (focus on AI failure stories)
 
 ## Sprint Rules
 
-1. No article published outside the 4 buckets (Website Setup, Windows, Hosting, AI for Owners)
-2. No article published without belonging to an active cluster
-3. No article published without at least 3 internal links
-4. No article published without checking GSC momentum first
-
-## Agent Behavior
-
-### Research Agent
-- Research only the current sprint's primary cluster
-- GSC data is primary input for topic selection
-- Never suggest topics outside the 4 buckets
-
-### Generate Agent
-- Problem-based titles only ("[X] Not Working? [N] Fixes")
-- Must include 3+ internal links to same-cluster articles
-- Hub page link required
-
-### Boss Agent
-- Score each topic 0-10 using the framework
-- Reject anything scoring < 5
-- Reject anything failing the 4-question filter
-
-### Syndication Agent
-- Only syndicate pillar articles
-- Track which clusters are syndicated
-
-## Clusters to Build (Month 1)
-
-### Website Setup Cluster
-- Google Search Console setup, verification, errors, sitemaps
-- Google Analytics setup, tracking, reports, events
-- IndexNow, Bing Webmaster, site verification
-
-### Windows Cluster (secondary)
-- Reinstallation: clean install, reset, refresh
-- Recovery: Safe Mode, Startup Repair, System Restore
+1. Legacy pillars (website-setup, windows-fixes, hosting-infra, ai-websites) — maintain existing content, no active generation
+2. Active pillars (ai-automation, it-operations, build-in-public) — primary generation targets
+3. Every new article must include the exact prompt used
+4. Every new article must include a "Where It Broke" or "What I Learned" section
