@@ -574,10 +574,18 @@ Return ONLY a valid JSON array. No markdown. No extra text. Example: [{ "title":
     saveState(state);
   } catch (err) { log(`  Publish failed: ${err.message}`); }
 
-  // Phase 6: Syndicate (1 per cycle to avoid rate limits)
+  // Phase 6: Regenerate llms.txt with new article
+  try {
+    const { generateLlmsTxt, generateLlmsFullTxt } = await import("./lib/generate-llms-txt.mjs");
+    generateLlmsTxt();
+    generateLlmsFullTxt();
+    log("  llms.txt regenerated with new article.");
+  } catch (err) { log(`  llms.txt regeneration: ${err.message}`); }
+
+  // Phase 7: Syndicate (1 per cycle to avoid rate limits)
   try { await runSyndication(); } catch (err) { log(`  Syndication: ${err.message}`); }
 
-  // Phase 7: Ping (last cycle of day)
+  // Phase 8: Ping (last cycle of day)
   if (state.articlesPublishedToday >= state.dailyQuota) {
     try {
       const { pingGoogleSitemap } = await import("./seo-agent/gsc-client.mjs");
