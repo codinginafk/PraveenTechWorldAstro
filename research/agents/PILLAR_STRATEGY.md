@@ -19,8 +19,8 @@ Document how an IT Operations Lead uses AI (DeepSeek + OpenCode) to build automa
 ## Monthly Roadmap
 
 ### Phase 1: Foundation & Pivot (Jun-Aug 2026)
-- **Month 1**: First AI automation script post (database audit with DeepSeek)
-- **Month 2**: 14KB challenge documented as experiment
+- **Month 1** ✅: 3 narrative articles published (DB audit, TLS cert, sysadmin toolkit)
+- **Month 2** 🏃: Sprint active — targets 8 ai-automation, 4 it-operations, 3 build-in-public
 - **Month 3**: E-commerce/AI bridge post
 
 ### Phase 2: Tool Belt Expansion (Sep-Nov 2026)
@@ -48,14 +48,25 @@ Document how an IT Operations Lead uses AI (DeepSeek + OpenCode) to build automa
 
 ## Distribution
 
-- Dev.to (tags: AI, Python, automation, opensource)
+- Dev.to (tags: AI, Python, automation, opensource) — auto-syndicate via syndication-agent.mjs
 - Reddit r/sysadmin, r/automation, r/ITCareerQuestions
-- LinkedIn (lead with vulnerability, not expertise)
+- LinkedIn (lead with vulnerability, not expertise) — auto-post via syndication-agent.mjs
 - Hacker News (focus on AI failure stories)
 
-## Sprint Rules
+## Tracking
 
-1. Legacy pillars (website-setup, windows-fixes, hosting-infra, ai-websites) — maintain existing content, no active generation
-2. Active pillars (ai-automation, it-operations, build-in-public) — primary generation targets
+- Google Search Console (daily via analytics-agent.mjs)
+- Bing Webmaster Tools (daily via bing-client.mjs) — set BING_API_KEY in .env
+- AI crawler tracking (GPTBot, ClaudeBot, PerplexityBot, Bingbot, etc.) via api/track.js + middleware.js
+  - Deployed as Vercel Function + Edge Middleware
+  - Data stored in Vercel Blob (set BLOB_READ_WRITE_TOKEN)
+  - Report generated weekly by ai-crawler-agent.mjs
+
+## Sprint Rules (Month 2 — AI Automation)
+
+1. Active pillars: ai-automation (primary), it-operations (secondary), build-in-public (tertiary)
+2. Legacy pillars (website-setup, windows-fixes, hosting-infra, ai-websites) — maintain existing content, no active generation
 3. Every new article must include the exact prompt used
 4. Every new article must include a "Where It Broke" or "What I Learned" section
+5. Syndicate each new article to Dev.to (same day)
+6. LinkedIn post within 24 hours of publish

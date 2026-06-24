@@ -190,6 +190,30 @@ export async function runMarketing() {
   recommendations.push(`SYNDICATION: LinkedIn=${linkedInCount}, Buffer=${bufferCount}, Blogger=${bloggerCount}, Dev.to=${(state.devtoPosts?.length || 0)}`);
   recommendations.push("  Posts are broadcasts. Start conversations: reply to every comment, ask questions in posts, tag relevant people.");
 
+  // 5f: Bing Webmaster data
+  if (analytics?.bingData) {
+    const bing = analytics.bingData;
+    recommendations.push(`BING: ${bing.queryTraffic ? `${bing.queryTraffic.length} queries` : "No data yet"} | Backlinks: ${bing.backlinks?.Backlinks?.length || "N/A"}`);
+    if (bing.crawlStats) {
+      recommendations.push(`  Bing crawl: ${bing.crawlStats.PagesCrawled || "?"} pages crawled`);
+    }
+  } else {
+    recommendations.push("BING: Not configured. Set BING_API_KEY in .env (see research/agents/seo-agent/bing-setup-guide.md)");
+  }
+
+  // 5g: AI crawler data
+  if (analytics?.aiCrawlerData) {
+    const crawler = analytics.aiCrawlerData;
+    recommendations.push(`AI CRAWLERS: ${crawler.uniqueBots} unique bots, ${crawler.totalBotHits} total hits`);
+    if (crawler.bots?.length > 0) {
+      for (const b of crawler.bots.slice(0, 3)) {
+        recommendations.push(`  ${b.name}: ${b.hits} hits`);
+      }
+    }
+  } else {
+    recommendations.push("AI CRAWLERS: No data yet. Deploy to Vercel and set BLOB_READ_WRITE_TOKEN.");
+  }
+
   // 5e: Content gap — articles with position < 20 that get zero clicks
   const closeButNoCigar = zeroClickArticles.filter(a => a.position < 20);
   if (closeButNoCigar.length > 0) {

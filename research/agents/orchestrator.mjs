@@ -18,6 +18,9 @@ const ARTICLES_DIR = path.join(ROOT_DIR, "src/content/articles");
 const HUB_DIR = path.join(ROOT_DIR, "src/content/hubs");
 const STATE_FILE = path.join(__dirname, "state.json");
 
+const BING_ENABLED = !!process.env.BING_API_KEY;
+const BLOB_ENABLED = !!process.env.BLOB_READ_WRITE_TOKEN;
+
 // Sprint configuration
 const SPRINTS = [
   {
@@ -155,7 +158,7 @@ async function checkGscMomentum() {
 }
 
 function pickClusterForToday(state, gscMomentum) {
-  const sprint = SPRINTS[0];
+  const sprint = SPRINTS.find(s => s.id === state.sprint?.id) || SPRINTS[0];
   const progress = state.sprintProgress || {};
 
   // If GSC shows momentum in a cluster, prioritize it
@@ -330,9 +333,9 @@ async function orchestratorCycle(state) {
     return;
   }
 
-  const sprint = SPRINTS[0];
+  const sprint = SPRINTS.find(s => s.id === state.sprint?.id) || SPRINTS[0];
   const day = state.sprint?.dayOfSprint || 1;
-  log(`Sprint: ${sprint.id}, Day ${day}`);
+  log(`Sprint: ${sprint.id}, Day ${day}, Primary: ${sprint.primaryCluster}`);
 
   // Phase 0: GSC Morning Check (first cycle of day only)
   let gscMomentum = state.gscMomentum || null;
@@ -600,6 +603,33 @@ Return ONLY a valid JSON array. No markdown. No extra text. Example: [{ "title":
   log(`=== Cycle done. Cluster: ${clusterForToday}. Sprint: ${totalDone}/${totalTarget}. Today: ${state.articlesPublishedToday}/${state.dailyQuota} ===`);
 }
 
+async function checkSprintTransition(state) {
+  const currentSprint = SPRINTS.find(s => s.id === state.sprint?.id);
+  if (!currentSprint) {
+    // Start month1
+    state.sprint = { id: SPRINTS[0].id, startedAt: new Date().toISOString(), dayOfSprint: 1 };
+    state.currentCluster = SPRINTS[0].primaryCluster;
+    log(`[Sprint] Starting: ${state.sprint.id}`);
+    saveState(state);
+    return;
+  }
+
+  // Check if month1 targets are met or days exceeded — transition to month2
+  if (currentSprint.id === "month1-website-setup" && SPRINTS[1]) {
+    const targets = currentSprint.targets;
+    const progress = state.sprintProgress || {};
+    const allMet = Object.entries(targets).every(([c, t]) => (progress[c] || 0) >= t);
+    const daysExceeded = (state.sprint.dayOfSprint || 0) >= currentSprint.days;
+
+    if (allMet || daysExceeded) {
+      log(`[Sprint] Transitioning: ${currentSprint.id} → ${SPRINTS[1].id} (allMet=${allMet}, daysExceeded=${daysExceeded})`);
+      state.sprint = { id: SPRINTS[1].id, startedAt: new Date().toISOString(), dayOfSprint: 1 };
+      state.currentCluster = SPRINTS[1].primaryCluster;
+      saveState(state);
+    }
+  }
+}
+
 async function dailyReset(state) {
   const lastPubDate = state.lastPublishDate ? state.lastPublishDate.split("T")[0] : "";
   if (lastPubDate !== todayStr()) {
@@ -607,6 +637,9 @@ async function dailyReset(state) {
     log(`New day. Resetting counter (had ${state.articlesPublishedToday} articles yesterday).`);
     state.articlesPublishedToday = 0;
     state.lastPublishDate = null;
+
+    // Check sprint transition at day boundary
+    await checkSprintTransition(state);
 
     // Only advance sprint day if articles were actually published
     if (hadArticles) {
@@ -638,25 +671,49 @@ async function dailyCycles(state) {
       saveState(state);
     } catch {}
   }
+
+  // AI Crawler report (weekly — skip if already run this week)
+  if (BLOB_ENABLED) {
+    const crawlerKey = "lastCrawlerRun";
+    if (!state[crawlerKey] || Date.now() - new Date(state[crawlerKey]).getTime() > 7 * 86400000) {
+      try {
+        const { runAiCrawlerAnalysis } = await import("./ai-crawler-agent.mjs");
+        await runAiCrawlerAnalysis();
+        state[crawlerKey] = new Date().toISOString();
+        saveState(state);
+      } catch (err) { log(`[Orchestrator] AI crawler analysis failed: ${err.message}`); }
+    }
+  }
+
+  // Bing sitemap submission (weekly)
+  if (BING_ENABLED) {
+    const bingKey = "lastBingSitemapSubmit";
+    if (!state[bingKey] || Date.now() - new Date(state[bingKey]).getTime() > 7 * 86400000) {
+      try {
+        const { submitSitemapToBing } = await import("./seo-agent/bing-client.mjs");
+        await submitSitemapToBing();
+      } catch (err) { log(`[Orchestrator] Bing sitemap submit failed: ${err.message}`); }
+    }
+  }
 }
 
 export async function runOrchestrator() {
-  log("============================================");
-  log("  PraveenTechWorld Sprint Orchestrator v2.0");
-  log("============================================");
-  log(`  Sprint: ${SPRINTS[0].id}`);
-  log(`  Target: ${Object.entries(SPRINTS[0].targets).map(([c, t]) => `${c}=${t}`).join(", ")}`);
-  log(`  Daily: ${SPRINTS[0].dailyTarget} articles`);
-  log("============================================");
-
   if (!acquireLock()) return;
 
   let state = loadState();
+  const activeSprint = SPRINTS.find(s => s.id === state?.sprint?.id) || SPRINTS[0];
+  log("============================================");
+  log("  PraveenTechWorld Sprint Orchestrator v2.0");
+  log("============================================");
+  log(`  Sprint: ${activeSprint.id}`);
+  log(`  Target: ${Object.entries(activeSprint.targets).map(([c, t]) => `${c}=${t}`).join(", ")}`);
+  log(`  Daily: ${activeSprint.dailyTarget} articles`);
+  log("============================================");
+
   await dailyReset(state);
   await dailyCycles(state);
   await orchestratorCycle(state);
 
-  // Schedule: run every 4 hours (3 articles/day = 8am, 12pm, 4pm)
   setInterval(async () => {
     state = loadState();
     await dailyReset(state);

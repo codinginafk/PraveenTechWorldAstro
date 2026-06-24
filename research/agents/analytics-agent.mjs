@@ -9,6 +9,9 @@ const STATE_FILE = path.join(__dirname, "state.json");
 const ARTICLES_DIR = path.join(ROOT_DIR, "src/content/articles");
 const ANALYTICS_FILE = path.join(__dirname, "analytics-data.json");
 
+const BING_ENABLED = !!process.env.BING_API_KEY;
+const BLOB_ENABLED = !!process.env.BLOB_READ_WRITE_TOKEN;
+
 function loadState() {
   try { return JSON.parse(fs.readFileSync(STATE_FILE, "utf-8")); }
   catch { return {}; }
@@ -150,6 +153,34 @@ export async function runAnalytics() {
     analytics.gscData = null;
     analytics.contentGaps = [];
     analytics.performingArticles = { top: [], zeroClicks: [] };
+  }
+
+  // Fetch Bing Webmaster data
+  if (BING_ENABLED) {
+    try {
+      const { fetchAllBingData } = await import("./seo-agent/bing-client.mjs");
+      const bingData = await fetchAllBingData();
+      if (bingData) {
+        analytics.bingData = bingData;
+        log(`[Analytics Agent] Bing data fetched`);
+      }
+    } catch (err) {
+      log(`[Analytics Agent] Bing fetch failed: ${err.message}`);
+    }
+  }
+
+  // Fetch AI crawler data
+  if (BLOB_ENABLED) {
+    try {
+      const { runAiCrawlerAnalysis } = await import("./ai-crawler-agent.mjs");
+      const crawlerData = await runAiCrawlerAnalysis();
+      if (crawlerData) {
+        analytics.aiCrawlerData = crawlerData;
+        log(`[Analytics Agent] AI crawler data: ${crawlerData.uniqueBots} bots, ${crawlerData.totalBotHits} hits`);
+      }
+    } catch (err) {
+      log(`[Analytics Agent] AI crawler fetch failed: ${err.message}`);
+    }
   }
 
   analytics.articleCount = articles.length;
