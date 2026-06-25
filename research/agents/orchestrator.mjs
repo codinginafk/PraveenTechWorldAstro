@@ -685,14 +685,17 @@ async function dailyCycles(state) {
     }
   }
 
-  // Bing sitemap submission (weekly)
+  // Bing submission (sitemap weekly, URLs daily)
   if (BING_ENABLED) {
-    const bingKey = "lastBingSitemapSubmit";
-    if (!state[bingKey] || Date.now() - new Date(state[bingKey]).getTime() > 7 * 86400000) {
+    const sitemapKey = "lastBingSitemapSubmit";
+    const urlKey = "lastBingUrlBatchSubmit";
+    const shouldSubmitSitemap = !state[sitemapKey] || Date.now() - new Date(state[sitemapKey]).getTime() > 7 * 86400000;
+    const shouldSubmitUrls = !state[urlKey] || Date.now() - new Date(state[urlKey]).getTime() > 24 * 3600000;
+    if (shouldSubmitSitemap || shouldSubmitUrls) {
       try {
-        const { submitSitemapToBing } = await import("./seo-agent/bing-client.mjs");
-        await submitSitemapToBing();
-      } catch (err) { log(`[Orchestrator] Bing sitemap submit failed: ${err.message}`); }
+        const { submitEverything } = await import("./seo-agent/bing-client.mjs");
+        await submitEverything();
+      } catch (err) { log(`[Orchestrator] Bing submission failed: ${err.message}`); }
     }
   }
 }

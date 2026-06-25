@@ -29,9 +29,9 @@ function getServiceAccountPath() {
   return process.env.GOOGLE_SERVICE_ACCOUNT_PATH || path.join(ROOT_DIR, "gcp-service-account.json");
 }
 
-export async function pingIndexNow() {
+export async function pingIndexNow(extraUrls = []) {
   log("[GSC Client] Pinging IndexNow (Bing + partners)...");
-  const urls = [SITE_URL, SITEMAP_URL];
+  const urls = [SITE_URL, SITEMAP_URL, ...extraUrls.slice(0, 100)];
 
   try {
     const res = await fetch("https://api.indexnow.org/indexnow", {
