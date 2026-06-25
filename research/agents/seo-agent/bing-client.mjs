@@ -81,8 +81,8 @@ export async function getBingQueryTraffic() {
 
 export async function getBingUrlTraffic(urlPath = "") {
   log(`[Bing Client] Fetching URL traffic for ${urlPath || "(site root)"}...`);
-  const params = urlPath ? { url: urlPath } : {};
-  const data = await bingApiCall("GetUrlTrafficInfo", params);
+  const fullUrl = urlPath ? `https://www.praveentechworld.com${urlPath.startsWith("/") ? urlPath : `/${urlPath}`}` : "https://www.praveentechworld.com";
+  const data = await bingApiCall("GetUrlTrafficInfo", { url: fullUrl });
   return data;
 }
 
