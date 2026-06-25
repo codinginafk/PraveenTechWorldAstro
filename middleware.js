@@ -16,7 +16,7 @@ const BOT_PATTERNS = [
 
 export const config = {
   matcher: [
-    '/((?!api/|_next/|_astro/|pagefind/|images/|fonts/|favicon|robots\\.txt|llms\\.txt|sitemap|b5ccb860).*)',
+    '/((?!api/|_next/|_astro/|pagefind/|images/|fonts/|favicon|robots\\.txt|llms\\.txt|sitemap|BingSiteAuth\\.xml|b5ccb860).*)',
   ],
 };
 
