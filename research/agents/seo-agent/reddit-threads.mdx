@@ -1,0 +1,93 @@
+# Reddit Threads for Commenting — June 2026
+
+## Prime Targets (self-promotion allowed or high-relevance)
+
+### 1. r/sysadmin "Weekly 'I made a useful thing'" 
+- **April 17, 2026**: https://www.reddit.com/r/sysadmin/comments/1snugw5/weekly_i_made_a_useful_thing_thread_april_17_2026/
+- **February 20, 2026**: https://www.reddit.com/r/sysadmin/comments/1r9rdvf/weekly_i_made_a_useful_thing_thread_february_20/
+- **Angle**: Share the DeepSeek health check script story. These threads explicitly encourage sharing your own tools.
+
+### 2. r/selfhosted "Selfhosted Monitoring – I'm losing my mind!"
+- https://www.reddit.com/r/selfhosted/comments/1ihj81p/selfhosted_monitoring_im_losing_my_mind_how_do/
+- Active ~1 year ago but has 130+ comments
+- **Angle**: User running 130 containers struggling with monitoring. Suggest lightweight Python approach + link
+
+### 3. r/sysadmin "Would sysadmins actually use an EoL monitoring tool..."
+- https://www.reddit.com/r/sysadmin/comments/1rk495l/
+- Posted ~2 hours ago, VERY active
+- **Angle**: Comment on lightweight agent approach, share experience building health check scripts with AI
+
+### 4. r/VPS "Server monitoring, which service to choose?"
+- https://www.reddit.com/r/VPS/comments/1lk5r89/server_monitoring_which_service_to_choose/
+- **Angle**: Suggest DIY Python script approach for those who don't want another SaaS subscription
+
+## Secondary Targets
+
+### 5. r/sysadmin "What's the most clever PS script you've written for automation?"
+- https://www.reddit.com/r/sysadmin/comments/1m3vugf/
+- 10 months old but still open
+
+### 6. r/sysadmin "Monitoring / Dashboard"
+- https://www.reddit.com/r/sysadmin/comments/190df1q/monitoring_dashboard/
+- General monitoring discussion
+
+## Cold Outreach Targets
+
+### 7. r/usefulscripts community
+- https://www.reddit.com/r/usefulscripts/
+- Entire subreddit is for sharing scripts — perfect for posting the health check script directly
+
+## Comment Templates
+
+### Template A — "I made a useful thing" thread
+```
+I built a lightweight server health checker using DeepSeek (AI-generated with manual fixes).
+
+It SSHes into multiple Linux servers, collects CPU/disk/memory/service states, compares against thresholds, and sends Slack alerts. The first version had SSH connection pooling bugs and no error handling for down servers — had to fix those manually.
+
+Key features:
+- Async SSH (checks 4 servers in ~6 seconds)
+- Configurable thresholds per metric
+- Alert deduplication (no spam)
+- Graceful failure (skips down servers)
+
+Wrote about the process here: https://www.praveentechworld.com/blog/i-automated-server-health-checks-with-deepseek-the-script-that-saved-my-weekend
+
+The TL;DR is: AI got me 80% of the way there, but the edge cases (rate limiting, dedup, error handling) still needed human attention.
+```
+
+### Template B — Monitoring recommendation thread (value-first)
+```
+I went down this rabbit hole recently for 4 Ubuntu servers. Didn't want to run Nagios/Zabbix for such a small fleet, so I built a lightweight Python script that checks CPU, disk, memory, and services via SSH and alerts on thresholds.
+
+What surprised me: most monitoring tools assume you want an agent on every box. For small setups, a single script that SSHes in, runs checks, and reports back is way simpler to maintain.
+
+One thing to watch for with any DIY approach: async SSH connection pooling bit me hard at first (12 concurrent connections per box triggered rate limiting). Fixed it by reusing one connection per server for all checks.
+
+Full story here if helpful: https://www.praveentechworld.com/blog/i-automated-server-health-checks-with-deepseek-the-script-that-saved-my-weekend
+```
+
+### Template C — "Would sysadmins use this?" thread
+```
+I've been down this path. Built a lightweight health checker for my own servers. The trick I found is most teams don't want another agent — they want something they can run from cron or their laptop that just works and doesn't need root.
+
+For the EoL angle specifically: one thing I'd add is checking package repo versions alongside OS version. A server on Ubuntu 24.04 is fine, but if it's running Python 3.8 from a dead PPA, that's the real risk.
+
+Wrote about where my approach broke and how I fixed it here: https://www.praveentechworld.com/blog/i-automated-server-health-checks-with-deepseek-the-script-that-saved-my-weekend
+```
+
+### Template D — r/usefulscripts direct post
+```
+[Python] Lightweight multi-server health checker with Slack alerts
+
+I built a Python script that SSHes into multiple Linux servers, checks CPU/disk/memory/services, and alerts on threshold breaches. Uses asyncssh for parallel execution (~6s for 4 servers).
+
+What it does:
+- Reads YAML config with server list and thresholds
+- Checks load average, df -h, free -m, systemctl status
+- Sends Slack webhook on threshold breach (with dedup)
+- Skips unreachable servers instead of crashing
+- Logs everything to health-check.log
+
+The AI-generated first draft had bugs (connection pooling floods, no error handling, alert spam). Fixed all of those. Full writeup with the exact prompt and fixes: https://www.praveentechworld.com/blog/i-automated-server-health-checks-with-deepseek-the-script-that-saved-my-weekend
+```
