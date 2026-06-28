@@ -1,4 +1,4 @@
-﻿---
+---
 title: "I Built an AI Token Dashboard and Tracked Every API Call for 30 Days. My Bill Dropped 60%."
 description: "My AI API bill hit $2,300 in one month with no tracking. I built a token dashboard with SQLite and a proxy. Here is how we cut costs by 60%."
 imageCredit: "Photo by FlyD on Unsplash"
@@ -29,7 +29,7 @@ This is the dashboard, the data it revealed, and the exact code you need to buil
 
 ### The Direct Answer
 
-Every AI agent burns tokens. Most teams have no idea how many. I built a transparent HTTP proxy that sits between every service and every LLM provider. For a closer look at how browser-level AI features handle your data, read our [Chrome AI privacy analysis](/blog/chrome-removes-ai-privacy-wording-what-googles-on-device-data-claim-means-for-us). It logs each request — model, prompt length, completion length, latency, cost — to a local SQLite database. A simple dashboard queries that database and shows cost by agent, cost by user, cost trend over time. Within a week, I identified two agents responsible for 40% of our total cost doing redundant work. I merged them, added prompt caching, and the bill dropped from $2,300 to $920.
+Every AI agent burns tokens. Most teams have no idea how many. I built a transparent HTTP proxy that sits between every service and every LLM provider. For a closer look at how browser-level AI features handle your data, read our [Chrome AI privacy analysis](/blog/chrome-removes-ai-privacy-wording-what-googles-on-device-data-claim-means-for-us). It logs each request � model, prompt length, completion length, latency, cost � to a local SQLite database. A simple dashboard queries that database and shows cost by agent, cost by user, cost trend over time. Within a week, I identified two agents responsible for 40% of our total cost doing redundant work. I merged them, added prompt caching, and the bill dropped from $2,300 to $920.
 
 ### Why You Have No Idea What You Are Spending
 
@@ -110,7 +110,7 @@ FROM token_log GROUP BY hour ORDER BY burn DESC;
 
 **4. The dashboard view (dashboard.html).** A single HTML file with Chart.js that reads from the SQLite database via a simple HTTP endpoint. 14 KB, same philosophy as the Vanilla JS site. No framework, no build step.
 
-The entire system — proxy, database, dashboard — cost zero to run. It lives on a $5 VPS and processes 50,000 requests per day without breaking a sweat.
+The entire system � proxy, database, dashboard � cost zero to run. It lives on a $5 VPS and processes 50,000 requests per day without breaking a sweat.
 
 ### What the Data Showed
 
@@ -127,7 +127,7 @@ After 30 days of logging, here is what I found:
 
 The single biggest finding: two agents were doing the same classification work. One was built by a developer who did not know the other existed. Together, they accounted for 40% of our total token spend. I merged them, added a cache layer, and the cost dropped overnight.
 
-The second finding: one agent was sending the entire chat history (48,000 tokens) on every request, even when the task was a simple yes/no classification. The developer had copied the prompt template from a prototype and never trimmed it. A one-line fix — `max_history: 5` — cut that agent's cost by 80%.
+The second finding: one agent was sending the entire chat history (48,000 tokens) on every request, even when the task was a simple yes/no classification. The developer had copied the prompt template from a prototype and never trimmed it. A one-line fix � `max_history: 5` � cut that agent's cost by 80%.
 
 The third finding: our peak burn hour was 2 PM, correlated with a cron job that re-processed the entire day's data every hour instead of incrementally. Changing it to an incremental scheduler flattened the cost curve and reduced API rate limit errors.
 
@@ -157,15 +157,15 @@ It is not useful for teams with a single model endpoint and a single use case. I
 
 ### Decision Summary
 
-If your monthly AI API bill is under $100 → use Helicone free tier or the OpenAI dashboard. You do not need a custom proxy.
+If your monthly AI API bill is under $100 ? use Helicone free tier or the OpenAI dashboard. You do not need a custom proxy.
 
-If your bill is $100-$1,000 → build the SQLite proxy. It takes an afternoon and gives you per-agent cost attribution.
+If your bill is $100-$1,000 ? build the SQLite proxy. It takes an afternoon and gives you per-agent cost attribution.
 
-If your bill is over $1,000 → add the proxy AND set up budget alerts AND schedule a weekly cost review meeting. The proxy will pay for itself in the first day.
+If your bill is over $1,000 ? add the proxy AND set up budget alerts AND schedule a weekly cost review meeting. The proxy will pay for itself in the first day.
 
-If you are prototyping → do not worry about cost. But add a single-line log: `print(f"Tokens: {response.usage.total_tokens}, Cost: ${cost:.4f}")`. Future you will thank past you.
+If you are prototyping ? do not worry about cost. But add a single-line log: `print(f"Tokens: {response.usage.total_tokens}, Cost: ${cost:.4f}")`. Future you will thank past you.
 
-If your agent keeps getting more expensive → it is probably sending too much context. Check the prompt-to-completion ratio. If it is above 10:1, you have bloat.
+If your agent keeps getting more expensive ? it is probably sending too much context. Check the prompt-to-completion ratio. If it is above 10:1, you have bloat.
 
 **Q: Does the proxy add latency?**
 **A:** The SQLite write takes 2-5 milliseconds. The LLM call takes 2,000-5,000 milliseconds. The proxy adds less than 0.3% overhead. In practice, nobody notices.
