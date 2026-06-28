@@ -237,7 +237,7 @@ The final  now:
 
 ---
 
-## I Am Not a Developer — I Built a Database Audit Script with DeepSeek. Here Is Where It Went Wrong.
+## I Built a Database Audit Script with DeepSeek. Here Is Where It Went Wrong.
 
 **Pillar:** Build in Public
 **URL:** https://www.praveentechworld.com/blog/i-am-not-a-developer-i-built-a-database-audit-script-with-deepseek-here-is-where
@@ -245,52 +245,43 @@ The final  now:
 
 > A non-developer IT Ops Lead used DeepSeek to build a database audit Python script. The exact prompt, three AI failures, and the working 20-line script.
 
-What Problem Drove Me to Build a Database Audit Script?
+--
+title: "I Built a Database Audit Script with DeepSeek. Here Is Where It Went Wrong."
+description: "A non-developer IT Ops Lead used DeepSeek to build a database audit Python script. The exact prompt, three AI failures, and the working 20-line script."
+coverImage: "https://images.unsplash.com/photo-1571406537023-e82e9daff296?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxBbSUyME5vdCUyMERldmVsb3BlcnxlbnwwfHx8fDE3ODIyMDc3NTZ8MA&ixlib=rb-4.1.0&w=1200&h=600&fit=crop"
+imageAlt: "red Amor statuette"
+imageCredit: "Photo by Tatiana Rodriguez on Unsplash"
+publishDate: 2026-06-23
+author: praveen
+category: build-in-public
+tags:
+  deepseek
+  non-developer
+  database-audit
+  python
+  prompt-engineering
+seoTitle: "I Built a Database Audit Script with DeepSeek. Here Is Where It Went Wrong."
+socialHook: "I manage databases every day but I can't write Python. So I asked DeepSeek to build an audit script. The first 3 attempts failed. Here is the exact prompt that finally worked."
+pillarId: build-in-public
+faq:
+  question: "Do I need any Python packages beyond the DB connectors?"
+    answer: "Only  and  are required; they are part of the standard library. If you add  or logging, youâ€™ll need  (also standard). The script deliberately avoids extra dependencies. "
+  question: "How do I handle the Oracle driver if I donâ€™t have Instant Client?"
+    answer: "The script checks for  import and prints a warning, then skips the Oracle DB. For a production environment youâ€™ll still need the client libraries; the scriptâ€™s warning helps you know which DBs are being ignored. "
+  question: "Can I extend the script to support SQLite or SQL Server?"
+    answer: "Yes-just add another  block for the new DB type, update the size and column queries, and include the appropriate driver import. The same prompt engineering works; just tweak the queries. "
+  question: "What if the config file is malformed?"
+    answer: "The script uses . If it fails, argparse will raise  and youâ€™ll see a traceback. For a more robust solution you could wrap it in a try/except and log the error, but for a quick audit tool the default behavior is fine. "
+  question: "How do I schedule this script?"
+    answer: "Add a cron entry like . The script runs in under 3 seconds, so it fits comfortably within a weekly window."
 
-The short answer is I built a database audit Python script using DeepSeek after three failed attempts. Every week I was staring at my Oracle and MySQL instances, wondering which tables had grown beyond a safe size, who owned unused schemas, and whether any columns were still using the deprecated  data type. I could run manual queries, but the process took 30‑45 minutes and I had to copy‑paste results into spreadsheets for my weekly compliance report. My team kept asking for an automated “audit‑once‑and‑forget” CLI tool that would scan a list of databases, flag anomalies, and email a PDF summary. I’m not a developer-I’m an IT Operations Lead who spends my days on runbooks and monitoring dashboards-so I turned to AI as my junior developer. I asked DeepSeek (and OpenCode) to write the script, expecting a few tweaks. What followed was a three‑act drama of perfect‑looking code that never ran, snippets that hallucinated libraries, and a final script that actually worked-after I spent a solid 4 hours fixing it.
 
-How I Asked DeepSeek and OpenCode to Write the Script (The Prompt)
+What task would you automate with this approach? Feel free to share your prompts and the AIâ€™s output in the comments-letâ€™s build in public together!
 
-My first experiment was a simple prompt that described the business logic and requested a CLI tool. I copied the prompt into a markdown file, sent it to DeepSeek’s web interface, and got back a 30‑line Python script. The code looked sleek, but it never executed. Here’s the exact prompt I used (I kept the token count at 312 tokens, which DeepSeek quoted as a 0.004 USD cost):
+Related Guides
 
-The response arrived in 12.3 seconds, and the file size was 1.8 KB. I saved it as  and ran . The help text printed fine, but when I tried to run it against a dummy config, the script crashed with . I hadn’t installed Oracle’s binary, but the prompt explicitly said “assume the required DB drivers are installed.” That was my first failure.
-
-Where the AI Attempts Broke: Three Failures I Faced
-
-Failure #1 Missing Drivers  
-DeepSeek’s script assumed a perfect environment. My test VM only had  and  installed. The  import blew up. I tried to install it via , but the package requires Oracle Instant Client libraries, which I didn’t have on this Linux container. The error log looked like this:
-
-Failure #2 Hallucinated Schema Queries  
-After I removed the Oracle check (to keep the script runnable), I asked DeepSeek for a “quick fix” to drop the Oracle block and replace it with a placeholder. The new script arrived with queries like . That table doesn’t exist in MySQL. The AI had hallucinated Oracle‑specific views into a MySQL script. Running it produced:
-
-Failure #3 Incorrect JSON Structure  
-My third prompt asked DeepSeek to “just give me a working script that outputs the findings as a CSV instead of JSON.” The AI obliged with a 28‑line script that used  to write CSV, but it never imported . The script crashed with . Moreover, the CSV header I got was , which didn’t match the business requirement of a nested JSON array. My team rejected the output because they needed the exact JSON format for their downstream reporting pipeline.
-
-Each failure taught me a pattern: the AI writes great‑looking code but assumes an environment you may not have, and it can mix vendor‑specific syntax without warning. My next approach was to design the prompt around constraints and validate the output before trusting it.
-
-What I Had to Fix: Human Intervention and Debugging
-
-For the fourth attempt I flipped the strategy. Instead of asking for a full script, I asked DeepSeek to generate small, testable functions that I could assemble. I also added a “validation step” in the prompt: “Please include a simple  block that prints a sample output so I can verify the JSON shape.” I also requested that the script detect missing drivers and skip the DB with a clear warning.
-
-Here’s the revised prompt (token count 378, cost $0.0051):
-
-DeepSeek returned a 22‑line script (file size 1.2 KB). The first time I ran it, it printed the warning for Oracle and proceeded with MySQL and PostgreSQL. The JSON output looked correct, but I noticed the timestamp was a naive string instead of ISO‑8601. My team’s downstream parser expected . I edited the script to use . I also added a  flag to suppress warnings if the user wants clean output. The final script ran in 2.3 seconds on my test VM, processing three databases, and produced a clean JSON file of 3.4 KB.
-
-Here’s the before/after comparison:
-
-Before (AI‑only) broken snippet:
-
-After (my fix) working snippet:
-
-The script now meets the business logic, handles missing drivers, and outputs the exact JSON shape required.
-
-How the Final Script Works: Result and Output
-
-Running  on my lab environment (Ubuntu 22.04, Python 3.10) produced the following output in 2.3 seconds:
-
-The  file (size 3.4 KB) contained:
-
-The script also supports a  flag to suppress the informational logs, which is handy for cron jobs. I added it after my team complained about the noise in their CI pipelines. The final CLI tool is now part of our weekly autom
+Automating TLS Certificate Renewal with DeepSeek â€” Production Lessons â€” The short answer is I automated TLS certificate renewal using a DeepSeekâ€‘generated Python script, bu
+I Built a Sysadmin Toolkit with DeepSeek â€” Prompts, Failures & Code â€” The short answer is that I used DeepSeek to build a suite of Python scripts for log parsing, disk mo
 
 ---
 
@@ -420,7 +411,7 @@ If you use WordPress, go to Media, upload the optimized
 
 ---
 
-## Sitemap Submitted Successfully but Pages Stay Undiscovered? Check Robots.txt, Internal Links, and Canonicals
+## Sitemap Submitted but Pages Stay Undiscovered? Check Robots.txt and Links
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/sitemap-submitted-successfully-but-pages-stay-undiscovered-check-robotstxt-inter
@@ -574,7 +565,7 @@ Do not allow everything just to
 
 ---
 
-## Fix GA4 Data Delayed or Missing After Installation: 10 Troubleshooting Steps
+## GA4 Data Delayed or Missing? 10 Troubleshooting Steps
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/ga4-data-delayed-or-missing-after-installation-check-measurement-id-consent-and-
@@ -664,7 +655,7 @@ If Realtime is empty, the problem is still before reporting. Go back to the tag 
 
 ---
 
-## GA4 Shows Realtime Users but Standard Reports Stay Blank? Fix Event Processing and Report Configuration
+## GA4 Shows Realtime Users but Standard Reports Are Blank? Fix It Here
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/ga4-shows-realtime-users-but-standard-reports-stay-blank-fix-event-processing-an
@@ -800,7 +791,7 @@ Op
 
 ---
 
-## Understanding Sitemap & Indexing: How to Fix Crawling Issues and Improve Your Site's Performance in 2026
+## Understanding Sitemap and Indexing: Fix Crawling Issues in 2026
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/understanding-sitemap-indexing-how-to-fix-crawling-issues-and-improve-your-sites
@@ -833,7 +824,7 @@ undefined —
 
 ---
 
-## Website Speed Upgrades: Fixing Crawling Delays and Enhancing Core Web Vitals in 2026
+## Website Speed Upgrades: Fix Crawling Delays and Core Web Vitals
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/website-speed-upgrades-fixing-crawling-delays-and-enhancing-core-web-vitals-in-2
@@ -1342,7 +1333,7 @@ Q: Can I change the 10-second eng
 
 ---
 
-## Data Protection for Universities: A Complete Compliance and Security Guide (2026)
+## Data Protection for Universities: Compliance and Security Guide
 
 **Pillar:** privacy
 **URL:** https://www.praveentechworld.com/blog/data-protection-for-universities-compliance-and-security-guide
@@ -1821,7 +1812,7 @@ Step 2: Click the Start button in the bo
 
 ---
 
-## Windows 11 KB5089549 Causing White Flashes? Fix Xbox Mode & File Explorer Now
+## Windows 11 KB5089549: Enable Xbox Mode and Fix White Flashes
 
 **Pillar:** Windows Troubleshooting
 **URL:** https://www.praveentechworld.com/blog/windows-11-kb5089549-update-how-to-enable-xbox-mode-and-fix-file-explorer-white-flash
@@ -2482,7 +2473,7 @@ Jasper focuses on brand voice consistency by training on your existing content. 
 
 ---
 
-## How to Remove Your Personal Information from Google Search Results (2026 Guide)
+## How to Remove Your Personal Info from Google Search (2026 Guide)
 
 **Pillar:** privacy
 **URL:** https://www.praveentechworld.com/blog/how-to-remove-your-personal-information-from-google-search-results-2026-guide
@@ -2539,7 +2530,7 @@ This request is made pursuant to the [Californ
 
 ---
 
-## AI to Automate Office Work in 12–18 Months: Microsoft's CEO Predictions and Practical Steps
+## AI to Automate Office Work in 12-18 Months: Microsoft CEO Predictions
 
 **Pillar:** automation
 **URL:** https://www.praveentechworld.com/blog/ai-to-automate-office-work-in-1218-months-microsofts-ceo-predictions-and-practic
@@ -2583,7 +2574,7 @@ Your value is in interpretation, not spreadsheet mechanics.
 For the Project Manager:
 Your role is about oversight and communication.
   Automatic Status Tracking: AI integrated with project tools (like Planner or Asana) can monitor task progress. "Generate a status report for the 'Phoenix Project.' Compare completed tasks vs. planned milestones. Flag any tasks that are overdue or at risk."
-  Risk Identification: You can ask, "Based on current task progress and team work
+  Risk Identification: You can ask, "Based on
 
 ---
 
@@ -2755,7 +2746,7 @@ Marketing and Advertising: This industry saw the fastest growth in the last 18 m
 
 ---
 
-## Chrome Removes AI Privacy Wording: What Google's On-Device Data Claim Means for Users in 2026
+## Chrome Removes AI Privacy Wording: What It Means for Your Data
 
 **Pillar:** privacy
 **URL:** https://www.praveentechworld.com/blog/chrome-removes-ai-privacy-wording-what-googles-on-device-data-claim-means-for-us
@@ -2871,7 +2862,7 @@ Third, accuracy is key. AI can misinterpret text, misunderstand context, or even
 
 ---
 
-## AI in Higher Education: Protecting Student Data Privacy - Essential Tips and Regulations
+## AI in Higher Education: Protecting Student Data Privacy
 
 **Pillar:** privacy
 **URL:** https://www.praveentechworld.com/blog/ai-in-higher-education-protecting-student-data-privacy-essential-tips-and-regula
@@ -3126,7 +3117,7 @@ You have granular control. You don’t have to wipe everything if only a few ite
 
 ---
 
-## How to Automate Your Daily Workflow with Free Tools in 2026: Complete Guide
+## How to Automate Your Daily Workflow with Free Tools in 2026
 
 **Pillar:** automation
 **URL:** https://www.praveentechworld.com/blog/how-to-automate-your-daily-workflow-with-free-tools-in-2026-complete-guide
@@ -3236,7 +3227,7 @@ Error 0x80070070: "Insufficient disk space." This is straightforward. You need t
 
 ---
 
-## I Built an AI Token Dashboard and Tracked Every API Call for 30 Days. My Bill Dropped 60%.
+## I Built an AI Token Dashboard and Cut My API Bill by 60%
 
 **Pillar:** AI Tools & Websites
 **URL:** https://www.praveentechworld.com/blog/is-chatgpt-safe-2026-security-privacy-guide
@@ -3299,7 +3290,7 @@ The third finding: our peak burn hour was 2 PM, correlated with a cron j
 
 ---
 
-## Microsoft Free AI for Teachers & Students: How to Access and Use Copilot Now
+## Microsoft Free AI for Teachers and Students: Access Copilot Now
 
 **Pillar:** free-software
 **URL:** https://www.praveentechworld.com/blog/microsoft-free-ai-for-teachers-students-how-to-access-and-use-copilot-now
@@ -3699,7 +3690,7 @@ This leads us to the core of modern SEO: E-E-A-T, which stands for Experience, E
 
 ---
 
-## 14KB Web Bloat: How I Replaced My Bloated 2MB Site With 4 Vanilla HTML Files
+## 14KB Web Bloat: I Replaced My 2MB Site With Vanilla HTML Files
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/website-speed-optimization-why-it-matters-for-seo-and-how-to-fix-it
