@@ -10,7 +10,7 @@ This file contains the full text of every article on the site. AI systems can ex
 
 ---
 
-## I Automated Server Health Checks with DeepSeek — Saved My Weekend
+## I Automated Server Health Checks with DeepSeek
 
 **Pillar:** AI Automation Scripts
 **URL:** https://www.praveentechworld.com/blog/i-automated-server-health-checks-with-deepseek-the-script-that-saved-my-weekend
@@ -24,11 +24,15 @@ What Problem Made Me Build This?
 
 I manage 4 Ubuntu servers for different projects. One runs my monitoring stack. One hosts a small e-commerce site. Two run internal tools for clients. Every Saturday morning, I used to SSH into each one and run the same commands:
 
+
+
 It took 15 minutes of grunt work. I kept telling myself I would set up Nagios or Zabbix, but those felt like overkill for 4 boxes. I wanted a single Python script I could run from my laptop that would check all servers, collect the metrics, and alert me if anything was wrong.
 
 The Prompt I Fed DeepSeek
 
 I opened DeepSeek and wrote a single prompt that covered the full workflow:
+
+
 
 DeepSeek returned a 450-line script that looked impressive. It had asyncssh, a config parser, threshold checks, and even a colorful summary table. It quoted around 780 tokens for the output, costing me roughly $0.002 on DeepSeek's API.
 
@@ -38,9 +42,12 @@ SSH connection pooling. The AI used asyncssh but created a fresh connection for 
 
 The error I got:
 
+
 Threshold logic was inverted. The script checked each metric individually but used OR logic to trigger alerts. A single high CPU core would fire an alert even if disk and memory were fine. Worse, it would keep firing the same alert every 300 seconds because it never tracked which alerts had already been sent. My test inbox filled up with 47 identical Slack messages in 10 minutes.
 
 No error handling on SSH failures. When one server was down for maintenance, the script crashed entirely instead of skipping it and checking the remaining servers. The async task raised an unhandled exception that killed the whole loop.
+
+
 
 What I Had to Fix
 
@@ -60,7 +67,11 @@ The Working Result
 
 Here is what the output looks like:
 
+
+
 The config file is a simple YAML:
+
+
 
 What I Learned About Prompting for Health Check Scripts
 
@@ -76,6 +87,8 @@ The Exact Prompt
 
 Here is the raw, unedited prompt I sent to DeepSeek. You can copy-paste it and see the same output I received:
 
+
+
 FAQ
 
 Q: Does this script work on Windows servers?
@@ -85,7 +98,7 @@ Q: Can I run this without email or Slack configured?
 A: Yes. Omit the --webhook flag and the script logs everything to health.log and stdout. You can pipe the output to any other tool.
 
 Q: How much CPU does this use?
-A: On a 2-core VPS, the script uses about 0.8% CPU during each check cycle and 35MB of RAM. The sleep interval between check
+A: On a 2-core VPS, the script 
 
 ---
 
@@ -155,68 +168,75 @@ What I Learned About Prompt Engineer
 
 ---
 
-## I Automated TLS Renewal with DeepSeek — and Almost Broke Production
+## I Automated TLS Renewal with DeepSeek
 
 **Pillar:** IT Operations & Infrastructure
 **URL:** https://www.praveentechworld.com/blog/how-i-automated-tls-certificate-renewal-with-deepseek-and-why-it-almost-broke-pr
 **Published:** 2026-06-23
 
-> The short answer is I automated TLS certificate renewal using a DeepSeek‑generated Python script, but it almost broke production due to missing
+> The short answer is I automated TLS certificate renewal using a DeepSeekâ€‘generated Python script, but it almost broke production due to missing
 
-The short answer is I automated TLS certificate renewal using a DeepSeek‑generated Python script, but it almost broke production due to missing libraries and cron timing issues. I had to add manual safety checks, debug the AI’s hallucinations, and turn the prototype into a reliable CLI tool before I could trust it in my workflow.
+The short answer is I automated TLS certificate renewal using a DeepSeekâ€‘generated Python script, but it almost broke production due to missing libraries and cron timing issues. I had to add manual safety checks, debug the AIâ€™s hallucinations, and turn the prototype into a reliable CLI tool before I could trust it in my workflow.
 
 What problem drove me to automate TLS certificate renewal?
 
-For months I was manually renewing TLS certs on my Nginx front‑ends every 90 days. Each renewal required SSHing into three servers, backing up configs, running , and then restarting services. The process was tedious, error‑prone, and ate into my weekend. I also had to keep track of expiry dates across a handful of domains, and one missed renewal would trigger an alert from my monitoring stack. The pain point was simple: a repeatable, safe, and auditable renewal workflow that I could set and forget. I wanted a script that would check expiration, pull new certs, and roll out changes without human intervention-something I could run as a cron job at 2 AM and not have to debug at 3 AM.
+For months I was manually renewing TLS certs on my Nginx frontâ€‘ends every 90 days. Each renewal required SSHing into three servers, backing up configs, running , and then restarting services. The process was tedious, errorâ€‘prone, and ate into my weekend. I also had to keep track of expiry dates across a handful of domains, and one missed renewal would trigger an alert from my monitoring stack. The pain point was simple: a repeatable, safe, and auditable renewal workflow that I could set and forget. I wanted a script that would check expiration, pull new certs, and roll out changes without human intervention-something I could run as a cron job at 2â€¯AM and not have to debug at 3â€¯AM.
 
 How I asked DeepSeek to write the renewal script
 
 I opened DeepSeek and pasted a detailed prompt that outlined the exact requirements, edge cases, and safety checks I needed. The prompt was deliberately verbose because I knew the AI thrives on context. I also included a request for a simple CLI interface and logging so I could see what it was doing.
 
-DeepSeek returned a 284‑token response (≈2.3 KB of code). The script looked clean, had proper argparse, and even included a JSON config template. I copied it into a file called  and made it executable.
+
+
+DeepSeek returned a 284â€‘token response (â‰ˆ2.3â€¯KB of code). The script looked clean, had proper argparse, and even included a JSON config template. I copied it into a file called  and made it executable.
 
 Before (AI generated) snippet:
 
-The script ran fine on my laptop (execution time ≈12 seconds). I even tested the dry‑run mode and saw the logs being written. Everything looked good-until I pushed it to production.
+
+The script ran fine on my laptop (execution time â‰ˆ12â€¯seconds). I even tested the dryâ€‘run mode and saw the logs being written. Everything looked good-until I pushed it to production.
 
 Why the cron job failed in production
 
-I scheduled the script via cron to run at 2 AM every week:
+I scheduled the script via cron to run at 2â€¯AM every week:
 
-At 3 AM the next morning I got a panic call: . The script never even got to the certbot step. I also noticed that the  function was a placeholder that always returned a date 45 days in the future, meaning the script never actually triggered a renewal. The logs in  showed only “Processing example.com” and “Done”-no real validation.
+
+
+At 3â€¯AM the next morning I got a panic call: . The script never even got to the certbot step. I also noticed that the  function was a placeholder that always returned a date 45 days in the future, meaning the script never actually triggered a renewal. The logs in  showed only â€œProcessing example.comâ€ and â€œDoneâ€-no real validation.
 
 The root causes were:
 
-1. Missing dependency  (required by certbot’s Python bindings) was not installed on the production server.
-2. Hallucinated logic the AI’s placeholder expiry check never performed a real check.
+1. Missing dependency  (required by certbotâ€™s Python bindings) was not installed on the production server.
+2. Hallucinated logic the AIâ€™s placeholder expiry check never performed a real check.
 3. Path issues the script tried to reload Nginx with  but the service name differed on some nodes ( vs ).
 4. Permissions the cron job ran as  but the script wrote logs to  without proper ownership, causing subsequent runs to fail with permission errors.
 
-I also discovered that the AI’s JSON config example referenced a file that didn’t exist, and the script tried to open it when no  was provided, raising a .
+I also discovered that the AIâ€™s JSON config example referenced a file that didnâ€™t exist, and the script tried to open it when no  was provided, raising a .
 
-All of these issues made the script unusable in production. The AI had produced a “good enough” prototype, but it lacked the robustness required for a mission‑critical workflow.
+All of these issues made the script unusable in production. The AI had produced a â€œgood enoughâ€ prototype, but it lacked the robustness required for a missionâ€‘critical workflow.
 
 How I manually patched the script
 
-I rolled up my sleeves and turned the prototype into a production‑ready tool. The changes fell into three buckets: dependency management, real expiry checking, and safety wrappers.
+I rolled up my sleeves and turned the prototype into a productionâ€‘ready tool. The changes fell into three buckets: dependency management, real expiry checking, and safety wrappers.
 
 1. Dependency management
 
-I added a requirements.txt and used  in the script itself (with a guard to avoid re‑installing if already present). I also added a check for the  library and printed a helpful error message.
+I added a requirements.txt and used  in the script itself (with a guard to avoid reâ€‘installing if already present). I also added a check for the  library and printed a helpful error message.
 
 2. Real expiry checking
 
-I replaced the placeholder with a call to  to get the actual expiry date. If certbot isn’t installed, the script falls back to . I added error handling for missing cert paths.
+I replaced the placeholder with a call to  to get the actual expiry date. If certbot isnâ€™t installed, the script falls back to . I added error handling for missing cert paths.
 
 3. Safety wrappers
 
-I introduced a  flag that now prints a JSON summary of what would happen, and a  flag that runs the renewal in a test environment (using  with certbot). I also added a pre‑flight check that verifies Nginx is reachable and that the renewal script has write permissions to the cert directories.
+I introduced a  flag that now prints a JSON summary of what would happen, and a  flag that runs the renewal in a test environment (using  with certbot). I also added a preâ€‘flight check that verifies Nginx is reachable and that the renewal script has write permissions to the cert directories.
 
-Here’s the after version of the script (key changes highlighted). I kept the original structure but rewrote the critical functions.
+Hereâ€™s the after version of the script (key changes highlighted). I kept the original structure but rewrote the critical functions.
+
+
 
 What changed?  
 
-Added  and a requirements.txt (≈0.8 KB).  
+Added  and a requirements.txt (â‰ˆ0.8â€¯KB).  
 Replaced placeholder expiry check with real certbot/OpenSSL calls.  
 Added robust error handling and logging.  
 Added a configurable Nginx service name.  
@@ -224,16 +244,13 @@ Added a JSON summary output for easy monitoring.
 
 I also created a simple :
 
+
+
 Running  on the production server took about 45 seconds and cost roughly $0.02 for the downloaded packages.
 
-After these changes, the script passed a full dry‑run, then I ran it manually (execution time ≈18 seconds). It renewed the test cert, validated it, and reloaded Nginx without any errors. The cron job ran successfully at 2 AM the following week-no panic call.
+After these changes, the script passed a full dryâ€‘run, then I ran it manually (execution time â‰ˆ18â€¯seconds). It renewed the test cert, validated it, and reloaded Nginx without any errors. The cron job ran successfully at 2â€¯AM the following week-no panic call.
 
-What the final script does and how to run it
-
-The final  now:
-
-1. Checks dependencies and exits with a clear message if missing.  
-2. Accepts domains via  or 
+Wha
 
 ---
 
@@ -411,7 +428,7 @@ If you use WordPress, go to Media, upload the optimized
 
 ---
 
-## Sitemap Submitted but Pages Stay Undiscovered? Check Robots.txt and Links
+## Sitemap Submitted but Pages Stay Undiscovered?
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/sitemap-submitted-successfully-but-pages-stay-undiscovered-check-robotstxt-inter
@@ -421,17 +438,17 @@ If you use WordPress, go to Media, upload the optimized
 
 Direct Answer
 
-A sitemap can say “submitted successfully” while Google still leaves pages undiscovered because the sitemap is only a hint, not a crawl command. In my experience, the first things to check are robots.txt, weak internal links, and canonical tags that point Google away from the page you want indexed. If those three areas are clean, then check page quality, redirects, noindex tags, and server response issues.
+A sitemap can say â€œsubmitted successfullyâ€ while Google still leaves pages undiscovered because the sitemap is only a hint, not a crawl command. In my experience, the first things to check are robots.txt, weak internal links, and canonical tags that point Google away from the page you want indexed. If those three areas are clean, then check page quality, redirects, noindex tags, and server response issues.
 
 Explanation
 
-This problem usually starts with a confusing Google Search Console message. You submit your XML sitemap, Google accepts it, and the status looks healthy. Then you open the Pages report and see URLs listed under Crawled currently not indexed, Discovered currently not indexed, or Excluded by ‘noindex’ tag.
+This problem usually starts with a confusing Google Search Console message. You submit your XML sitemap, Google accepts it, and the status looks healthy. Then you open the Pages report and see URLs listed under Crawled currently not indexed, Discovered currently not indexed, or Excluded by â€˜noindexâ€™ tag.
 
-The sitemap is doing one job. It is telling Google, “These URLs exist, and here is how often they change.” It is not forcing Google to crawl them, index them, or rank them. Google Search Central explains that sitemaps help Google discover URLs, but they do not guarantee crawling or indexing. You can read more in Google’s official sitemap documentation: Sitemaps overview.
+The sitemap is doing one job. It is telling Google, â€œThese URLs exist, and here is how often they change.â€ It is not forcing Google to crawl them, index them, or rank them. Google Search Central explains that sitemaps help Google discover URLs, but they do not guarantee crawling or indexing. You can read more in Googleâ€™s official sitemap documentation: Sitemaps overview.
 
 The page may stay undiscovered for a few common reasons. Google may find the URL in the sitemap, then hit robots.txt and back away. The page may have no internal links from other pages, so Google sees it as isolated. A canonical tag may point to another URL, telling Google that this page is not the main version.
 
-I’ve seen this happen often with new blog posts, product pages, category pages, and landing pages. The sitemap looks fine, but the page has no strong path from the homepage, no links from related posts, or a canonical tag copied from a template. That is why I always treat sitemap status as the starting point, not the finish line.
+Iâ€™ve seen this happen often with new blog posts, product pages, category pages, and landing pages. The sitemap looks fine, but the page has no strong path from the homepage, no links from related posts, or a canonical tag copied from a template. That is why I always treat sitemap status as the starting point, not the finish line.
 
 When This Fix Works
 
@@ -461,13 +478,11 @@ Step-by-Step Instructions
 
 4. Run the URL Inspection test for the affected page. Check whether Google says the URL is available to Google. If it says blocked by robots.txt, move to the robots.txt check.
 
-5. Test robots.txt with Google’s official tool. Go to the robots.txt testing tool and enter your URL. If the tool says blocked, open your robots.txt file at .
+5. Test robots.txt with Googleâ€™s official tool. Go to the robots.txt testing tool and enter your URL. If the tool says blocked, open your robots.txt file at .
 
 6. Remove any rule that blocks the page or section you want indexed. For example, change  to a narrower rule, or remove it if you want all blog posts crawled. Do not block pages that you want Google to index.
 
-7. Check the live page for a noindex tag. In your browser, open the page, right-click, and select View Page Source. Search for . If you see , remove it from the page settings, SEO plugin, or template.
-
-8. Check the canonical 
+7. Check the live page for a noindex tag. In your browser, open the page, right-click, and select View Page Source. Search for . If you see , remove it from the 
 
 ---
 
@@ -655,23 +670,23 @@ If Realtime is empty, the problem is still before reporting. Go back to the tag 
 
 ---
 
-## GA4 Shows Realtime Users but Standard Reports Are Blank? Fix It Here
+## GA4 Shows Realtime Users but Reports Are Blank
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/ga4-shows-realtime-users-but-standard-reports-stay-blank-fix-event-processing-an
 **Published:** 2026-06-17
 
-> GA4 Realtime shows users but standard reports are blank? The tag is firing but data has not processed yet — here is how to fix event processing.
+> GA4 Realtime shows users but standard reports are blank? The tag is firing but data has not processed yet â€” here is how to fix event processing.
 
 Direct Answer
 
-If GA4 Realtime shows users but standard reports are blank, the tag is probably firing, but GA4 has not processed the data yet, a filter is removing it, or the report is using the wrong date, property, or configuration. In my experience, the first fixes are to wait past the 24-48 hour processing delay, confirm the date range and time zone, check Data filters, and make sure  is appearing in Events. Don’t reinstall the tag first. Fix event processing and report settings before you reset the property.
+If GA4 Realtime shows users but standard reports are blank, the tag is probably firing, but GA4 has not processed the data yet, a filter is removing it, or the report is using the wrong date, property, or configuration. In my experience, the first fixes are to wait past the 24-48 hour processing delay, confirm the date range and time zone, check Data filters, and make sure  is appearing in Events. Donâ€™t reinstall the tag first. Fix event processing and report settings before you reset the property.
 
 Explanation
 
 Realtime and standard reports are not the same data path. Realtime is a live event stream that shows activity within seconds or minutes. Standard reports are processed tables that GA4 builds after the event data passes checks for filters, attribution, identity, consent, and report rules.
 
-That is why a fresh website can show 2 active users in Realtime, but the Acquisition, Engagement, and Pages reports still say “No data available.” The hit reached GA4, but the report layer has not accepted it yet or is hiding it.
+That is why a fresh website can show 2 active users in Realtime, but the Acquisition, Engagement, and Pages reports still say â€œNo data available.â€ The hit reached GA4, but the report layer has not accepted it yet or is hiding it.
 
 Google Support says GA4 report data is usually processed within 24 hours, and acquisition source data can take up to 48 hours (Google Support). I treat that as the first checkpoint, not as a reason to panic.
 
@@ -705,7 +720,7 @@ Step-by-Step Instructions
 
 In the bottom-left corner of GA4, click Admin. In the Property column, click Property details. Check the property name, property ID, and web data stream.
 
-If the property name says “Demo Account,” “Old Site,” or a different domain, you are in the wrong place. Go back to the property list on the left and select the correct GA4 property.
+If the property name says â€œDemo Account,â€ â€œOld Site,â€ or a different domain, you are in the wrong place. Go back to the property list on the left and select the correct GA4 property.
 
 2. Check the web data stream and Measurement ID.
 
@@ -723,11 +738,11 @@ This is a simple check, but I have fixed blank GA4 reports this way more than on
 
 Go to Admin. In the Property column, click Property settings. Look at the Time zone setting.
 
-If your GA4 property is set to Pacific Time but your server and visitors are in India, your “Today” report may not match your local day yet. This does not mean the data is gone. It means the reporting day is cut at a different ho
+If your GA4 property is set to Pacific Time but your server and visitors are in India, your â€œTodayâ€ report may not match your local day yet. This does 
 
 ---
 
-## GA4 Traffic Numbers Look Wrong? Check These 5 Settings First
+## GA4 Traffic Numbers Look Wrong? Check 5 Settings
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/ga4-traffic-looks-wrong-after-website-setup-check-consent-mode-filters-and-cross
@@ -737,7 +752,7 @@ If your GA4 property is set to Pacific Time but your server and visitors are in 
 
 Direct Answer
 
-If GA4 traffic looks wrong after website setup, check three things first: Consent Mode, GA4 data filters, and cross-domain tracking. In my experience, most “bad GA4 data” cases are not random. They come from a cookie banner blocking analytics, an internal traffic filter excluding real users, or a checkout domain starting a new session. Fix those before reinstalling your analytics plugin or Tag Manager container.
+If GA4 traffic looks wrong after website setup, check three things first: Consent Mode, GA4 data filters, and cross-domain tracking. In my experience, most â€œbad GA4 dataâ€ cases are not random. They come from a cookie banner blocking analytics, an internal traffic filter excluding real users, or a checkout domain starting a new session. Fix those before reinstalling your analytics plugin or Tag Manager container.
 
 Explanation
 
@@ -745,7 +760,7 @@ GA4 traffic can look wrong because GA4 is not just counting page loads. It count
 
 Consent Mode is the first place I check. If your cookie banner sets  to denied before the GA4 tag loads, GA4 may receive less complete data. On one client site, traffic dropped by about 36% after a new cookie banner went live. The missing users were visitors who never clicked Accept for analytics cookies.
 
-Filters are another common cause. GA4 data filters can remove internal traffic, developer traffic, or traffic marked with a specific . Google’s official GA4 data filters documentation explains that data filters control which events are included in reports. I’ve seen setups where the office IP was added correctly, but the filter was too broad and removed visitors from the same network range.
+Filters are another common cause. GA4 data filters can remove internal traffic, developer traffic, or traffic marked with a specific . Googleâ€™s official GA4 data filters documentation explains that data filters control which events are included in reports. Iâ€™ve seen setups where the office IP was added correctly, but the filter was too broad and removed visitors from the same network range.
 
 Cross-domain tracking causes a different problem. Your main site may show one user, then your checkout, booking, or payment domain may show a second user. If the GA4 linker does not pass the client ID, GA4 treats the move as a new session. I once saw a service site lose 18% of conversions because the booking domain was not in the GA4 cross-domain list.
 
@@ -783,11 +798,7 @@ Go to your website source, Tag Manager container, or WordPress analytics plugin.
 
 Open Google Tag Manager and click Preview in the upper right. Enter your website URL and click Connect.
 
-In Tag Assistant, click through your home page, a service page, and the main conversion page. On the left, open Tags Fired. Your GA4 Configuration tag or Google tag should fire on All Pages. If it does not fire, fix the base tag before touching filters or cross-domain settings. If you use GTM on WordPress, this guide may help: How to Enable Google Search Console for Your Website.
-
-3. Check Consent Mode before the GA4 tag loads.
-
-Op
+In Tag Assistant, click through your home page, a service page, and the main conversion page. On the left, open Tags Fired. Your GA4 Configuration tag or Google tag should fire on All Pages. If it does not fire, fix the base tag before touching filters or cross-domain settings. If you use GTM on WordPress, this guide may help: How to Enable Google Search Console for Your Websi
 
 ---
 
@@ -797,30 +808,30 @@ Op
 **URL:** https://www.praveentechworld.com/blog/understanding-sitemap-indexing-how-to-fix-crawling-issues-and-improve-your-sites
 **Published:** 2026-06-17
 
-> Improve - Direct Answer: Understanding Sitemap & Indexing is crucial for fixing crawling issues and boosting your site’s performance in 2026.
+> Improve - Direct Answer: Understanding Sitemap & Indexing is crucial for fixing crawling issues and boosting your siteâ€™s performance in 2026.
 
-Direct Answer: Understanding Sitemap & Indexing is crucial for fixing crawling issues and boosting your site’s performance in 2026. Many developers overlook this step, but it directly impacts how search engines discover your content. If you’re struggling with slow indexing or missing URLs, you’re not alone. The key lies in creating a clear, structured sitemap that guides crawlers efficiently.
+Direct Answer: Understanding Sitemap & Indexing is crucial for fixing crawling issues and boosting your siteâ€™s performance in 2026. Many developers overlook this step, but it directly impacts how search engines discover your content. If youâ€™re struggling with slow indexing or missing URLs, youâ€™re not alone. The key lies in creating a clear, structured sitemap that guides crawlers efficiently.
 
-Explain the technical cause: A broken or incomplete sitemap prevents search engines from properly indexing your pages. This often happens when missing URLs, incorrect metadata, or outdated links disrupt the crawl process. To resolve this, start by auditing your site’s current sitemap structure. Use tools like Screaming Frog or Ahrefs to identify gaps and correct them. This ensures that every important page gets visibility during indexing.
+Explain the technical cause: A broken or incomplete sitemap prevents search engines from properly indexing your pages. This often happens when missing URLs, incorrect metadata, or outdated links disrupt the crawl process. To resolve this, start by auditing your siteâ€™s current sitemap structure. Use tools like Screaming Frog or Ahrefs to identify gaps and correct them. This ensures that every important page gets visibility during indexing.
 
-When This Fix Works: Implementing a well-maintained sitemap immediately improves crawl efficiency. Search engines prioritize sites with up-to-date and complete sitemaps, leading to faster rankings and better user experience. I’ve seen this work in real projects where a simple update reduced indexing time by nearly half.
+When This Fix Works: Implementing a well-maintained sitemap immediately improves crawl efficiency. Search engines prioritize sites with up-to-date and complete sitemaps, leading to faster rankings and better user experience. Iâ€™ve seen this work in real projects where a simple update reduced indexing time by nearly half.
 
 When This Does NOT Work: Even after fixing the sitemap, some issues persist. For example, if your site has duplicate content or broken links, crawlers may ignore certain pages despite a good sitemap. In such cases, manual checks and automated fixes become necessary. Always verify that all internal links are functional and that your robots.txt file allows proper crawling.
 
-Step-by-Step instructions: Begin by generating an XML sitemap using your website’s CMS or hosting platform. Next, upload this file to your server or use a service like Google Search Console. Then, submit the sitemap to search engines via their APIs or direct submission forms. Finally, monitor performance using analytics tools to track changes in indexing speed and relevance.
+Step-by-Step instructions: Begin by generating an XML sitemap using your websiteâ€™s CMS or hosting platform. Next, upload this file to your server or use a service like Google Search Console. Then, submit the sitemap to search engines via their APIs or direct submission forms. Finally, monitor performance using analytics tools to track changes in indexing speed and relevance.
 
-Alternatives / Related Fixes: If the sitemap isn’t updating correctly, consider refreshing your site’s configuration or contacting your hosting provider. Another option is to optimize your robots.txt file to ensure crawlers can access all intended URLs. These steps complement sitemap management and strengthen overall SEO.
+Alternatives / Related Fixes: If the sitemap isnâ€™t updating correctly, consider refreshing your siteâ€™s configuration or contacting your hosting provider. Another option is to optimize your robots.txt file to ensure crawlers can access all intended URLs. These steps complement sitemap management and strengthen overall SEO.
 
 Decision Summary: If you notice slow crawling or missing pages, prioritize updating your sitemap. If the issue remains unresolved, explore alternative fixes like improving site speed or enhancing meta tags. Remember, consistency is key-regular sitemap maintenance keeps your site competitive in 2026.
 
-For more insights on optimizing your site’s structure, check out our previous article on "How to Use a Proper Sitemap for Better SEO." You can also read detailed guidance on "Understanding Indexing Errors" in our latest web setup guide. For additional resources, visit PraveenTechWorld’s SEO Best Practices and explore the official Microsoft Indexing Documentation.
+For more insights on optimizing your site structure, check out our previous article on "How to Use a Proper Sitemap for Better SEO." You can also read detailed guidance on "Understanding Indexing Errors" in our latest web setup guide. For additional resources, visit our guide on fixing sitemap errors and explore the official Microsoft Indexing Documentation.
 
 Related Guides
 
-Website Setup — Browse all guides in this category
-undefined — 
-undefined — 
-undefined —
+Website Setup â€” Browse all guides in this category
+undefined â€” 
+undefined â€” 
+undefined â€”
 
 ---
 
@@ -873,13 +884,13 @@ GA4 Events: Automatic, Recommended, and Custom Events Explained — Automatic, r
 
 ---
 
-## GA4 Events Explained: Automatic, Recommended, and Custom Events
+## GA4 Events: Automatic, Recommended, and Custom
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/ga4-events-automatic-recommended-custom-tracking-guide
 **Published:** 2026-06-12
 
-> Automatic, recommended, or custom GA4 events — learn the difference and how to track button clicks, form submissions, file downloads, and scroll depth.
+> Automatic, recommended, or custom GA4 events â€” learn the difference and how to track button clicks, form submissions, file downloads, and scroll depth.
 
 I spent my first month with GA4 confused about events. There were events that showed up automatically, events I was supposed to create myself, and events Google recommended but did not enforce. I did not know which ones to use or when.
 
@@ -888,10 +899,10 @@ After working through it, the breakdown is simpler than it seems. GA4 has three 
 Automatic Events: The Freebies
 
 Automatic events fire without any configuration. Install the GA4 tag and these start working:
- — every page load
- — each new session
- — first time a user visits your site
- — page is in focus for 10+ seconds
+ â€” every page load
+ â€” each new session
+ â€” first time a user visits your site
+ â€” page is in focus for 10+ seconds
 
 These cover the basics. You get page view counts and session data without touching any code. If you have enhanced measurement enabled (which you should), you also get , , , , and  events.
 
@@ -904,15 +915,15 @@ Recommended Events: The Template
 Recommended events are predefined events that Google suggests for specific industries and use cases. They have standardized names and parameters that unlock built-in reports.
 
 If you run an ecommerce site, Google recommends events like:
- — someone viewed a product
- — product added to cart
- — completed transaction
- — product removed
+ â€” someone viewed a product
+ â€” product added to cart
+ â€” completed transaction
+ â€” product removed
 
 If you run a content or lead generation site, Google recommends:
- — form submission
- — account creation
- — content shared via social
+ â€” form submission
+ â€” account creation
+ â€” content shared via social
 
 Using recommended events has two advantages. First, GA4's built-in reports automatically populate with your data when you use the correct event names. Second, your data is standardized, meaning you can compare your metrics against industry benchmarks without manual mapping.
 
@@ -925,9 +936,9 @@ Custom Events: Your Own Rules
 Custom events are events you define yourself. You choose the name, you choose the parameters, you choose when they fire. This is where GA4 becomes truly flexible.
 
 I use custom events for things specific to my site:
- — fires when a reader scrolls past 75% of an article
- — tracks when someone opens a free tool on my site
- — fires on email form submission (since I want extra parameters beyond the default)
+ â€” fires when a reader scrolls past 75% of an article
+ â€” tracks when someone opens a free tool on my site
+ â€” fires on email form submission (since I want extra parameters beyond the default)
 
 Custom events have one rule: do not use names that conflict with automatic or recommended events. For example, do not create a custom event called  because that name is reserved. Google ignores custom events that clash with reserved names.
 
@@ -961,9 +972,7 @@ Common Mistakes
 
 Creating custom events for automatic events. I see people creating custom  events when enhanced measurement already tracks scrolls. Check what enhanced measurement covers before writing any custom code.
 
-Wrong event names. A typo in an event name means that data ends up in a separate event instead of the report you expected. GA4 does not validate event names, so a  event (missing the 'a') creates a new event instead of populating the purchase report.
-
-Too many custom events. I started wit
+Wrong event names. A typo in an event name means that data ends up in a separate event instead of the report you expected. GA4 does not validate event names, so a  event (missing th
 
 ---
 
@@ -1248,7 +1257,7 @@ A: Some fixes
 
 ---
 
-## How to Track Content Engagement in GA4 (Without Losing Your Mind)
+## Track Content Engagement in GA4
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/how-to-track-content-engagement-in-google-analytics-4
@@ -1258,7 +1267,7 @@ A: Some fixes
 
 I spent months staring at bounce rate in Universal Analytics thinking I was doing something wrong. Pages had high bounce rates but people kept coming back. Something did not add up.
 
-When I moved to Google Analytics 4, I found the metric I was actually looking for — engagement rate. It changed how I think about content performance entirely.
+When I moved to Google Analytics 4, I found the metric I was actually looking for â€” engagement rate. It changed how I think about content performance entirely.
 
 What Is Content Engagement in GA4?
 
@@ -1275,11 +1284,11 @@ Where to Find Content Engagement Metrics
 
 Open GA4 and go to Reports Engagement. You will see:
 
-Engagement Rate — The percentage of sessions that were engaged. This replaces bounce rate. A good engagement rate depends on your content type, but anything above 60% is solid for a blog.
+Engagement Rate â€” The percentage of sessions that were engaged. This replaces bounce rate. A good engagement rate depends on your content type, but anything above 60% is solid for a blog.
 
-Average Engagement Time — How long people actively spend on your pages. I aim for 2 minutes or more per session on my articles.
+Average Engagement Time â€” How long people actively spend on your pages. I aim for 2 minutes or more per session on my articles.
 
-Engaged Sessions Per User — How many times returning visitors have engaged sessions. This tells you if people come back for more.
+Engaged Sessions Per User â€” How many times returning visitors have engaged sessions. This tells you if people come back for more.
 
 For a breakdown by page, go to Reports Engagement > Pages and screens. This shows you engagement time and engagement rate for every URL on your site.
 
@@ -1287,7 +1296,7 @@ Engagement Rate vs Bounce Rate
 
 Bounce rate made me think my content was bad when it was not. Here is the difference:
 
-In Universal Analytics, if someone landed on my GA4 troubleshooting guide, read the whole thing, and closed the tab — that was a bounce. A visitor who I helped completely was counted the same as someone who left after 3 seconds.
+In Universal Analytics, if someone landed on my GA4 troubleshooting guide, read the whole thing, and closed the tab â€” that was a bounce. A visitor who I helped completely was counted the same as someone who left after 3 seconds.
 
 GA4 fixes this. That same reader now counts as an engaged session because they stayed for more than 10 seconds. The numbers look different, but they tell a more honest story.
 
@@ -1327,9 +1336,7 @@ Q: Why does GA4 engagement rate differ from my old bounce rate?
 A: They use different definitions. Bounce rate counted single-page sessions as failures. Engagement rate counts a session as engaged if someone stays 10+ seconds, views 2+ pages, or converts. The same visitor behavior can look bad in one system and good in the other.
 
 Q: Does the 10-second threshold make analytics less useful?
-A: Not really. The 10-second rule filters out accidental visits and quick tab closes. Someone who stays for 10 seconds is at least reading the intro. For most content sites, this is a more useful signal than bounce rate ever was.
-
-Q: Can I change the 10-second eng
+A: Not really. The 10-second rule filters out accidental visits and quick tab closes. Someone who stays for 10 seconds is at least reading the intro. For most content sites, this is a
 
 ---
 
@@ -1812,7 +1819,7 @@ Step 2: Click the Start button in the bo
 
 ---
 
-## Windows 11 KB5089549: Enable Xbox Mode and Fix White Flashes
+## Windows 11 KB5089549: Enable Xbox Mode, Fix Flashes
 
 **Pillar:** Windows Troubleshooting
 **URL:** https://www.praveentechworld.com/blog/windows-11-kb5089549-update-how-to-enable-xbox-mode-and-fix-file-explorer-white-flash
@@ -1864,9 +1871,7 @@ Step 2: Install KB5089549 via Windows Update
 
 Click the Start button in the bottom-left corner of your screen. Open the Settings gear icon just above it. Click Windows Update in the left sidebar. Click Check for updates. Windows finds KB5089549 and starts downloading it. The download takes about 3 to 5 minutes on a standard broadband connection. When it finishes, click Restart now.
 
-Step 3: Verify the Update Installed Correctly
-
-After 
+Step 3: V
 
 ---
 
@@ -1920,7 +1925,7 @@ The background service might be disabled by a rogue policy or third-party tool. 
 
 ---
 
-## Windows 11 Volume Control Not Working? 8 Fixes That Actually Work
+## Windows 11 Volume Control Not Working? 8 Fixes
 
 **Pillar:** Windows Troubleshooting
 **URL:** https://www.praveentechworld.com/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026
@@ -2004,13 +2009,11 @@ Step 7: Click the Driver tab at the top of the Properties window.
 
 Step 8: Click Roll Back Driver and follow the prompts. If the button is gray, Windows doesn't have a previous version saved.
 
-Rolling back the driver restores the last known good version. This is faster than hunting for a new driver from the manufacturer.
-
-If you need help identifying 
+Rolling back the driver restores the last known good version. This is faster than hu
 
 ---
 
-## Does Factory Resetting Windows Remove Viruses? The Truth
+## Does Factory Resetting Windows Remove Viruses?
 
 **Pillar:** Windows Troubleshooting
 **URL:** https://www.praveentechworld.com/blog/does-resetting-windows-remove-viruses-completely
@@ -2061,8 +2064,7 @@ Before you begin, connect a USB flash drive or external hard drive. Copy your es
 
 Step 2: Access the Windows Recovery Environment.
 You can do this two ways:
-1.  Click the Start button, click the Power icon, then hold the Shift key and click Restart.
-2.  Go to Settings Update & Secu
+1.  Click the Start button, click the Power icon, then hold the Shift key and clic
 
 ---
 
@@ -2473,7 +2475,7 @@ Jasper focuses on brand voice consistency by training on your existing content. 
 
 ---
 
-## How to Remove Your Personal Info from Google Search (2026 Guide)
+## Remove Your Personal Info from Google Search (2026)
 
 **Pillar:** privacy
 **URL:** https://www.praveentechworld.com/blog/how-to-remove-your-personal-information-from-google-search-results-2026-guide
@@ -2481,14 +2483,14 @@ Jasper focuses on brand voice consistency by training on your existing content. 
 
 > Search your name on Google right now. Open a new tab and type it in. This guide shows you how to remove your personal information from search.
 
-Search your name on Google right now. Go ahead, open a new tab and type it in. What do you see? If you're like millions of people, you might find your home address, your personal phone number, or even your email address listed on some sketchy-looking sites. ItÃ¢â‚¬â„¢s an unnerving feeling, like someone has taken a piece of your life and pinned it to a public bulletin board for anyone to see. This isn't just about embarrassment. It's about safety. A potential stalker, a scammer, or a thief can use that information. The good news is, you have more power to clean it up than you think. This guide is your step-by-step playbook for taking back control.
+Search your name on Google right now. Go ahead, open a new tab and type it in. What do you see? If you're like millions of people, you might find your home address, your personal phone number, or even your email address listed on some sketchy-looking sites. ItÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s an unnerving feeling, like someone has taken a piece of your life and pinned it to a public bulletin board for anyone to see. This isn't just about embarrassment. It's about safety. A potential stalker, a scammer, or a thief can use that information. The good news is, you have more power to clean it up than you think. This guide is your step-by-step playbook for taking back control.
 
 Why Your Personal Information Shows Up on Google in the First Place
 For additional privacy protection, see our best password managers guide.
 
 Before you can fix the problem, you need to know where it's coming from. Your info doesn't just magically appear on the internet. There are specific sources, and understanding them helps you target your removal efforts.
 
-Data Brokers are the main culprits. These are companies that exist solely to collect, aggregate, and sell your personal data. They scrape public records, buy information from loyalty programs and magazine subscriptions, and pull details from social media profiles. Websites like WhitePages, Spokeo, and BeenVerified are just the tip of the iceberg. There are hundreds of these data brokers operating in the shadows, and they are constantly refreshing their databases. A 2023 report found that the average personÃ¢â‚¬â„¢s data is held by at least 35 different data broker sites.
+Data Brokers are the main culprits. These are companies that exist solely to collect, aggregate, and sell your personal data. They scrape public records, buy information from loyalty programs and magazine subscriptions, and pull details from social media profiles. Websites like WhitePages, Spokeo, and BeenVerified are just the tip of the iceberg. There are hundreds of these data brokers operating in the shadows, and they are constantly refreshing their databases. A 2023 report found that the average personÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢s data is held by at least 35 different data broker sites.
 
 Public Records are another big source. This includes information from voter registration rolls, property ownership records, marriage licenses, and court documents. Many local governments have digitized these records, making them easily scrapable by data brokers. Your full name and address are often tied together in these public files.
 
@@ -2524,9 +2526,7 @@ I am writing to request the immediate removal of my personal information from yo
 
   Full Name: Your Name
   Information to Remove: [Specify exactly: e.g., Home Address, Phone Number, etc.]
-  URL of the Page: [Paste the direct link to the page with your info]
-
-This request is made pursuant to the [Californ
+  URL of the Page: [Paste the direct link to the page 
 
 ---
 
@@ -2690,7 +2690,7 @@ Bottom Line: If you’re on a budget, want to see the source code, or just need 
 
 ---
 
-## ChatGPT Usage and Adoption Patterns at Work in 2026 – What the Data Shows
+## ChatGPT Usage and Adoption at Work in 2026
 
 **Pillar:** ai-tools
 **URL:** https://www.praveentechworld.com/blog/chatgpt-usage-and-adoption-patterns-at-work-in-2026-what-the-data-shows
@@ -2701,52 +2701,52 @@ Bottom Line: If you’re on a budget, want to see the source code, or just need 
 ChatGPT Usage and Adoption Patterns at Work in 2026
 For industry predictions, see our AI office automation article. What the Data Shows
 
-If you think everyone in the office is just using ChatGPT to write the odd email, the latest data will surprise you. A comprehensive study from the Future Work Institute just dropped, surveying 12,500 knowledge workers across the US and Europe. It found that 73% of professionals now use an AI assistant like ChatGPT as a core part of their weekly workflow. That’s not a fringe tool anymore. It’s the new standard.
+If you think everyone in the office is just using ChatGPT to write the odd email, the latest data will surprise you. A comprehensive study from the Future Work Institute just dropped, surveying 12,500 knowledge workers across the US and Europe. It found that 73% of professionals now use an AI assistant like ChatGPT as a core part of their weekly workflow. Thatâ€™s not a fringe tool anymore. Itâ€™s the new standard.
 
-I’ve been tracking this shift myself. I remember when introducing it at my company felt experimental. Now, it’s the opposite. Not using it is starting to feel like not using a search engine. This article breaks down exactly how people are using it, which industries are adopting it fastest, and the real productivity impact. No hype, just the numbers and patterns from the field.
+Iâ€™ve been tracking this shift myself. I remember when introducing it at my company felt experimental. Now, itâ€™s the opposite. Not using it is starting to feel like not using a search engine. This article breaks down exactly how people are using it, which industries are adopting it fastest, and the real productivity impact. No hype, just the numbers and patterns from the field.
 
 The Hard Numbers on Adoption
 Our Microsoft Copilot for education guide explores similar adoption trends.
 
-Let's start with the headline figure. That 73% weekly usage rate is up from 51% just two years ago. The growth is happening across the board, but it’s uneven. Management consultants and software developers are the highest adopters, hitting over 80%. Administrative and support roles are lower, around 64%, but that number is climbing fastest.
+Let's start with the headline figure. That 73% weekly usage rate is up from 51% just two years ago. The growth is happening across the board, but itâ€™s uneven. Management consultants and software developers are the highest adopters, hitting over 80%. Administrative and support roles are lower, around 64%, but that number is climbing fastest.
 
-Frequency tells a big story. It’s not a daily log-in for everyone. The data shows three main user groups:
+Frequency tells a big story. Itâ€™s not a daily log-in for everyone. The data shows three main user groups:
   Power Users (28%): These folks use it multiple times a day. They treat it like a collaborator or a second brain.
   Regular Users (45%): They use it several times a week for specific, recurring tasks.
   Occasional Users (27%): They pull it up for ad-hoc questions or one-off projects.
 
-In my experience, people often start in the “Occasional” group after a colleague shows them a neat trick. Then, as they discover it can save them an hour here or there, they quickly move to “Regular.” The path to “Power User” is usually about integrating it into formal processes, like using it to analyze meeting transcripts or draft initial project plans.
+In my experience, people often start in the â€œOccasionalâ€ group after a colleague shows them a neat trick. Then, as they discover it can save them an hour here or there, they quickly move to â€œRegular.â€ The path to â€œPower Userâ€ is usually about integrating it into formal processes, like using it to analyze meeting transcripts or draft initial project plans.
 
 The Most Common Professional Use Cases
 
-This is where the real shift is happening. It’s moved way beyond basic writing. Here are the top five use cases backed by the data.
+This is where the real shift is happening. Itâ€™s moved way beyond basic writing. Here are the top five use cases backed by the data.
 
 1. Drafting and Editing (Used by 62% of users)
-This is the classic use case, but it’s evolved. It’s not just “write me an email.” It’s “rewrite this policy document in a more accessible tone for the Q&A section,” or “draft three different subject lines for this campaign, targeting a technical audience.” It’s become a professional editor and tone-adjuster.
+This is the classic use case, but itâ€™s evolved. Itâ€™s not just â€œwrite me an email.â€ Itâ€™s â€œrewrite this policy document in a more accessible tone for the Q&A section,â€ or â€œdraft three different subject lines for this campaign, targeting a technical audience.â€ Itâ€™s become a professional editor and tone-adjuster.
 
 2. Data Analysis and Summarization (55%)
-This one exploded in the last year. I use it constantly for this. I’ll paste in a messy spreadsheet of survey responses or a 30-page research report and ask it to “Extract the key trends, note any conflicting data points, and list the top 5 actionable recommendations.” It saves me hours of manual synthesis. A marketing manager I know uses it to summarize customer review data, asking it to “categorize feedback into themes like ‘pricing,’ ‘usability,’ and ‘customer service,’ and assign a sentiment score to each.”
+This one exploded in the last year. I use it constantly for this. Iâ€™ll paste in a messy spreadsheet of survey responses or a 30-page research report and ask it to â€œExtract the key trends, note any conflicting data points, and list the top 5 actionable recommendations.â€ It saves me hours of manual synthesis. A marketing manager I know uses it to summarize customer review data, asking it to â€œcategorize feedback into themes like â€˜pricing,â€™ â€˜usability,â€™ and â€˜customer service,â€™ and assign a sentiment score to each.â€
 
 3. Coding and Technical Documentation (48%)
-Developers are deep users. It’s used for everything from writing boilerplate code and debugging errors to explaining complex code snippets. One senior developer told me, “It’s like having a junior dev who knows every language and never sleeps. I give it the messy code, and it cleans it up and explains what it did.”
+Developers are deep users. Itâ€™s used for everything from writing boilerplate code and debugging errors to explaining complex code snippets. One senior developer told me, â€œItâ€™s like having a junior dev who knows every language and never sleeps. I give it the messy code, and it cleans it up and explains what it did.â€
 
 4. Learning and Skill Development (43%)
-Many professionals are using it as a personalized tutor. I’ve used it to learn a new software scripting language. You can ask it, “Explain the concept of API calls like I’m 10,” and it’ll give you a simple analogy. Then, in the next prompt, “Now give me a Python example using the requests library,” and you have a hands-on lesson. It’s closing skill gaps faster than any online course I’ve tried.
+Many professionals are using it as a personalized tutor. Iâ€™ve used it to learn a new software scripting language. You can ask it, â€œExplain the concept of API calls like Iâ€™m 10,â€ and itâ€™ll give you a simple analogy. Then, in the next prompt, â€œNow give me a Python example using the requests library,â€ and you have a hands-on lesson. Itâ€™s closing skill gaps faster than any online course Iâ€™ve tried.
 
 5. Brainstorming and Ideation (39%)
-This is the “second brain” use case. When you’re stuck, you can talk through a problem. “I need to name our new project management software. The core features are real-time collaboration and AI-driven task prioritization. Generate 10 names that sound professional but modern.” The output isn’t always perfect, but it gives you a concrete starting point to react to and build upon.
+This is the â€œsecond brainâ€ use case. When youâ€™re stuck, you can talk through a problem. â€œI need to name our new project management software. The core features are real-time collaboration and AI-driven task prioritization. Generate 10 names that sound professional but modern.â€ The output isnâ€™t always perfect, but it gives you a concrete starting point to react to and build upon.
 
 Industry-Specific Adoption Trends
 
-Adoption isn’t a blanket wave. It hits different sectors in distinct ways.
+Adoption isnâ€™t a blanket wave. It hits different sectors in distinct ways.
 
-Tech and Software: Unsurprisingly, they’re the leaders. Adoption here is about augmenting core functions. Use cases are deeply technical: code generation, architecture planning, writing technical specifications, and automating parts of the QA testing process.
+Tech and Software: Unsurprisingly, theyâ€™re the leaders. Adoption here is about augmenting core functions. Use cases are deeply technical: code generation, architecture planning, writing technical specifications, and automating parts of the QA testing process.
 
-Marketing and Advertising: This industry saw the fastest growth in the last 18 months. Marketers use it for generating ad copy variations, brainstorming campaign concepts, writing so
+Marketing and Advertising: T
 
 ---
 
-## Chrome Removes AI Privacy Wording: What It Means for Your Data
+## Chrome Removes AI Privacy Wording: What It Means
 
 **Pillar:** privacy
 **URL:** https://www.praveentechworld.com/blog/chrome-removes-ai-privacy-wording-what-googles-on-device-data-claim-means-for-us
@@ -2798,11 +2798,11 @@ Step 1: Install a Network Monitor.
 Download and install GlassWire (the free version is fine) from their official website. It's a user-friendly firewall and network monitor.
 
 Step 2: Clear Your Baseline.
-Open Chrome and a few tabs you often use. Let GlassWire run for about 5 minutes to establish what normal background traffic lo
+Open Chrome and a few tabs you often use. Let GlassWire run for about 5 minutes to
 
 ---
 
-## How to Summarize 100-Page PDFs with ChatGPT for Free
+## Summarize 100-Page PDFs with ChatGPT for Free
 
 **Pillar:** ai-tools
 **URL:** https://www.praveentechworld.com/blog/how-to-use-chatgpt-to-summarize-long-pdfs-for-free
@@ -2828,7 +2828,7 @@ Another option is to use the GPT-4 version through ChatGPT Plus. (OpenAI Documen
 The Step-by-Step Process
 If privacy is a concern, read our ChatGPT safety guide.
 
-Once you have your .txt file, here’s what to do:
+Once you have your .txt file, hereâ€™s what to do:
 
 1.  Open your browser and go to . Log into your account.
 2.  Start a new chat. In the message box, don't just paste the entire document. You want to give clear instructions.
@@ -2858,7 +2858,7 @@ First, it loses all formatting. Charts, graphs, tables, images, and even bold or
 
 Second, there's a length limit. The free version has a maximum input size. If you paste a very long document, it might cut off partway through. The solution is to break the document into logical sections. Paste the first 10,000 words, ask for a summary of that part, then paste the next section and ask for a summary of that. Finally, you can ask ChatGPT to "Combine these two summaries into one coherent overview."
 
-Third, accuracy is key. AI can misinterpret text, misunderstand context, or even subtly "hallucinate" details that aren't there. Always treat the AI's output as a first draft or a starting point. For critical decisions, you must verify the key points by checking the 
+Third, accuracy is key. AI can misinterpret text, misunderstand context, or even subtly "hallucinate" details that aren't there. Always treat the AI's output as a first draft or a starting point. For critical decision
 
 ---
 
@@ -3338,7 +3338,7 @@ A quick note: the free version may have some usage limits compared to the paid C
 
 ---
 
-## Speed Up Your Slow PC in 2026 — 10 Tweaks That Actually Help
+## Speed Up Your Slow PC in 2026 — 10 Essential Tweaks
 
 **Pillar:** Windows Troubleshooting
 **URL:** https://www.praveentechworld.com/blog/speed-up-your-slow-pc-in-2026-10-essential-windows-performance-tweaks
@@ -3380,7 +3380,7 @@ Go to Control Panel Hardware and Sound > Power Options. Select "High performance
 
 5. Hunt Down Resource Hogs
 
-Sometimes a specific program is the culprit. It might be stuck in a loop, using 100% 
+Sometimes a specific program is the culprit. It mig
 
 ---
 
@@ -3772,7 +3772,7 @@ But for content sites — blogs, documentation, marketing pages, portfolios — 
 
 ---
 
-## Google Search Console Setup for New Sites (2026 Complete Guide)
+## Google Search Console Setup for New Websites
 
 **Pillar:** Website Setup & SEO
 **URL:** https://www.praveentechworld.com/blog/how-to-set-up-google-search-console-for-your-new-website
@@ -3780,7 +3780,7 @@ But for content sites — blogs, documentation, marketing pages, portfolios — 
 
 > Step-by-step guide to set up Google Search Console for your new website. Verify ownership, submit your sitemap, and start tracking search traffic today.
 
-You've just launched your new website. You've poured in the work, the content is live, and you're waiting for the traffic to roll in. But days turn into a week, and your site feels like a ghost town. You type a key phrase from your homepage into Google, and you don't see your site anywhere. What's going on? This is the exact moment Google Search Console becomes your most critical tool. It’s not just another dashboard; it’s the direct line of communication between your site and Google, telling you exactly how it sees your pages and why they might not be showing up for the people you want to reach.
+You've just launched your new website. You've poured in the work, the content is live, and you're waiting for the traffic to roll in. But days turn into a week, and your site feels like a ghost town. You type a key phrase from your homepage into Google, and you don't see your site anywhere. What's going on? This is the exact moment Google Search Console becomes your most critical tool. Itâ€™s not just another dashboard; itâ€™s the direct line of communication between your site and Google, telling you exactly how it sees your pages and why they might not be showing up for the people you want to reach.
 
 Setting it up might seem like a technical hurdle for a new site owner, but it's straightforward and essential. Think of it as registering your business with the search engine's post office. Without that registration, your mail isn't getting delivered. Let's walk through the process, not just as a list of steps, but as the first, most important performance metric you'll set up.
 
@@ -3816,7 +3816,7 @@ For most beginners with a simple site, the HTML file upload or HTML tag method i
 
 Your New Dashboard: Taking a First Look
 
-Once verified, you won't see data immedi
+Once verified, you won't see data i
 
 ---
 
