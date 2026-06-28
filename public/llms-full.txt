@@ -4,9 +4,97 @@
 > URL: https://www.praveentechworld.com
 > Language: English
 > Last updated: 2026-06-28
-> Total articles: 63
+> Total articles: 64
 
 This file contains the full text of every article on the site. AI systems can extract specific passages for citations or answers.
+
+---
+
+## I Built a DeepSeek API Cost Tracker and Saved $2K a Month
+
+**Pillar:** AI Automation Scripts
+**URL:** https://www.praveentechworld.com/blog/deepseek-api-cost-tracker-scripts
+**Published:** 2026-06-28
+
+> An IT Ops Lead used DeepSeek to build a Python script tracking AI API costs across providers. The AI hallucinated endpoints. Manual fixes saved $2K/month.
+
+I built a Python script that tracks AI API costs across four providers using DeepSeek. It saved my team roughly $2,000 a month in wasted spend. Getting there took a week of evenings fixing hallucinations the AI introduced. Here is what happened.
+
+What Problem Made Me Build This?
+
+My team was burning through AI API credits like there was no tomorrow. We had three different engineers using OpenAI for different tasks, someone spun up an Anthropic Claude research project, I was testing DeepSeek for internal tools, and our data team was experimenting with Google's Gemini. Nobody had a unified view of what we were spending.
+
+The monthly invoice from each provider came in a different format, at a different time of the month, and nobody was watching. When I finally added them up, I nearly fell off my chair. We were spending $4,700 a month on AI APIs, and roughly 40% of that was on premium models for simple tasks that a cheaper model could handle just as well.
+
+I wanted a single CLI tool that would:
+
+1. Pull usage data from all four providers
+2. Normalize costs into a single view
+3. Show me which models were burning the most money
+4. Generate a simple HTML dashboard I could share with the team
+
+This looked like a job for DeepSeek. I can write basic Python, but stitching together four API SDKs with auth, rate limiting, and cost normalization? That is exactly the grunt work I wanted the AI to chew on.
+
+How I Prompted DeepSeek to Build the Tracker
+
+I wrote a single detailed prompt describing the full architecture. I wanted the AI to give me a working skeleton I could extend.
+
+This is the prompt I fed it:
+
+DeepSeek returned about 800 lines of code. Looked great in the preview. Imported , , ,  — all standard. It even added a cute animated spinner while fetching data.
+
+Where Did the AI Output Break?
+
+I pasted the code into , set my environment variables, and ran . It fell apart almost immediately.
+
+Hallucinated API Endpoints
+
+The first crash was immediate. DeepSeek invented an endpoint for OpenAI's usage API:
+
+This endpoint does not exist. OpenAI's actual usage data comes through a different API. You have to hit the billing dashboard API or parse the CSV exports. The AI just made up a REST path that looked reasonable on paper.
+
+I got a clean 404, which the script handled gracefully ("Provider OpenAI: No data returned"), but that silence was worse than an error. It looked like OpenAI had zero usage. I spent two hours debugging before I realized the endpoint was fake.
+
+Wrong Cost Calculation Logic
+
+The AI assumed every provider used the same cost structure: . Roughly correct in theory, but the reality is messier:
+
+Anthropic rounds token counts per request, not aggregated
+Google Gemini API returns costs in micros (millionths of a cent), not dollars
+DeepSeek's API returns token counts without cost. You have to calculate it yourself from their published pricing.
+
+The AI used the same formula for all four and got three of them wrong.
+
+No Pagination Handling
+
+When I ran it against our actual production data, it only returned the last 100 records from each provider. Turns out every API paginates differently:
+
+OpenAI uses a cursor-based  parameter
+Anthropic uses offset pagination
+Google uses page tokens
+DeepSeek uses limit/offset
+
+The AI code handled zero of these. It fetched one page and declared victory.
+
+Rate Limit Chaos
+
+I have 12 API keys across four providers (some personal, some team). The AI added a simple  between calls. That is fine for a single key, but when you have multiple keys hitting the same provider, you get rate limited fast. I saw:
+
+The script's "retry with backoff" was a single retry after 5 seconds. Not enough for the burst pattern of our team's usage.
+
+What I Had to Fix
+
+I spent roughly six evenings rewriting the script. Here is what I changed:
+
+API endpoint discovery (2 hours): I read the actual API docs for each provider and replaced the fake endpoints with real ones. For OpenAI, I used the  endpoint. For Anthropic, I hit their admin API. For Google, I used the  endpoint. DeepSeek's was the simplest — their dashboard API actually exists and works.
+
+Cost normalization (1 hour): I wrote a provider-specific cost calculator for each one. Each provider publishes per-model pricing as a separate lookup table in its own format. I hardcoded the current prices (as of June 2026) and added a  flag that pulls the latest from each provider's pricing page.
+
+Pagination (2 hours): I added pagination loops for each provider separately. This was the most tedious part because the patterns are all different. I used a generator pattern so the main loop just iterates over pages without caring about the specifics.
+
+Rate limiting (1 hour): I replaced the naive sleep with a proper token-bucket rate limiter that respects per-minute and per-hour limits for each provider. Each API key gets its own bucket. When one key is exhausted, the script rotates to another key if available.
+
+Cost dashboard (30 minutes): The AI generated a decent 
 
 ---
 
