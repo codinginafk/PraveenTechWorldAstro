@@ -1,7 +1,7 @@
-﻿---
+---
 title: "I Built a Log Monitor with DeepSeek. Here Is Where It Broke."
 description: "The short answer is: I built a log monitoring Python script using DeepSeek, but the generated code hallucinated and needed a lot of manual fixing."
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxCdWlsdCUyMExvZyUyME1vbml0b3Jpbmd8ZW58MHx8fHwxNzgyMzg5ODY5fDA&ixlib=rb-4.1.0&w=1200&h=600&fit=crop"
+coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxCdWlsdCUyMExvZyUyME1vbml0b3Jpbmd8ZW58MHx8fHwxNzgyMzg5ODY5fDA&ixlib=rb-4.1.0&w=800&h=400&fit=crop"
 imageAlt: "graphs of performance analytics on a laptop screen"
 imageCredit: "Photo by Luke Chesser on Unsplash"
 publishDate: 2026-06-25
@@ -20,33 +20,33 @@ socialHook: "I asked DeepSeek to build a Python script that monitors server logs
 pillarId: ai-automation
 faq:
   - question: "Do I need to install any extra packages beyond the standard library?"
-    answer: "Yes. The script expects `colorama` for colored output and `requests` for the Slack webhook. I added a `requirements.txt` with those two (and `python‑daemon` if you enable `--daemon`). The script will exit with a clear install message if they’re missi"
+    answer: "Yes. The script expects `colorama` for colored output and `requests` for the Slack webhook. I added a `requirements.txt` with those two (and `python-daemon` if you enable `--daemon`). The script will exit with a clear install message if they�re missi"
   - question: "Can I run this on a system without a Slack webhook?"
-    answer: "Absolutely. You can omit the `--webhook` argument, and the script will log “Webhook not configured” but will still monitor and count errors. For pure logging you can pipe the output to another tool. "
-  - question: "How does the sliding‑window actually work?"
-    answer: "The script keeps a deque of `(timestamp, line)` pairs for each error line. Every second it purges entries older than the window size (e.g., 300 s) and counts the remaining entries. When the count exceeds the threshold, it fires the webhook and clears"
+    answer: "Absolutely. You can omit the `--webhook` argument, and the script will log �Webhook not configured� but will still monitor and count errors. For pure logging you can pipe the output to another tool. "
+  - question: "How does the sliding-window actually work?"
+    answer: "The script keeps a deque of `(timestamp, line)` pairs for each error line. Every second it purges entries older than the window size (e.g., 300?s) and counts the remaining entries. When the count exceeds the threshold, it fires the webhook and clears"
   - question: "What happens if the log file rotates while the script is running?"
     answer: "The `tail_file` generator opens the file once and reads from the end. If you need log rotation support, you can add a `logging.handlers.WatchedFileHandler` or simply restart the script. For production, a supervisor like `systemd` or `supervisord` can"
-  - question: "Is the script production‑ready?"
-    answer: "I’ve used it on a couple of Ubuntu servers for a month now. It’s lightweight, writes logs, and handles missing dependencies gracefully. For enterprise use, you might want to add TLS verification for the webhook, rate‑limit alerts, or integrate with a"
+  - question: "Is the script production-ready?"
+    answer: "I�ve used it on a couple of Ubuntu servers for a month now. It�s lightweight, writes logs, and handles missing dependencies gracefully. For enterprise use, you might want to add TLS verification for the webhook, rate-limit alerts, or integrate with a"
 ---
 The short answer is: I built a log monitoring Python script using DeepSeek, but the generated code hallucinated and needed a lot of manual fixing. This article walks you through the whole process-from the problem that drove me crazy to the final working script and the exact prompt you can copy.
 
 ## What Problem Drove Me to Build a Log Monitoring Script?
 
-My production servers were spitting out hundreds of error lines every night, and I was spending an hour each morning scrolling through `/var/log/nginx/error.log` just to see if anything new had popped up. The pattern was simple: when the error count jumped above three in a 5‑minute window, I should get an alert. I wanted a CLI tool that would tail the log, count errors in real time, and push a Slack webhook when the threshold was breached. I also wanted it to be lightweight-no heavy frameworks, just a pure Python script I could drop into any Ubuntu box.
+My production servers were spitting out hundreds of error lines every night, and I was spending an hour each morning scrolling through `/var/log/nginx/error.log` just to see if anything new had popped up. The pattern was simple: when the error count jumped above three in a 5-minute window, I should get an alert. I wanted a CLI tool that would tail the log, count errors in real time, and push a Slack webhook when the threshold was breached. I also wanted it to be lightweight-no heavy frameworks, just a pure Python script I could drop into any Ubuntu box.
 
-I spent a week manually writing a small script, but I knew I could accelerate the process by letting an AI do the heavy lifting. I turned to DeepSeek (and a quick side‑trip to OpenCode) to generate the whole workflow in one go. My goal was to get a functional pipeline that I could then fine‑tune for my exact needs, all while learning how to prompt an AI for real‑world automation.
+I spent a week manually writing a small script, but I knew I could accelerate the process by letting an AI do the heavy lifting. I turned to DeepSeek (and a quick side-trip to OpenCode) to generate the whole workflow in one go. My goal was to get a functional pipeline that I could then fine-tune for my exact needs, all while learning how to prompt an AI for real-world automation.
 
 ## How I Asked DeepSeek (and OpenCode) to Write the Script?
 
-I drafted a single prompt that covered the whole workflow: from reading the log file, parsing lines, counting errors over a sliding window, and firing a webhook. I kept the prompt as detailed as possible, but I also left room for the AI to make decisions about libraries and structure. Here’s the exact prompt I fed into DeepSeek:
+I drafted a single prompt that covered the whole workflow: from reading the log file, parsing lines, counting errors over a sliding window, and firing a webhook. I kept the prompt as detailed as possible, but I also left room for the AI to make decisions about libraries and structure. Here�s the exact prompt I fed into DeepSeek:
 
 ```
 Prompt:
-Build a Python CLI tool that monitors a given log file (e.g., /var/log/nginx/error.log) and sends a Slack webhook notification when the number of error lines (containing "error" or "Error" or "ERROR") exceeds a threshold (default 3) within a rolling 5‑minute window. The tool should:
+Build a Python CLI tool that monitors a given log file (e.g., /var/log/nginx/error.log) and sends a Slack webhook notification when the number of error lines (containing "error" or "Error" or "ERROR") exceeds a threshold (default 3) within a rolling 5-minute window. The tool should:
 
-1. Accept optional command‑line arguments:
+1. Accept optional command-line arguments:
    - --log <path> (default: /var/log/nginx/error.log)
    - --threshold <int> (default: 3)
    - --window <int> (default: 300 seconds)
@@ -72,11 +72,11 @@ Build a Python CLI tool that monitors a given log file (e.g., /var/log/nginx/err
 Please output the complete script with comments, and include a brief usage example.
 ```
 
-I sent this prompt to DeepSeek’s chat interface, which returned a ~560‑token response (≈3.8KB of code). The output looked professional, had colored output, used `requests` for the webhook, and even added a daemonizer. I also tried OpenCode right after, just to see if it would hallucinate differently. OpenCode produced a ~420‑token script that was more compact but missed the sliding‑window logic entirely.
+I sent this prompt to DeepSeek�s chat interface, which returned a ~560-token response (�3.8KB of code). The output looked professional, had colored output, used `requests` for the webhook, and even added a daemonizer. I also tried OpenCode right after, just to see if it would hallucinate differently. OpenCode produced a ~420-token script that was more compact but missed the sliding-window logic entirely.
 
 ## Where Did the AI Output Break Down?
 
-The first thing I noticed was that the generated script referenced `colorama`, a third‑party package that isn’t guaranteed to be installed. Running the script on a clean VM threw:
+The first thing I noticed was that the generated script referenced `colorama`, a third-party package that isn�t guaranteed to be installed. Running the script on a clean VM threw:
 
 ```
 Traceback (most recent call last):
@@ -84,22 +84,22 @@ Traceback (most recent call last):
     ImportError: No module named 'colorama'
 ```
 
-The AI also assumed `requests` was present, which is fine, but it didn’t include a helpful install check. The sliding‑window logic used a `deque` from `collections`, but the code incorrectly reset the deque on each iteration instead of preserving errors across lines. In the terminal, after a few simulated error lines, I saw:
+The AI also assumed `requests` was present, which is fine, but it didn�t include a helpful install check. The sliding-window logic used a `deque` from `collections`, but the code incorrectly reset the deque on each iteration instead of preserving errors across lines. In the terminal, after a few simulated error lines, I saw:
 
 ```
 [ERROR] Threshold breached! Sending alert...
 [INFO] No errors in the last 300 seconds.
 ```
 
-The logic was contradictory-errors were counted but then immediately cleared. The webhook payload was also malformed; the AI used a non‑serializable datetime object, causing:
+The logic was contradictory-errors were counted but then immediately cleared. The webhook payload was also malformed; the AI used a non-serializable datetime object, causing:
 
 ```
 TypeError: Object of type datetime is not JSON serializable
 ```
 
-OpenCode’s version was even worse: it completely omitted the webhook call and the daemon flag, leaving a skeleton that would never alert anyone.
+OpenCode�s version was even worse: it completely omitted the webhook call and the daemon flag, leaving a skeleton that would never alert anyone.
 
-I also ran a quick cost check. DeepSeek’s API quoted a usage of 560 tokens input + 210 tokens output, costing me roughly $0.0018 on the free tier (estimated). OpenCode ran locally with zero monetary cost but produced a useless draft.
+I also ran a quick cost check. DeepSeek�s API quoted a usage of 560 tokens input + 210 tokens output, costing me roughly $0.0018 on the free tier (estimated). OpenCode ran locally with zero monetary cost but produced a useless draft.
 
 ## What I Had to Fix to Get a Working Script?
 
@@ -107,19 +107,19 @@ I took the DeepSeek draft as my base and iteratively applied fixes:
 
 1. **Dependency handling** - I added a `requirements.txt` check at the top of the script. If `colorama` or `requests` were missing, the script would print a clear install message and exit with code 1. I also added `import sys` and `try/except ImportError` blocks.
 
-2. **Sliding‑window logic** - I replaced the resetting deque with a proper `collections.deque(maxlen=window_seconds//interval)` pattern. I also introduced a background thread that runs the evaluation loop every second, preserving the error timestamps across the entire tail.
+2. **Sliding-window logic** - I replaced the resetting deque with a proper `collections.deque(maxlen=window_seconds//interval)` pattern. I also introduced a background thread that runs the evaluation loop every second, preserving the error timestamps across the entire tail.
 
 3. **JSON serialization** - I converted datetime objects to ISO strings before posting to Slack. I also added a `sample_error` truncation to 200 characters to keep payloads small.
 
 4. **Colored output** - I kept `colorama` but wrapped the initialization in a try/except so the script could still run on systems without it, falling back to plain text.
 
-5. **Daemonization** - I swapped the AI’s simple `daemon` flag for `python-daemon` (another optional import) and wrote the PID file atomically.
+5. **Daemonization** - I swapped the AI�s simple `daemon` flag for `python-daemon` (another optional import) and wrote the PID file atomically.
 
 6. **Error handling and logging** - I added a rotating log file (`monitor.log`) using `logging.handlers.RotatingFileHandler` to capture exceptions without spamming stdout.
 
-The final script landed at **3.2KB** and executed in **0.32 seconds** for the first tail read of a 1000‑line log file. After the sliding‑window thread started, it consumed ~0.015 seconds per evaluation cycle. The webhook call took ~0.12 seconds on average, and the whole process stayed under 2% CPU on a modest 2‑core droplet.
+The final script landed at **3.2KB** and executed in **0.32 seconds** for the first tail read of a 1000-line log file. After the sliding-window thread started, it consumed ~0.015 seconds per evaluation cycle. The webhook call took ~0.12 seconds on average, and the whole process stayed under 2% CPU on a modest 2-core droplet.
 
-Here’s the fixed version (comments added for clarity):
+Here�s the fixed version (comments added for clarity):
 
 ```python
 #!/usr/bin/env python3
@@ -211,7 +211,7 @@ def tail_file(path, stop_event, error_queue, logger):
         while not stop_event.is_set():
             line = f.readline()
             if line:
-                # Simple error detection (case‑insensitive)
+                # Simple error detection (case-insensitive)
                 if any(kw in line.lower() for kw in ("error", "fail", "critical")):
                     error_queue.append((time.time(), line.strip()))
                 yield line
@@ -287,37 +287,37 @@ if __name__ == "__main__":
 
 I saved this as `log_monitor.py` (3.2KB), added a `requirements.txt` with `colorama requests python-daemon`, and committed everything to a new repo:
 
-https://github.com/PraveenTechWorld/log-monitor (repo coming soon — ping me for early access)
+https://github.com/PraveenTechWorld/log-monitor (repo coming soon � ping me for early access)
 
 Running `./log_monitor.py --log /var/log/nginx/error.log --webhook https://hooks.slack.com/services/xxx --daemon` started the daemon, wrote its PID to `monitor.pid`, and began monitoring. The script logged each evaluation to `monitor.log` and only sent a Slack alert when the error spike persisted beyond the sliding window.
 
 ## What I Learned About Prompt Engineering and AI Limitations?
 
-1. **Be specific, but leave room for AI creativity** - My prompt listed exact libraries, but the AI still hallucinated missing imports. Adding a “must check for missing packages and print install instructions” clause helped, but I still had to manually guard imports.
+1. **Be specific, but leave room for AI creativity** - My prompt listed exact libraries, but the AI still hallucinated missing imports. Adding a �must check for missing packages and print install instructions� clause helped, but I still had to manually guard imports.
 
-2. **Test the output in a clean environment** - The AI’s code looked great on my dev machine (which already had `colorama`). In a fresh VM, the ImportError surfaced immediately. I now always run a `pip install -r requirements.txt` before trusting any AI script.
+2. **Test the output in a clean environment** - The AI�s code looked great on my dev machine (which already had `colorama`). In a fresh VM, the ImportError surfaced immediately. I now always run a `pip install -r requirements.txt` before trusting any AI script.
 
-3. **Sliding‑window logic is subtle** - The AI assumed a simple counter, but real‑time monitoring needs state preservation. I learned to break complex algorithms into small, testable functions (e.g., `evaluate_window`).
+3. **Sliding-window logic is subtle** - The AI assumed a simple counter, but real-time monitoring needs state preservation. I learned to break complex algorithms into small, testable functions (e.g., `evaluate_window`).
 
-4. **Daemonization is over‑engineered for many use‑cases** - The AI added a full daemon flag, but I ended up using `python-daemon` only because I wanted a PID file. For most automation scripts, a simple background thread with a PID file works fine.
+4. **Daemonization is over-engineered for many use-cases** - The AI added a full daemon flag, but I ended up using `python-daemon` only because I wanted a PID file. For most automation scripts, a simple background thread with a PID file works fine.
 
-5. **Cost vs. quality trade‑offs** - DeepSeek’s output cost me $0.0018 but required ~2 hours of manual debugging. OpenCode was free but produced a useless skeleton. The sweet spot for me is to let the AI draft the architecture, then iterate with small, focused prompts to fix specific bugs.
+5. **Cost vs. quality trade-offs** - DeepSeek�s output cost me $0.0018 but required ~2 hours of manual debugging. OpenCode was free but produced a useless skeleton. The sweet spot for me is to let the AI draft the architecture, then iterate with small, focused prompts to fix specific bugs.
 
-6. **Logging is your friend** - Adding structured logging to `monitor.log` turned a cryptic “webhook failed” into a clear error message with stack trace. It also helped me see how many times the evaluation loop ran (≈180 evaluations per hour).
+6. **Logging is your friend** - Adding structured logging to `monitor.log` turned a cryptic �webhook failed� into a clear error message with stack trace. It also helped me see how many times the evaluation loop ran (�180 evaluations per hour).
 
-Overall, the experiment reinforced that AI is a great junior developer when you treat it like a co‑pilot: you still need to review, test, and own the final product. The prompt you see above is now part of my “prompt engineering playbook” for any future automation project.
+Overall, the experiment reinforced that AI is a great junior developer when you treat it like a co-pilot: you still need to review, test, and own the final product. The prompt you see above is now part of my �prompt engineering playbook� for any future automation project.
 
 For another real-world example, see how I [automated server health checks with DeepSeek](/blog/i-automated-server-health-checks-with-deepseek-the-script-that-saved-my-weekend) and what went wrong there too.
 
 ## The Exact Prompt
 
-Below is the raw, unedited prompt I sent to DeepSeek. You can copy‑paste it exactly into the chat and see the same output I received.
+Below is the raw, unedited prompt I sent to DeepSeek. You can copy-paste it exactly into the chat and see the same output I received.
 
 ```text
 Prompt:
-Build a Python CLI tool that monitors a given log file (e.g., /var/log/nginx/error.log) and sends a Slack webhook notification when the number of error lines (containing "error" or "Error" or "ERROR") exceeds a threshold (default 3) within a rolling 5‑minute window. The tool should:
+Build a Python CLI tool that monitors a given log file (e.g., /var/log/nginx/error.log) and sends a Slack webhook notification when the number of error lines (containing "error" or "Error" or "ERROR") exceeds a threshold (default 3) within a rolling 5-minute window. The tool should:
 
-1. Accept optional command‑line arguments:
+1. Accept optional command-line arguments:
    - --log <path> (default: /var/log/nginx/error.log)
    - --threshold <int> (default: 3)
    - --window <int> (default: 300 seconds)
@@ -346,24 +346,24 @@ Please output the complete script with comments, and include a brief usage examp
 ## FAQ
 
 **Q: Do I need to install any extra packages beyond the standard library?**  
-A: Yes. The script expects `colorama` for colored output and `requests` for the Slack webhook. I added a `requirements.txt` with those two (and `python‑daemon` if you enable `--daemon`). The script will exit with a clear install message if they’re missing.
+A: Yes. The script expects `colorama` for colored output and `requests` for the Slack webhook. I added a `requirements.txt` with those two (and `python-daemon` if you enable `--daemon`). The script will exit with a clear install message if they�re missing.
 
 **Q: Can I run this on a system without a Slack webhook?**  
-A: Absolutely. You can omit the `--webhook` argument, and the script will log “Webhook not configured” but will still monitor and count errors. For pure logging you can pipe the output to another tool.
+A: Absolutely. You can omit the `--webhook` argument, and the script will log �Webhook not configured� but will still monitor and count errors. For pure logging you can pipe the output to another tool.
 
-**Q: How does the sliding‑window actually work?**  
-A: The script keeps a deque of `(timestamp, line)` pairs for each error line. Every second it purges entries older than the window size (e.g., 300 s) and counts the remaining entries. When the count exceeds the threshold, it fires the webhook and clears the deque to avoid spamming alerts.
+**Q: How does the sliding-window actually work?**  
+A: The script keeps a deque of `(timestamp, line)` pairs for each error line. Every second it purges entries older than the window size (e.g., 300?s) and counts the remaining entries. When the count exceeds the threshold, it fires the webhook and clears the deque to avoid spamming alerts.
 
 **Q: What happens if the log file rotates while the script is running?**  
 A: The `tail_file` generator opens the file once and reads from the end. If you need log rotation support, you can add a `logging.handlers.WatchedFileHandler` or simply restart the script. For production, a supervisor like `systemd` or `supervisord` can handle restarts automatically.
 
-**Q: Is the script production‑ready?**  
-A: I’ve used it on a couple of Ubuntu servers for a month now. It’s lightweight, writes logs, and handles missing dependencies gracefully. For enterprise use, you might want to add TLS verification for the webhook, rate‑limit alerts, or integrate with an existing monitoring stack (e.g., Prometheus). But for a quick automation win, it works out of the box.
+**Q: Is the script production-ready?**  
+A: I�ve used it on a couple of Ubuntu servers for a month now. It�s lightweight, writes logs, and handles missing dependencies gracefully. For enterprise use, you might want to add TLS verification for the webhook, rate-limit alerts, or integrate with an existing monitoring stack (e.g., Prometheus). But for a quick automation win, it works out of the box.
 
 What task would you automate with this approach?
 
 ## Related Guides
 
-- [I Built a Sysadmin Toolkit with DeepSeek — Prompts, Failures & Code](/blog/i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke) — The short answer is that I used DeepSeek to build a suite of Python scripts for log parsing, disk mo
-- [Automating TLS Certificate Renewal with DeepSeek — Production Lessons](/blog/how-i-automated-tls-certificate-renewal-with-deepseek-and-why-it-almost-broke-pr) — The short answer is I automated TLS certificate renewal using a DeepSeek-generated Python script, bu
-- [Non-Developer Builds Database Audit with DeepSeek — Full Breakdown](/blog/i-am-not-a-developer-i-built-a-database-audit-script-with-deepseek-here-is-where) — A non-developer IT Ops Lead used DeepSeek to build a database audit Python script. The exact prompt,
+- [I Built a Sysadmin Toolkit with DeepSeek � Prompts, Failures & Code](/blog/i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke) � The short answer is that I used DeepSeek to build a suite of Python scripts for log parsing, disk mo
+- [Automating TLS Certificate Renewal with DeepSeek � Production Lessons](/blog/how-i-automated-tls-certificate-renewal-with-deepseek-and-why-it-almost-broke-pr) � The short answer is I automated TLS certificate renewal using a DeepSeek-generated Python script, bu
+- [Non-Developer Builds Database Audit with DeepSeek � Full Breakdown](/blog/i-am-not-a-developer-i-built-a-database-audit-script-with-deepseek-here-is-where) � A non-developer IT Ops Lead used DeepSeek to build a database audit Python script. The exact prompt,
