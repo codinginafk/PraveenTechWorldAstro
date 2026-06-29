@@ -146,3 +146,58 @@ export async function callLLM(systemPrompt, userPrompt, opts = {}) {
   const json = await res.json();
   return json.choices?.[0]?.message?.content || "";
 }
+
+export async function callGemini(systemPrompt, userPrompt, opts = {}) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = opts.model || process.env.GEMINI_MODEL || "gemini-flash-latest";
+
+  if (!apiKey) {
+    console.warn("  [callGemini] No GEMINI_API_KEY in env. Faking response.");
+    return `[Gemini unavailable - no API key configured]`;
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const body = {
+    contents: [
+      { parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
+    ],
+    generationConfig: {
+      temperature: opts.temperature ?? 0.7,
+      maxOutputTokens: opts.maxTokens ?? 4096,
+    },
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(opts.timeout ?? 240000),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Gemini API ${res.status}: ${text.slice(0, 200)}`);
+  }
+
+  const json = await res.json();
+  return json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
+export async function callAI(systemPrompt, userPrompt, opts = {}) {
+  const model = opts.model || "deepseek";
+  const cleanOpts = { ...opts };
+  delete cleanOpts.model;
+  try {
+    if (model === "gemini") {
+      return await callGemini(systemPrompt, userPrompt, cleanOpts);
+    }
+    return await callLLM(systemPrompt, userPrompt, cleanOpts);
+  } catch (err) {
+    console.warn(`  [callAI] ${model} failed (${err.message}), trying fallback.`);
+    if (model === "gemini") {
+      return await callLLM(systemPrompt, userPrompt, cleanOpts);
+    }
+    return await callGemini(systemPrompt, userPrompt, cleanOpts);
+  }
+}

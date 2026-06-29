@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { callLLM } from "./shared.mjs";
+import { callAI } from "./shared.mjs";
 
 const USER_AGENT = "PraveenTechWorld/1.0 (article-generator)";
 
@@ -105,7 +105,7 @@ async function tryOpenverse(query) {
 
 async function generateSVG(slug, title, assetsDir) {
   const prompt = `Generate a simple, clean SVG illustration for a tech blog article titled "${title}". The SVG must be exactly 800x400 pixels with viewBox="0 0 800 400". Use a light background (#f8f9fa). Include simple geometric shapes and icons representing the topic. Use only basic SVG elements (rect, circle, path, text). No external fonts or images. Keep it minimal and professional. Return ONLY valid SVG code, no markdown, no explanation, no backticks.`;
-  let svgCode = await callLLM("You generate clean SVG illustrations.", prompt, { temperature: 0.3, maxTokens: 1024 });
+  let svgCode = await callAI("You generate clean SVG illustrations.", prompt, { model: "gemini", temperature: 0.3, maxTokens: 1024 });
   if (!svgCode) return null;
   svgCode = svgCode.trim();
   svgCode = svgCode.replace(/^```(?:svg)?\s*/i, "").replace(/\s*```$/i, "").trim();

@@ -1,7 +1,7 @@
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
-import { callLLM } from "./lib/shared.mjs";
+import { callAI } from "./lib/shared.mjs";
 import { searchImage, extractKeywords } from "./lib/imagesearch.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -249,7 +249,7 @@ ${narrativeStructure}
 
 ${depth}`;
 
-  let body = await callLLM(sysPrompt, userPrompt, { temperature: 0.7, maxTokens: 8192, timeout: 480000 });
+  let body = await callAI(sysPrompt, userPrompt, { model: "deepseek", temperature: 0.7, maxTokens: 8192, timeout: 480000 });
   if (!body) {
     console.error("  Generation failed");
     return null;

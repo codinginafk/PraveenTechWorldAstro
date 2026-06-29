@@ -1,7 +1,7 @@
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
-import { log, ensureDir, callLLM } from "./lib/shared.mjs";
+import { log, ensureDir, callAI } from "./lib/shared.mjs";
 import { runResearch } from "./research-agent.mjs";
 import { runSeoAnalysis } from "./seo-analysis.mjs";
 import { runBoss } from "./boss-agent.mjs";
@@ -410,7 +410,7 @@ ${clusterForToday === "website-setup" ? 'Must be about: Google Search Console, G
 
 Return ONLY a valid JSON array. No markdown. No extra text. Example: [{ "title": "SEO Title Here", "snippet": "Short description" }]`;
 
-      const result = await callLLM("You are a technical content strategist generating unique, non-duplicate evergreen pillar content.", prompt, { temperature: 0.8, maxTokens: 2048, timeout: 240000 });
+      const result = await callAI("You are a technical content strategist generating unique, non-duplicate evergreen pillar content.", prompt, { model: "gemini", temperature: 0.8, maxTokens: 2048, timeout: 240000 });
 
       // Robust JSON extraction
       let generated = null;
