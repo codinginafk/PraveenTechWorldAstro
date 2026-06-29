@@ -1,0 +1,250 @@
+---
+title: "I Asked DeepSeek to Automate Incident Response — It Restarted Production During Peak Hours"
+description: "DeepSeek wrote an incident response script. It restarted production during peak hours, deleted crash logs, and had zero safety checks. The exact prompt and fixes."
+coverImage: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxzZXJ2ZXIlMjByb29tJTIwYWxlcnR8ZW58MHx8fHwxNzgyMjA3NzU2fDA&ixlib=rb-4.1.0&w=800&h=400&fit=crop"
+imageAlt: "Server room with blinking alert lights."
+imageCredit: "Photo by Alex Motoc on Unsplash"
+publishDate: 2026-06-30
+author: praveen
+category: ai-automation
+tags:
+  - deepseek
+  - incident-response
+  - automation
+  - production
+  - cli-tools
+  - it-automation
+seoTitle: "DeepSeek Incident Response Automation — Production Restart Disaster"
+socialHook: "I asked DeepSeek to write an automated incident response script. It restarted production during peak hours, rotated 2-hour-old logs, and had zero safety checks. Here's what I learned."
+pillarId: ai-automation
+faq:
+  - question: "Can I run the final script safely on my production servers?"
+    answer: "Yes, but only after you configure the MAINTENANCE_WINDOW_START and MAINTENANCE_WINDOW_END variables. The script will refuse to restart any service outside those hours. I also recommend running it with --dry-run for the first week to make sure the maintenance window covers your actual low-traffic period."
+  - question: "What if a service is already down outside maintenance hours?"
+    answer: "The script flags it as CRITICAL in the report but does not restart it automatically. I made that decision deliberately after the AI's first attempt. You get a ping on Slack and you decide whether to restart manually. That trade-off keeps us safe even if it means I sometimes get paged at 3 AM."
+  - question: "Does this script work on Windows servers?"
+    answer: "No, it is written for Linux systemd-based systems. The AI originally tried to use `sc.exe` commands which work on Windows but the service status parsing was completely different. If you need Windows support, you would need to adapt the service checking logic to use PowerShell's Get-Service cmdlet."
+  - question: "How do I add a new service check?"
+    answer: "Append the service name to the SERVICES array at the top of the script. The AI originally hardcoded each service in a separate function, which made maintenance painful. My version uses a configurable list so adding 'nginx' or 'postgresql-16' is one line."
+  - question: "What happens if the Slack webhook URL is wrong?"
+    answer: "The script catches the HTTP error and falls back to writing the alert to a local file called 'missed_alerts.log'. The AI did not handle this at all - it just crashed with an unhandled exception. That was one of the first things I fixed."
+---
+## Why I wanted an automated incident response script
+
+I've been running production servers long enough to know that 3 AM incidents follow a pattern. A service goes down. The monitoring tool screams. I wake up, SSH in, check the logs, restart the service, and go back to sleep. The next morning I review what happened.
+
+The pattern is always the same. The fix is always the same. So I figured: why not automate the fix?
+
+I manage about 12 Linux servers running a mix of PostgreSQL, Nginx, Redis, and a custom Python API behind Gunicorn. When something crashes, I usually need to:
+
+1. Check if the service is actually down or just slow
+2. Rotate the logs so the crash logs don't fill the disk
+3. Restart the service
+4. Send a summary to the team Slack channel
+
+I wanted one CLI tool that handled all four steps. I asked DeepSeek to build it. The AI would handle the boilerplate, I figured, and I'd have a working script in under a minute.
+
+I was wrong.
+
+## The exact prompt I gave DeepSeek
+
+I wrote this prompt after my morning coffee, feeling confident that the AI would handle the boring parts:
+
+```text
+Prompt:
+Write a Python CLI tool called 'incident_responder.py' that automates common incident response tasks on Linux servers.
+
+The script should:
+
+1. Accept a service name as an argument (e.g., postgresql, nginx, redis).
+2. Check the current status of the service using systemctl.
+3. If the service is inactive or failed:
+   a. Rotate the service's log files (move the current log to a .old file).
+   b. Restart the service using systemctl restart.
+   c. Verify the service started successfully.
+   d. Send a Slack notification with the service name, action taken, and timestamp.
+4. If the service is already running, print "OK" and exit.
+5. Use argparse with --service as a required argument and optional --slack-webhook for the Slack URL.
+6. Keep it under 40 lines.
+7. Use subprocess.run for all system commands.
+8. Handle common errors like service not found or permission denied.
+
+Please provide the complete script with comments.
+```
+
+The AI returned the code in about 11 seconds. It looked clean. The logic flowed well. I copied it into my test VM and ran: `python3 incident_responder.py --service postgresql`.
+
+Then things got interesting.
+
+## Where the AI made dangerous mistakes
+
+### Mistake 1: It restarted production during peak hours
+
+The script ran at 2:15 PM on a Tuesday. Our PostgreSQL serves an e-commerce API that averages 400 requests per second during business hours. The AI's script checked the service status, found it was running, and printed "OK". Good so far.
+
+Then I deliberately stopped PostgreSQL to test the restart logic. The AI's script immediately ran `systemctl restart postgresql`. No check for whether this was a maintenance window. No confirmation prompt. No "are you sure" dialog. Just straight to restart.
+
+I had set `--slack-webhook` to a test channel. The Slack message came through: "Restarted postgresql at 2026-06-28T14:15:32Z". It didn't say why it restarted. It didn't mention whether any connections were dropped. Just a bare notification.
+
+My colleague in the next room immediately messaged: "Did you just restart the DB?"
+
+This would have dropped about 400 active connections. The application has connection pooling and retry logic, but each retry adds 2-3 seconds of latency. For a few seconds, the site would have crawled. Not great when people are trying to check out.
+
+The AI had no concept of "production hours" or "maintenance windows."
+
+### Mistake 2: It rotated logs that were 2 hours old
+
+The log rotation logic was the second shocker. The AI's script did this:
+
+```python
+def rotate_logs(service):
+    log_path = f"/var/log/{service}/{service}.log"
+    if os.path.exists(log_path):
+        os.rename(log_path, f"{log_path}.{int(time.time())}")
+        print(f"Rotated {log_path}")
+```
+
+It renamed the active log file. Including all the logs from the last 2 hours that contained the crash details. The very logs I would need to debug the incident were gone.
+
+Linux has `logrotate` for a reason. The AI ignored it completely. It treated log files as disposable.
+
+### Mistake 3: No health check before declaring success
+
+After restarting the service, the AI's script checked `systemctl is-active postgresql` and if the output was "active", it declared victory. But PostgreSQL can report itself as "active" while still refusing connections. The port might be open but the database could be in recovery mode. The AI never attempted an actual connection test.
+
+### Mistake 4: It silently skipped permission errors
+
+The AI added try-except blocks but they all did this:
+
+```python
+except Exception as e:
+    print(f"Error: {e}")
+```
+
+No logging to a file. No Slack notification for failures. If the Slack webhook was wrong (which it was on my first test), the script printed "Error: HTTP 400" and exited. I had to check the terminal output to know it failed. If this ran from a cron job, I would have never seen the error.
+
+## What I had to fix
+
+I spent about 3 hours fixing the AI's output. Here is what I changed:
+
+**1. Added a maintenance window check.**
+
+I added two environment variables: `MAINTENANCE_WINDOW_START=02` and `MAINTENANCE_WINDOW_END=05`. The script compares the current hour against these. If a restart is requested outside the window, the script writes a CRITICAL alert to a report file and sends a Slack message - but does NOT restart. It waits for human intervention.
+
+**2. Replaced the log rotation with a proper copy-and-truncate.**
+
+Instead of renaming the whole log file, the script now:
+
+```python
+def safe_rotate(service):
+    log_path = f"/var/log/{service}/{service}.log"
+    rotated_path = f"/var/log/{service}/{service}.log.old"
+    try:
+        subprocess.run(["cp", log_path, rotated_path], check=True)
+        subprocess.run(["truncate", "-s", "0", log_path], check=True)
+    except subprocess.CalledProcessError as e:
+        log_error(f"Log rotation failed for {service}: {e}")
+```
+
+This keeps the crash logs available while clearing the active file. The old data is preserved in the `.old` file.
+
+**3. Added a real health check.**
+
+After restarting, the script now tries to connect to the service on its port. For PostgreSQL it attempts a `psql` connection. For Redis it sends a `PING`. For Nginx it checks the HTTP status code on the health endpoint. Only if that succeeds does it report the service as recovered.
+
+**4. Replaced silent error handling with structured logging.**
+
+Every error goes to three places: a local error log file, the terminal output, and the Slack webhook if configured. If Slack fails, the error is still recorded locally.
+
+**5. Added a --dry-run flag.**
+
+The first thing the script does now is check for `--dry-run`. If set, it prints what it WOULD do without actually running any systemctl or log rotation commands. This lets me see the sequence of actions before committing to them.
+
+## The final working result
+
+After the fixes, running the script looks like this:
+
+```
+$ python3 incident_responder.py --service postgresql --dry-run
+[DRY RUN] Would check status of postgresql
+[DRY RUN] Status: active
+[DRY RUN] Service is healthy, no action needed
+[INFO] Dry run complete. 0 actions would have been taken.
+
+$ python3 incident_responder.py --service redis --slack-webhook https://hooks.slack.com/services/xxx
+2026-06-28 03:12:01 [INFO] Checking redis status...
+2026-06-28 03:12:01 [INFO] redis is inactive (current hour: 3, maintenance window: 2-5)
+2026-06-28 03:12:01 [ACTION] Rotating /var/log/redis/redis.log (size: 1.2MB)
+2026-06-28 03:12:02 [ACTION] Restarting redis via systemctl...
+2026-06-28 03:12:03 [HEALTH] Connecting to redis on port 6379... PONG
+2026-06-28 03:12:03 [INFO] redis restarted successfully (downtime: ~2 seconds)
+2026-06-28 03:12:04 [NOTIFY] Slack notification sent (channel: #ops-alerts)
+```
+
+The script now runs in about 3 seconds per service. The Slack message includes the downtime duration and whether the restart happened inside or outside the maintenance window.
+
+It runs every night at 3 AM via a cron job. In the last week, it has automatically recovered Redis twice (OOM kills from a memory leak we are still debugging) and Nginx once (a worker process that hung). Zero false restarts. Zero log loss.
+
+## What I learned about prompting AI for ops automation
+
+1. **The AI does not understand production.** It treats every server like a dev environment. You have to explicitly teach it about maintenance windows, connection draining, and graceful degradation.
+
+2. **Log rotation is one of those things that sounds simple until you get it wrong.** The AI will happily delete your crash logs because "rotate" sounds like "move out of the way." You need to spell out exactly what happens to each byte.
+
+3. **Health checks must be real.** Checking systemctl status is not enough. The AI will declare the service healthy as long as the process table shows it running. You need application-level health checks.
+
+4. **Error handling is the first thing the AI skips.** Every try-except in the AI's output was a generic catch that printed to stdout. For a cron job, that is invisible. You must explicitly ask for logging to files.
+
+5. **Dry-run mode is non-negotiable.** Without it, you are trusting an AI-written script to touch your production servers. The first run should always be `--dry-run` even after you have reviewed the code.
+
+## The exact prompt (with safety fixes baked in)
+
+If you want your own copy, use this refined prompt. I added the safety constraints so you don't repeat my mistakes:
+
+```text
+Prompt:
+Write a Python CLI tool called 'incident_responder.py' that automates incident response on Linux servers.
+
+Requirements:
+- Accept a service name via --service (required) and a Slack webhook URL via --slack-webhook (optional).
+- Check service status using 'systemctl is-active'.
+- Before any restart, check if current hour is between MAINTENANCE_WINDOW_START and MAINTENANCE_WINDOW_END (configurable via env vars). If outside window, log a CRITICAL alert but DO NOT restart.
+- If restarting: rotate logs by COPYING the current log to a .old file, then TRUNCATE the current log (do not rename/delete).
+- After restart attempt, perform a real health check (try connecting to the service port).
+- Log ALL actions to a file at /var/log/incident_responder.log with timestamps.
+- If Slack webhook is provided, send a structured notification. If Slack fails, log locally.
+- Support --dry-run flag that prints planned actions without executing them.
+- Use subprocess.run for system commands. Handle CalledProcessError gracefully.
+- Keep the script under 60 lines of functional code.
+
+Please provide the complete script with inline comments.
+```
+
+Copy that into DeepSeek and you will get a much safer starting point than I did.
+
+## FAQ
+
+**Can I run the final script safely on my production servers?**
+Yes, but only after you configure the MAINTENANCE_WINDOW_START and MAINTENANCE_WINDOW_END variables. The script will refuse to restart any service outside those hours. I also recommend running it with --dry-run for the first week to make sure the maintenance window covers your actual low-traffic period.
+
+**What if a service is already down outside maintenance hours?**
+The script flags it as CRITICAL in the report but does not restart it automatically. I made that decision deliberately after the AI's first attempt. You get a ping on Slack and you decide whether to restart manually. That trade-off keeps us safe even if it means I sometimes get paged at 3 AM.
+
+**Does this script work on Windows servers?**
+No, it is written for Linux systemd-based systems. The AI originally tried to use `sc.exe` commands which work on Windows but the service status parsing was completely different. If you need Windows support, you would need to adapt the service checking logic to use PowerShell's Get-Service cmdlet.
+
+**How do I add a new service check?**
+Append the service name to the SERVICES array at the top of the script. The AI originally hardcoded each service in a separate function, which made maintenance painful. My version uses a configurable list so adding 'nginx' or 'postgresql-16' is one line.
+
+**What happens if the Slack webhook URL is wrong?**
+The script catches the HTTP error and falls back to writing the alert to a local file called 'missed_alerts.log'. The AI did not handle this at all - it just crashed with an unhandled exception. That was one of the first things I fixed.
+
+---
+
+What incident response task would you automate? Drop your prompt in the comments and I will try it in my next experiment.
+
+## Related Guides
+
+- [I Built a Sysadmin Toolkit with DeepSeek — Prompts, Failures & Code](/blog/i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke) — The short answer is I built a sysadmin toolkit using DeepSeek. It generated 210 lines across 4 scripts for log parsing, disk monitoring, and user management.
+- [Automated Server Health Checks with DeepSeek](/blog/automated-server-health-checks-with-deepseek) — The short answer is that I used DeepSeek to generate a Python script that runs periodic health checks, parses system metrics, and sends alerts when thresholds are breached.
+- [I Built a Log Monitoring Script with DeepSeek — Here is What Went Wrong](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong) — The short answer: I built a log monitoring script with DeepSeek but the AI hallucinated log parsing libraries. The final working version that monitors 12 servers runs in production today.
