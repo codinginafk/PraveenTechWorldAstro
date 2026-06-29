@@ -97,4 +97,46 @@ A: Standard reports update within a few hours. Real-time reports show data insta
 **Q: Can I use both UA and GA4 page tracking at the same time?**
 A: Yes, and you should during the transition. They use separate tracking codes and do not interfere with each other. Running both side by side lets you compare data and build a history in GA4 before UA stops processing new data.
 
+## Comparing GA4 Page Views Across Reports
+
+One thing that confused me early on was seeing different page view numbers in different GA4 reports. The Realtime report shows one number, the Engagement report shows another, and the Pages and Screens report shows a third.
+
+This is normal. Each report uses a different data processing level:
+
+- **Realtime:** Shows events within the last 30 minutes. Data is not fully processed and may change.
+- **Standard reports:** Show fully processed data with up to 24 hours of delay.
+- **Explorations:** Let you build custom queries with raw event data.
+
+The most accurate page view count for analysis is in the Engagement > Pages and Screens report after 24-48 hours of processing.
+
+## Debugging Your Page Tracking Implementation
+
+When page tracking breaks, I check these things in order:
+
+1. **Is the GA4 tag actually loading?** Install the GA4 DebugView extension or use Chrome DevTools to verify the gtag script loads and fires events.
+
+2. **Are events appearing in DebugView?** Open GA4 > Admin > DebugView. If you see events from your device, tracking is working. If not, the tag may not be installed correctly.
+
+3. **Is enhanced measurement enabled?** Go to Admin > Data Streams and confirm Page Views is checked under Enhanced Measurement.
+
+4. **Is there a filter excluding your traffic?** Internal traffic filters can accidentally exclude all data if misconfigured. Check Admin > Data Settings > Internal Traffic.
+
+5. **Is consent mode blocking tracking?** If you use Consent Mode v2 and the user denies analytics cookies, GA4 may not fire. I added a cookie consent banner that only blocks tracking when explicitly declined.
+
+For a complete walkthrough of fixing GA4 tracking issues, the [GA4 troubleshooting guide](/blog/ga4-not-tracking-visitors-12-troubleshooting-steps) covers every scenario I have encountered.
+
+## Page Tracking in the GA4 Data Model
+
+Understanding how GA4 stores page view data helps you interpret reports correctly. When a `page_view` event fires, GA4 records:
+
+- The event name (`page_view`)
+- Event parameters (`page_location`, `page_title`, `page_referrer`)
+- User identity (anonymous or logged-in)
+- Session information
+- Timestamp
+
+This data flows into GA4's event-based schema. Unlike Universal Analytics, which stored page views in a separate table, GA4 treats everything as events in a single data stream.
+
+You can query this data directly using GA4's Explorations or export it to BigQuery for advanced analysis. The BigQuery export includes raw event data with all parameters, which is useful for building custom reports that the GA4 interface does not support.
+
 For more on tracking and measuring website performance, read the [technical SEO checklist](/blog/technical-seo-checklist-for-beginners-fix-these-issues-to-rank-better) and the [website speed optimization guide](/blog/website-speed-optimization-why-it-matters-for-seo-and-how-to-fix-it).
