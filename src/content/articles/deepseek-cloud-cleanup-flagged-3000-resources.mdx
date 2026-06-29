@@ -1,0 +1,212 @@
+---
+title: "I Asked DeepSeek to Clean Up Our Cloud — It Flagged 3,000 Resources for Deletion"
+description: "A DeepSeek-generated AWS cleanup script identified 3,000 resources as deletable. The AI hallucinated tag matching logic. Safety checks prevented a disaster."
+coverImage: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=600&fit=crop"
+imageAlt: "aerial view of earth with glowing network connections representing cloud infrastructure"
+imageCredit: "Photo by NASA on Unsplash"
+publishDate: 2026-06-29
+author: praveen
+category: ai-automation
+tags:
+  - deepseek
+  - aws
+  - cloud-costs
+  - python
+  - ai-automation
+  - infrastructure
+seoTitle: "DeepSeek Cloud Cleanup Flagged 3,000 Resources"
+socialHook: "I asked DeepSeek to write a script that finds orphaned cloud resources. It flagged 3,000 items for deletion. The tag matching was hallucinated. Here's the exact prompt and the safeguards I added."
+pillarId: ai-automation
+faq:
+  - question: "Could the AI-generated cleanup script have deleted real resources?"
+    answer: "Yes. If I had run the first version without reviewing it, the script would have deleted 12 active EC2 instances that happened to be missing the 'Project' tag. The AI assumed any untagged resource was orphaned, which is wrong — some of our teams don't use tagging consistently."
+  - question: "How do you verify a resource is actually orphaned?"
+    answer: "I check three things: no network traffic in the last 30 days (CloudWatch), no recent console logins for the owner (CloudTrail), and no references in other resources (tag-based dependency scan). Only resources that fail all three checks go into the deletion queue."
+  - question: "Do you still use AI to generate cleanup scripts?"
+    answer: "Yes, but only with the preview mode I built. The script generates a report first, I review it, then I approve the deletion batch. No AI-generated cleanup script runs without human sign-off at our org now."
+  - question: "How much did this actually save?"
+    answer: "About $400/month in orphaned resources. Three stopped EC2 instances that were still attached to EBS volumes, two old load balancers pointing to nothing, and a handful of EBS snapshots from decommissioned accounts."
+  - question: "What's the main lesson from this?"
+    answer: "AI is great at generating infrastructure scripts fast. It is terrible at understanding your specific tagging conventions, team workflows, and what 'abandoned' actually means in your environment. Always add a dry-run mode. Always review the match list."
+---
+I asked DeepSeek to write a Python script that finds orphaned cloud resources so I could cut our AWS bill. The first version flagged 3,000 resources for deletion. The real number was closer to 20. Here is what went wrong and how I fixed it.
+
+## What Problem Made Me Build This?
+
+Our AWS bill was creeping up month over month. I had a hunch there were orphaned resources — old EC2 instances, unattached EBS volumes, stale snapshots — that nobody had noticed. The kind of stuff that accumulates when teams spin up infrastructure for a project and forget to tear it down.
+
+I looked into AWS Config and Trusted Advisor. Both can find unused resources. But they also flag a lot of false positives — resources that look orphaned but are actually in use by another team. I needed something that understood our specific tagging conventions and team ownership model.
+
+The manual approach would take days. I had 11 AWS accounts to scan across two regions each. That is a lot of console clicking.
+
+I wanted a single script that would:
+
+1. Scan all 11 accounts and both regions
+2. Find EC2 instances, EBS volumes, load balancers, and snapshots with no recent activity
+3. Cross-reference against our tag taxonomy to identify actual owners
+4. Output a clean report of what could be safely deleted
+
+I figured DeepSeek could handle the grunt work. I can write basic boto3 calls, but stitching together multi-account auth, paginated API calls, and a tagging overlay across 11 accounts? That is the kind of tedious plumbing I wanted the AI to handle.
+
+## How I Prompted It
+
+I wrote a detailed prompt describing the architecture. Standard approach — single prompt, complete spec, let the AI generate the skeleton.
+
+```text
+Prompt:
+Write a Python CLI tool that finds orphaned cloud resources across multiple AWS accounts. Call it cleanup.py. It should:
+
+1. Read a list of AWS account IDs and roles to assume from a config file (config.yaml).
+2. For each account, assume the specified IAM role and scan us-east-1 and eu-west-1.
+3. Scan the following resource types:
+   a. EC2 instances (status, launch time, tags, last network activity)
+   b. EBS volumes (attachment state, size, tags, last write time)
+   c. ELB load balancers (number of targets, last activity, tags)
+   d. EBS snapshots (age, volume status, tags, owning account)
+4. For each resource, check if it has been idle for more than 30 days:
+   a. EC2: stopped state OR no network bytes in 30 days
+   b. EBS: unattached OR attachment count = 0
+   c. ELB: zero registered targets OR no requests in 30 days
+   d. Snapshot: older than 90 days AND source volume no longer exists
+5. Flag any resource missing the 'Project' or 'Owner' tag.
+6. Output a CSV report with columns: account, region, resource_type, resource_id, age_days, status, tags, reason, deletable (yes/no).
+7. Include a --dry-run flag that prints the report without any deletions.
+8. Include a --delete flag that actually terminates/deletes/deregisters the flagged resources.
+9. Log everything to cleanup.log with timestamps.
+10. Use boto3, PyYAML, and csv. Use only standard library beyond those.
+
+Please output the complete script with comments and usage examples.
+```
+
+DeepSeek returned about 900 lines. Looked solid in the diff view. I created the config file, set up the cross-account roles, and ran it with `--dry-run`.
+
+## Where Did the AI Output Break?
+
+It failed in four distinct ways. Each one could have caused real damage.
+
+### Hallucinated Tag Matching Logic
+
+The script checked for missing tags by looking for resources where `tags` was `None`. This is wrong. In AWS, every resource has a `tags` field — it is just an empty list if no tags are set. The AI's check never triggered.
+
+So the first run reported zero untagged resources. That should have been a red flag, but I was so focused on the output numbers that I missed it.
+
+The real problem was deeper. The AI added a filter that checked for `'Project' in tags` and `'Owner' in tags` and flagged anything missing either one. But our organization uses a different tag structure. Some teams use `'CostCenter'` instead of `'Project'`. Others use `'Team'` instead of `'Owner'`. The flag was technically working, but the rules were wrong for our environment.
+
+### False Positive Cascade
+
+Because the tag matching was broken, the script could not determine ownership for a huge number of resources. It defaulted to "deletable" for anything it could not classify.
+
+The output showed 3,012 resources flagged as deletable. That number scared me. We have maybe 500 active resources across all accounts. Something was clearly wrong.
+
+I dug into the CSV. The script had flagged:
+
+- **12 running EC2 instances** that were actively serving traffic. They happened to be missing the 'Project' tag because they were provisioned by a different team that uses 'CostCenter' instead.
+- **4 production load balancers** that had low traffic volumes overnight. The idle check triggered because the script checked during a maintenance window.
+- **2,800 EBS snapshots** that were older than 90 days. Most of them were from decommissioned accounts, but about 30 were from active backup policies. The source volumes were still in use, but the script checked if the *original* volume tag was present, not if the snapshot was referenced in a backup plan.
+
+The remaining ~200 were legitimate orphaned resources. But finding them in a sea of 3,000 false positives was impractical.
+
+### No Pagination (Again)
+
+The script only scanned the first page of results for each API call. AWS APIs paginate at 50 or 100 results per page depending on the service. For accounts with hundreds of resources, the script was scanning maybe 20% of the actual inventory.
+
+### Rate Limiting from Cross-Account Assumption
+
+The script assumed IAM roles sequentially for each account without any backoff. When you assume a role, the AWS API throttles you if you switch too fast. The script crashed on the fourth account with a `ThrottlingException` and stopped entirely. No partial results. No retry.
+
+## What I Had to Fix
+
+I spent about four evenings rewriting the script.
+
+**Tag matching** (2 hours): I replaced the AI's binary check with a configurable tag mapping. The script now reads a `tag_map.yaml` that defines which tags correspond to ownership for each account. Account 101 uses 'Project' and 'Owner'. Account 203 uses 'CostCenter' and 'Team'. The script checks each account's config before making a decision.
+
+**Idle detection** (1 hour): I changed the heuristic to check CloudWatch metrics for actual network traffic and CPU utilization instead of just instance state. A stopped instance is different from a running-but-idle instance. The AI treated them the same. I also added a configurable threshold — some teams want 30 days, others want 90.
+
+**Snapshot filtering** (1.5 hours): I added a check against AWS Backup to see if each snapshot is part of a backup plan. If it is, the script skips it regardless of age. This single change cut the false positives from 2,800 to 40.
+
+**Pagination** (1 hour): I added proper pagination loops using AWS's built-in paginators. Each resource type has its own pagination pattern, but boto3 handles most of it if you use the right interface.
+
+**Cross-account rate limiting** (30 minutes): I added a random jitter between 2-5 seconds between account switches. Not elegant, but it works. The script now processes all 11 accounts without throttling.
+
+**Output** (30 minutes): I changed the CSV to group resources by account and include a confidence score (low/medium/high) for each deletion recommendation. A resource with no network traffic for 60 days AND no owner tag AND no backup plan reference gets a high confidence score. A resource missing just one check gets flagged but not automatically recommended.
+
+The final script was about 1,600 lines across three files:
+- `cleanup.py` — main CLI and orchestration (700 lines)
+- `scanners.py` — per-resource-type scanning logic (600 lines)
+- `report.py` — CSV report generation and formatting (300 lines)
+
+## The Actual Impact
+
+After the rewrite, the script found 23 genuinely orphaned resources:
+
+- 7 unattached EBS volumes (10 GB each, running for months, $35/month total)
+- 3 stopped EC2 instances with attached EBS volumes (nobody remembered they existed, $120/month)
+- 2 old load balancers with zero targets (pointing to decommissioned auto-scaling groups, $45/month)
+- 11 orphaned EBS snapshots (90+ days old, source volumes deleted, ~$200/month total)
+
+Total savings: about $400/month. Not life-changing money, but the real win was the process. I can now run this script monthly and catch orphaned resources before they accumulate.
+
+More importantly, I added a Slack notification integration that posts a summary to our infra channel every Monday. The team sees what would be deleted and has 48 hours to object before the script runs the actual cleanup.
+
+## The Exact Prompt
+
+This is the raw prompt I started with. Copy it into DeepSeek and you will get a similar first draft. The same issues will be there — hallucinated tag checks, wrong idle thresholds, broken pagination.
+
+```text
+Prompt:
+Write a Python CLI tool that finds orphaned cloud resources across multiple AWS accounts. Call it cleanup.py. It should:
+
+1. Read a list of AWS account IDs and roles to assume from a config file (config.yaml).
+2. For each account, assume the specified IAM role and scan us-east-1 and eu-west-1.
+3. Scan the following resource types:
+   a. EC2 instances (status, launch time, tags, last network activity)
+   b. EBS volumes (attachment state, size, tags, last write time)
+   c. ELB load balancers (number of targets, last activity, tags)
+   d. EBS snapshots (age, volume status, tags, owning account)
+4. For each resource, check if it has been idle for more than 30 days:
+   a. EC2: stopped state OR no network bytes in 30 days
+   b. EBS: unattached OR attachment count = 0
+   c. ELB: zero registered targets OR no requests in 30 days
+   d. Snapshot: older than 90 days AND source volume no longer exists
+5. Flag any resource missing the 'Project' or 'Owner' tag.
+6. Output a CSV report with columns: account, region, resource_type, resource_id, age_days, status, tags, reason, deletable (yes/no).
+7. Include a --dry-run flag that prints the report without any deletions.
+8. Include a --delete flag that actually terminates/deletes/deregisters the flagged resources.
+9. Log everything to cleanup.log with timestamps.
+10. Use boto3, PyYAML, and csv. Use only standard library beyond those.
+
+Please output the complete script with comments and usage examples.
+```
+
+## What I Learned
+
+The AI made confident assumptions about our infrastructure that were wrong. It assumed tag names that do not match our conventions. It assumed 30 days is the right idle threshold for every team. It assumed pagination works the same for every AWS service.
+
+The dry-run flag saved me. I cannot stress this enough. If I had run the first version without `--dry-run`, we would have lost 12 active EC2 instances. The AI would have deleted resources that were actively serving traffic, simply because they did not have the exact tag the script was looking for.
+
+The lesson I keep learning with every DeepSeek experiment: AI generates infrastructure code fast, but it does not understand your specific environment. Every org has quirks — custom tagging, non-standard backup policies, teams that do not follow the rules. The AI has no way to know these unless you spoon-feed every detail, and even then it will get some wrong.
+
+For a similar experience, check out how my [API cost tracker script](/blog/deepseek-api-cost-tracker-scripts) had the same pattern of hallucinated endpoints and wrong cost calculations. Or how my [log monitoring script](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong) flagged itself as a threat. The AI is consistent in its failures — and that is useful to know.
+
+## FAQ
+
+**Q: Could the AI-generated cleanup script have deleted real resources?**  
+A: Yes. If I had run the first version without reviewing it, the script would have deleted 12 active EC2 instances that happened to be missing the 'Project' tag. The AI assumed any untagged resource was orphaned, which is wrong — some of our teams do not use tagging consistently.
+
+**Q: How do you verify a resource is actually orphaned?**  
+A: I check three things: no network traffic in the last 30 days (CloudWatch), no recent console logins for the owner (CloudTrail), and no references in other resources (tag-based dependency scan). Only resources that fail all three checks go into the deletion queue.
+
+**Q: Do you still use AI to generate cleanup scripts?**  
+A: Yes, but only with the preview mode I built. The script generates a report first, I review it, then I approve the deletion batch. No AI-generated cleanup script runs without human sign-off.
+
+**Q: How much did this actually save?**  
+A: About $400/month in orphaned resources. Three stopped EC2 instances still attached to EBS volumes, two old load balancers pointing to nothing, and a handful of EBS snapshots from decommissioned accounts.
+
+**Q: What is the main lesson from this?**  
+A: AI is great at generating infrastructure scripts fast. It is terrible at understanding your specific tagging conventions, team workflows, and what 'abandoned' actually means in your environment. Always add a dry-run mode. Always review the match list.
+
+## Related Guides
+
+- [DeepSeek API Cost Tracker Saved Me $2K/Month](/blog/deepseek-api-cost-tracker-scripts) — Same pattern of AI hallucination and manual fix, applied to API cost monitoring.
+- [I Built a Log Monitor with DeepSeek — Full Breakdown](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong) — The AI generated code that flagged itself as suspicious. A story about false positives.
+- [Automated Server Health Checks with DeepSeek](/blog/automated-server-health-checks-with-deepseek) — Infrastructure automation with AI that needed significant safety retrofitting.
