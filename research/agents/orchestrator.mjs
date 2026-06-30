@@ -10,7 +10,9 @@ import { checkAndApplyUnreadReport } from "./dev-agent.mjs";
 import { reportAgeHours, wasReportOpened } from "./lib/report.mjs";
 import { generateArticle } from "./generate.mjs";
 import { runSyndication } from "./syndication-agent.mjs";
+import { syncObsidianVault } from "./lib/obsidian-sync.mjs";
 import { execSync } from "child_process";
+
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "../..");
@@ -609,6 +611,9 @@ Return ONLY a valid JSON array. No markdown. No extra text. Example: [{ "title":
 
   // Phase 7: Syndicate (1 per cycle to avoid rate limits)
   try { await runSyndication(); } catch (err) { log(`  Syndication: ${err.message}`); }
+
+  // Phase 8: Sync Obsidian vault with new published article
+  try { syncObsidianVault(); log("  Obsidian vault synced."); } catch (err) { log(`  Vault sync: ${err.message}`); }
 
   // Phase 8: Ping (last cycle of day)
   if (state.articlesPublishedToday >= state.dailyQuota) {
