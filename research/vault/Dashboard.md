@@ -7,6 +7,7 @@ Welcome to your central Content Ops Vault! This Obsidian space is inter-linked w
 ## 📈 Active Pipeline Overview
 
 - **Daily Article Quota:** 3 Posts / Day
+- **Total Published Articles:** 69 notes
 - **Latest Live Build:** [Astro Local Preview](http://localhost:3000)
 - **Active Sprint Categories:** 
   - `[[Topics/ai-automation-scripts]]`
