@@ -294,6 +294,9 @@ ${depth}`;
     `seoTitle: "${seoTitle.replace(/"/g, "'")}"`,
     `socialHook: "${socialHook.replace(/"/g, "'")}"`,
     `pillarId: ${pillarId}`,
+    `status: draft`,
+    `topic: "[[Topics/${s}]]"`,
+    `social: "[[Social-Hooks/${s}-social]]"`,
   ];
   if (faqYaml) lines.push(faqYaml);
   lines.push("---", "");
@@ -301,13 +304,35 @@ ${depth}`;
   const frontmatter = lines.join("\n");
   const mdx = frontmatter + body;
 
-  const filePath = path.join(ARTICLES_DIR, `${s}.mdx`);
+  const DRAFTS_DIR = path.join(ROOT_DIR, "research/vault/Drafts");
+  const SOCIAL_DIR = path.join(ROOT_DIR, "research/vault/Social-Hooks");
+  
+  if (!fs.existsSync(DRAFTS_DIR)) fs.mkdirSync(DRAFTS_DIR, { recursive: true });
+  if (!fs.existsSync(SOCIAL_DIR)) fs.mkdirSync(SOCIAL_DIR, { recursive: true });
+
+  const filePath = path.join(DRAFTS_DIR, `${s}.md`);
   if (fs.existsSync(filePath)) {
-    console.warn(`  DUPLICATE SKIPPED: ${s}.mdx already exists.`);
+    console.warn(`  DUPLICATE SKIPPED: ${s}.md already exists in Obsidian vault.`);
     return null;
   }
   fs.writeFileSync(filePath, mdx, "utf-8");
-  console.log(`  Saved: src/content/articles/${s}.mdx (pillar: ${pillarId})`);
+  console.log(`  Saved Draft to Vault: research/vault/Drafts/${s}.md`);
+
+  const socialFilePath = path.join(SOCIAL_DIR, `${s}-social.md`);
+  const socialContent = `# 🔗 Social Media Hooks: ${title}
+
+## 👥 LinkedIn Post
+${socialHook}
+
+## 🐦 X / Twitter Hook
+${socialHook.slice(0, 280)}
+
+---
+Backlink: [[Drafts/${s}]]
+`;
+  fs.writeFileSync(socialFilePath, socialContent, "utf-8");
+  console.log(`  Saved Social Hooks to Vault: research/vault/Social-Hooks/${s}-social.md`);
+
   return filePath;
 }
 

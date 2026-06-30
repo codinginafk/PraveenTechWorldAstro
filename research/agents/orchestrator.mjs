@@ -565,11 +565,33 @@ Return ONLY a valid JSON array. No markdown. No extra text. Example: [{ "title":
   const dateStamp = `${todayStr()}T${String(publishHour).padStart(2, "0")}:00:00 +0000`;
 
   try {
-    execSync(`git add "${filePath}"`, { cwd: ROOT_DIR });
+    const slug = path.basename(filePath, ".md");
+    const mdxPath = path.join(ARTICLES_DIR, `${slug}.mdx`);
+    const publishedPath = path.join(ROOT_DIR, `research/vault/Published/${slug}.md`);
+
+    // 1. Read draft, strip Obsidian frontmatter for Astro compliance, save to articles/
+    let draftContent = fs.readFileSync(filePath, "utf-8");
+    let cleanMdx = draftContent
+      .replace(/^status:\s*.+\n?/m, "")
+      .replace(/^topic:\s*.+\n?/m, "")
+      .replace(/^social:\s*.+\n?/m, "");
+    
+    fs.writeFileSync(mdxPath, cleanMdx, "utf-8");
+    log(`  Copied clean MDX to website content: src/content/articles/${slug}.mdx`);
+
+    // 2. Update status and move in Obsidian vault
+    let vaultPublishedContent = draftContent.replace(/^status:\s*draft/m, "status: published");
+    fs.writeFileSync(publishedPath, vaultPublishedContent, "utf-8");
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath); // delete original draft note
+    log(`  Moved draft note to vault archive: research/vault/Published/${slug}.md`);
+
+    // 3. Git commit and deploy
+    execSync(`git add "${mdxPath}" "${publishedPath}" "${path.join(ROOT_DIR, `research/vault/Social-Hooks/${slug}-social.md`)}"`, { cwd: ROOT_DIR });
     const env = { ...process.env, GIT_AUTHOR_DATE: dateStamp, GIT_COMMITTER_DATE: dateStamp };
     execSync(`git commit -m "Add: [${clusterForToday}] ${publishTitle.slice(0, 65)}"`, { cwd: ROOT_DIR, env });
     execSync("git push", { cwd: ROOT_DIR, env, timeout: 30000 });
-    log(`  Published: ${path.basename(filePath)} at ${dateStamp}`);
+    log(`  Published: ${slug}.mdx at ${dateStamp}`);
+    
     state.articlesPublishedToday++;
     state.lastPublishDate = new Date().toISOString();
     state.sprintProgress[clusterForToday] = (state.sprintProgress[clusterForToday] || 0) + 1;
@@ -700,6 +722,66 @@ async function dailyCycles(state) {
   }
 }
 
+async function checkAndPublishApprovedVaultDrafts(state) {
+  const DRAFTS_DIR = path.join(ROOT_DIR, "research/vault/Drafts");
+  if (!fs.existsSync(DRAFTS_DIR)) return;
+
+  const files = fs.readdirSync(DRAFTS_DIR).filter(f => f.endsWith(".md"));
+  for (const f of files) {
+    try {
+      const filePath = path.join(DRAFTS_DIR, f);
+      const content = fs.readFileSync(filePath, "utf-8");
+      
+      const statusMatch = content.match(/^status:\s*"?(\w+)"?/m);
+      const status = (statusMatch?.[1] || "").toLowerCase();
+
+      if (status === "publish" || status === "ready" || status === "approved") {
+        const slug = f.replace(/\.md$/, "");
+        log(`[Obsidian Connector] Found approved draft in vault: ${slug}`);
+
+        const titleMatch = content.match(/^title:\s*"(.+?)"/m);
+        const title = titleMatch?.[1] || slug;
+        
+        const catMatch = content.match(/^category:\s*(.+)/m) || content.match(/^pillarId:\s*(.+)/m);
+        const category = (catMatch?.[1] || "website-setup").trim().replace(/"/g, "");
+
+        const publishHour = 8 + state.articlesPublishedToday * 2;
+        const dateStamp = `${todayStr()}T${String(publishHour).padStart(2, "0")}:00:00 +0000`;
+        
+        const mdxPath = path.join(ARTICLES_DIR, `${slug}.mdx`);
+        const publishedPath = path.join(ROOT_DIR, `research/vault/Published/${slug}.md`);
+
+        // 1. Copy clean MDX
+        let cleanMdx = content
+          .replace(/^status:\s*.+\n?/m, "")
+          .replace(/^topic:\s*.+\n?/m, "")
+          .replace(/^social:\s*.+\n?/m, "");
+        fs.writeFileSync(mdxPath, cleanMdx, "utf-8");
+
+        // 2. Archive note in vault
+        let vaultPublishedContent = content.replace(/^status:\s*"?\w+"?/m, "status: published");
+        fs.writeFileSync(publishedPath, vaultPublishedContent, "utf-8");
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+        // 3. Commit and push
+        execSync(`git add "${mdxPath}" "${publishedPath}"`, { cwd: ROOT_DIR });
+        const env = { ...process.env, GIT_AUTHOR_DATE: dateStamp, GIT_COMMITTER_DATE: dateStamp };
+        execSync(`git commit -m "Add: [${category}] ${title.slice(0, 65)} (Approved via Obsidian)"`, { cwd: ROOT_DIR, env });
+        execSync("git push", { cwd: ROOT_DIR, env, timeout: 30000 });
+
+        log(`[Obsidian Connector] Successfully published approved draft: ${slug}`);
+        state.articlesPublishedToday++;
+        state.lastPublishDate = new Date().toISOString();
+        state.sprintProgress[category] = (state.sprintProgress[category] || 0) + 1;
+      }
+    } catch (err) {
+      log(`[Obsidian Connector] Failed to publish approved draft ${f}: ${err.message}`);
+    }
+  }
+  state.pillarCounts = getPillarDistribution();
+  saveState(state);
+}
+
 export async function runOrchestrator() {
   if (!acquireLock()) return;
 
@@ -718,6 +800,7 @@ export async function runOrchestrator() {
   try {
     await dailyReset(state);
     await dailyCycles(state);
+    await checkAndPublishApprovedVaultDrafts(state);
     await orchestratorCycle(state);
   } catch (err) {
     log(`Orchestrator cycle failed: ${err.message}`);
@@ -737,6 +820,7 @@ export async function runOrchestrator() {
     state = loadState();
     await dailyReset(state);
     await dailyCycles(state);
+    await checkAndPublishApprovedVaultDrafts(state);
     await orchestratorCycle(state);
   }, CYCLE_EVERY_MS);
 
