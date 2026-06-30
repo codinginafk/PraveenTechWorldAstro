@@ -137,6 +137,7 @@ const RULES = [
   "HUMANIZER: Use 'is', 'are', 'has' instead of 'serves as', 'stands as', 'boasts', 'offers'.",
   "HUMANIZER: No vague attributions. 'Microsoft says' not 'Experts believe' or 'Industry reports'.",
   "HUMANIZER: End with a specific next step or final recommendation, not a generic positive conclusion.",
+  "Never write a separate section named 'Internal Links' or 'Inter Links'. Related guides must be styled under the 'Related Guides' header only, and contextual links should be embedded naturally into sentences.",
 ];
 
 // Narrative-style rules for new AI/IT Ops pillars (ai-automation, it-operations, build-in-public)
@@ -164,6 +165,7 @@ const NARRATIVE_RULES = [
   "GEO RULE: Include specific numbers, token counts, file sizes, execution times, and cost data throughout. LLMs preferentially cite content with measurable, verifiable data points.",
   "GEO RULE: Every H2 must be a question someone would ask (or start with 'How', 'What', 'Why', 'Can I'). LLMs extract H2-matched answers for SGE/Perplexity results.",
   "GEO RULE: Include at least 2 internal links to other PraveenTechWorld articles using contextual anchor text. LLMs use internal linking structure to assess topical authority.",
+  "Never write a separate section named 'Internal Links' or 'Inter Links'. Related guides must be styled under the 'Related Guides' header only, and contextual links should be embedded naturally into sentences.",
 ];
 
 function slug(text) {
