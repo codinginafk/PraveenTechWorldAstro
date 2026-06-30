@@ -114,8 +114,7 @@ export async function callLLM(systemPrompt, userPrompt, opts = {}) {
   const model = process.env.LLM_MODEL || "openrouter/free";
 
   if (!apiKey) {
-    console.warn("  [callLLM] No LLM_API_KEY in env. Faking response.");
-    return `[LLM unavailable - no API key configured]`;
+    throw new Error("No LLM_API_KEY in env.");
   }
 
   const body = {
@@ -152,8 +151,7 @@ export async function callGemini(systemPrompt, userPrompt, opts = {}) {
   const model = opts.model || process.env.GEMINI_MODEL || "gemini-flash-latest";
 
   if (!apiKey) {
-    console.warn("  [callGemini] No GEMINI_API_KEY in env. Faking response.");
-    return `[Gemini unavailable - no API key configured]`;
+    throw new Error("No GEMINI_API_KEY in env.");
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;

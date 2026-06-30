@@ -48,8 +48,8 @@ echo [4/4] Launching Screaming Frog crawl...
 "%SF_PATH%" --crawl "%SITE_URL%" --headless --overwrite --output-folder "%OUTPUT_DIR%" --export-tabs "Response Codes:Client Error (4xx),Response Codes:Redirection (3xx),Response Codes:Server Error (5xx),Images:Missing Alt Text,Page Titles:Missing,Page Titles:Duplicate,Canonicals:Missing,Canonicals:Multiple"
 
 :: Step 5: Cleanup
-echo [4/4] Stopping preview server...
-for /f "tokens=2" %%a in ('tasklist /fi "imagename eq node.exe" /fo list ^| findstr "PID:"') do (
+echo [4/4] Stopping preview server on port 3000...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000" ^| findstr "LISTENING"') do (
     taskkill /PID %%a /f >nul 2>&1
 )
 
