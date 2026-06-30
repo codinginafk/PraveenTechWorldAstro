@@ -12,22 +12,44 @@ const { article } = Astro.props;
 const readingTime = article.data.readingTime || calculateReadingTime(article.body || article.data.description);
 ---
 
-<article class="group rounded-xl border border-border bg-surface p-6 transition-all hover:-translate-y-0.5 hover:border-brand-600 hover:shadow-md dark:border-border-dark dark:bg-surface-dark dark:hover:border-brand-400">
-  <a href={`/blog/${article.id}`}>
-    <p class="mb-3 text-xs font-medium uppercase tracking-wider text-brand-600 dark:text-brand-400">
-      <Badge variant="category">{article.data.category}</Badge>
-    </p>
-    <h2 class="mb-2 font-semibold group-hover:text-brand-600 dark:group-hover:text-brand-400">
-      {article.data.seoTitle || article.data.title}
-    </h2>
-    <p class="mb-4 text-sm text-text-muted dark:text-text-dark-muted">
-      {article.data.description}
-    </p>
-    <div class="flex items-center gap-3 text-xs text-text-muted dark:text-text-dark-muted">
-      <time datetime={article.data.publishDate.toISOString()}>
-        {formatDate(article.data.publishDate)}
-      </time>
-      <span>{readingTime} min read</span>
+<article class="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-600 hover:shadow-xl dark:border-border-dark dark:bg-surface-dark dark:hover:border-brand-400">
+  <a href={`/blog/${article.id}`} class="flex flex-col h-full">
+    {article.data.coverImage ? (
+      <div class="overflow-hidden aspect-video relative w-full border-b border-border dark:border-border-dark">
+        <img 
+          src={article.data.coverImage} 
+          alt={article.data.imageAlt || article.data.title} 
+          class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" 
+          loading="lazy"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+      </div>
+    ) : (
+      <div class="aspect-video relative w-full border-b border-border dark:border-border-dark bg-gradient-to-br from-brand-600/10 via-brand-500/5 to-transparent flex items-center justify-center overflow-hidden">
+        <svg class="w-12 h-12 text-brand-600/30 dark:text-brand-400/20 transition-transform duration-500 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+        </svg>
+        <div class="absolute bottom-2 right-2 text-[10px] font-mono text-brand-600/40 dark:text-brand-400/30 uppercase tracking-widest">{article.data.category.replace(/-/g, " ")}</div>
+      </div>
+    )}
+    
+    <div class="p-6 flex flex-col flex-grow">
+      <div class="mb-3">
+        <Badge variant="category">{article.data.category}</Badge>
+      </div>
+      <h2 class="mb-2 text-lg font-bold tracking-tight text-text dark:text-text-dark group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-200 line-clamp-2">
+        {article.data.seoTitle || article.data.title}
+      </h2>
+      <p class="mb-4 text-sm leading-relaxed text-text-muted dark:text-text-dark-muted line-clamp-3">
+        {article.data.description}
+      </p>
+      <div class="mt-auto flex items-center gap-3 text-xs font-medium text-text-muted dark:text-text-dark-muted border-t border-border/50 dark:border-border-dark/30 pt-4">
+        <time datetime={article.data.publishDate.toISOString()}>
+          {formatDate(article.data.publishDate)}
+        </time>
+        <span class="inline-block w-1 h-1 rounded-full bg-border dark:bg-border-dark"></span>
+        <span>{readingTime} min read</span>
+      </div>
     </div>
   </a>
 </article>
