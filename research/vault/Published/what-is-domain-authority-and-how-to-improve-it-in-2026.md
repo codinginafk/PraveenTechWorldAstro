@@ -3,7 +3,7 @@ title: "What Is Domain Authority? How I Boosted Mine From 0 to 20+"
 description: "Picture this. You have built a clean website. Learn what domain authority really means and how to improve yours in 2026."
 category: website-setup
 publishDate: 2026-05-05
-coverImage: "https://images.unsplash.com/photo-1740645580536-f2c196b0bd6b?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxEb21haW4lMjBBdXRob3JpdHklMjBJdHxlbnwwfHx8fDE3ODA1ODg4OTh8MA&ixlib=rb-4.1.0&w=800&h=400&fit=crop"
+coverImage: "/images/generated/what-is-domain-authority-and-how-to-improve-it-in-2026.svg"
 status: published
 topic: "[[Topics/what-is-domain-authority-and-how-to-improve-it-in-2026]]"
 social: "[[Social-Hooks/what-is-domain-authority-and-how-to-improve-it-in-2026-social]]"

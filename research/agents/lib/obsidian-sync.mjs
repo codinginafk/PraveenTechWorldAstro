@@ -33,8 +33,6 @@ export function syncObsidianVault() {
     const mdxPath = path.join(ARTICLES_DIR, f);
     const publishedPath = path.join(PUBLISHED_DIR, `${slug}.md`);
 
-    if (fs.existsSync(publishedPath)) continue;
-
     try {
       const content = fs.readFileSync(mdxPath, "utf-8");
       
