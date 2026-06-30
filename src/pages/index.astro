@@ -1,24 +1,38 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
-import { getLatestArticles, getFeaturedArticles } from "@lib/content/posts";
+import { getPublishedArticles } from "@lib/content/posts";
 import { getCollection } from "astro:content";
 import ArticleCard from "@components/content/ArticleCard.astro";
+import { formatDate } from "@lib/utils/dateFormat";
+import { calculateReadingTime } from "@lib/utils/readingTime";
 
-const latestArticles = await getLatestArticles(6);
-const featuredArticles = await getFeaturedArticles();
+const allArticles = await getPublishedArticles();
 const categories = await getCollection("categories");
 
-const topFeatured = featuredArticles[0] || latestArticles[0];
-const remainingArticles = latestArticles.filter(art => art.id !== topFeatured?.id).slice(0, 5);
+// Get 9 latest articles for the homepage
+const latestArticles = allArticles.slice(0, 9);
+const heroArticle = latestArticles[0];
+const secondaryArticles = latestArticles.slice(1, 3);
+const gridArticles = latestArticles.slice(3, 9);
 
-const categoryIcons: Record<string, string> = {
-  "website-setup":   "🌐",
-  "windows-fixes":   "🛠️",
-  "hosting-infra":   "☁️",
-  "ai-websites":     "🤖",
-  "ai-automation":   "⚙️",
-  "it-operations":   "🖥️",
-  "build-in-public": "📢",
+// Count articles per category
+const categoryCounts: Record<string, number> = {};
+allArticles.forEach(a => {
+  categoryCounts[a.data.category] = (categoryCounts[a.data.category] || 0) + 1;
+});
+
+const categoryMeta: Record<string, { icon: string; color: string; gradient: string }> = {
+  "website-setup":   { icon: "🌐", color: "text-blue-600 dark:text-blue-400", gradient: "from-blue-600/15 to-cyan-500/10" },
+  "windows-fixes":   { icon: "🛠️", color: "text-orange-600 dark:text-orange-400", gradient: "from-orange-600/15 to-amber-500/10" },
+  "hosting-infra":   { icon: "☁️", color: "text-sky-600 dark:text-sky-400", gradient: "from-sky-600/15 to-indigo-500/10" },
+  "ai-websites":     { icon: "🤖", color: "text-violet-600 dark:text-violet-400", gradient: "from-violet-600/15 to-purple-500/10" },
+  "ai-automation":   { icon: "⚙️", color: "text-emerald-600 dark:text-emerald-400", gradient: "from-emerald-600/15 to-teal-500/10" },
+  "it-operations":   { icon: "🖥️", color: "text-rose-600 dark:text-rose-400", gradient: "from-rose-600/15 to-pink-500/10" },
+  "build-in-public": { icon: "📢", color: "text-amber-600 dark:text-amber-400", gradient: "from-amber-600/15 to-yellow-500/10" },
+  "android-fixes":   { icon: "📱", color: "text-green-600 dark:text-green-400", gradient: "from-green-600/15 to-lime-500/10" },
+  "productivity":    { icon: "📊", color: "text-indigo-600 dark:text-indigo-400", gradient: "from-indigo-600/15 to-blue-500/10" },
+  "privacy":         { icon: "🔒", color: "text-red-600 dark:text-red-400", gradient: "from-red-600/15 to-rose-500/10" },
+  "career-growth":   { icon: "🚀", color: "text-fuchsia-600 dark:text-fuchsia-400", gradient: "from-fuchsia-600/15 to-purple-500/10" },
 };
 ---
 
@@ -29,169 +43,211 @@ const categoryIcons: Record<string, string> = {
       "Real experiments using DeepSeek & AI to build automation scripts, fix Windows issues, and document what actually works — from an IT Ops Lead who builds in public.",
   }}
 >
+
   <!-- ═══ HERO ═══ -->
-  <section class="relative overflow-hidden border-b border-border dark:border-border-dark">
-    <div class="mx-auto max-w-6xl px-6 py-16 md:py-20">
+  <section class="relative overflow-hidden">
+    <!-- Subtle background pattern -->
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(99,102,241,0.08),transparent)] dark:bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(99,102,241,0.15),transparent)]"></div>
+    
+    <div class="relative mx-auto max-w-6xl px-6 pt-16 pb-12 md:pt-24 md:pb-16">
       <div class="max-w-3xl">
         <span class="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/40 dark:bg-brand-900/20 dark:text-brand-400 mb-6">
           <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
           Building in Public
         </span>
-        <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl mb-6 text-text dark:text-text-dark">
+        <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl mb-6 text-text dark:text-text-dark leading-[1.1]">
           AI that actually
-          <span class="bg-gradient-to-r from-brand-600 to-brand-400 dark:from-brand-400 dark:to-brand-300 bg-clip-text text-transparent">works in the real world</span>
+          <span class="bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400 dark:from-brand-400 dark:via-brand-300 dark:to-accent-400 bg-clip-text text-transparent"> works in the real world</span>
         </h1>
         <p class="text-lg text-text-muted dark:text-text-dark-muted max-w-2xl leading-relaxed mb-8">
           I'm an IT Operations Lead — not a developer. I use DeepSeek and OpenCode to build automation scripts, data pipelines, and IT tools. This site documents what works, what breaks, and exactly how I fix it.
         </p>
         <div class="flex flex-wrap gap-4">
-          <a href="/blog" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-600/20">
+          <a href="/blog" class="group inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-600/25 hover:-translate-y-0.5">
             Read All Articles
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+            <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
           </a>
-          <a href="/guides" class="inline-flex items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-semibold text-text transition-all hover:border-brand-600 hover:text-brand-600 dark:border-border-dark dark:text-text-dark dark:hover:border-brand-400 dark:hover:text-brand-400">
+          <a href="/guides" class="inline-flex items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-semibold text-text transition-all hover:border-brand-600 hover:text-brand-600 hover:-translate-y-0.5 dark:border-border-dark dark:text-text-dark dark:hover:border-brand-400 dark:hover:text-brand-400">
             Browse Guides
           </a>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- ═══ BENTO GRID ═══ -->
-  <section class="mx-auto max-w-6xl px-6 py-14">
-    <div class="grid gap-5 md:grid-cols-3 lg:grid-cols-3">
-
-      <!-- Featured Article (spans 2 cols) -->
-      {topFeatured && (
-        <div class="group md:col-span-2 relative overflow-hidden rounded-3xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark-alt flex flex-col min-h-[400px] transition-all duration-300 hover:shadow-2xl hover:border-brand-600/50 dark:hover:border-brand-400/50">
-          {topFeatured.data.coverImage ? (
-            <div class="relative h-52 overflow-hidden border-b border-border dark:border-border-dark">
-              <img
-                src={topFeatured.data.coverImage}
-                alt={topFeatured.data.imageAlt || topFeatured.data.title}
-                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                loading="eager"
-              />
-              <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-            </div>
-          ) : (
-            <div class="relative h-52 bg-gradient-to-br from-brand-600/10 via-brand-500/5 to-transparent border-b border-border dark:border-border-dark flex items-center justify-center overflow-hidden">
-              <span class="font-mono text-brand-600/30 dark:text-brand-400/20 text-sm">[ {topFeatured.id}.py ]</span>
-            </div>
-          )}
-          <div class="flex flex-col flex-grow p-7">
-            <span class="inline-block px-2.5 py-1 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-brand-200/50 dark:border-brand-800/40 w-fit">
-              {topFeatured.data.category}
-            </span>
-            <a href={`/blog/${topFeatured.id}`} class="block">
-              <h2 class="text-xl md:text-2xl font-extrabold tracking-tight text-text dark:text-text-dark group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors mb-3 line-clamp-2">
-                {topFeatured.data.seoTitle || topFeatured.data.title}
-              </h2>
-            </a>
-            <p class="text-sm text-text-muted dark:text-text-dark-muted leading-relaxed line-clamp-2 mb-4">
-              {topFeatured.data.description}
-            </p>
-            <a href={`/blog/${topFeatured.id}`} class="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline">
-              Read article
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
-            </a>
+      <!-- Stats row -->
+      <div class="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { num: `${allArticles.length}+`, label: "Published guides" },
+          { num: `${Object.keys(categoryCounts).length}`, label: "Topic categories" },
+          { num: "3", label: "New posts / week" },
+          { num: "Real", label: "Tested experiments" },
+        ].map(stat => (
+          <div class="rounded-2xl border border-border/60 dark:border-border-dark/60 bg-surface/60 dark:bg-surface-dark/60 backdrop-blur-sm p-4 text-center">
+            <p class="text-2xl font-extrabold bg-gradient-to-br from-brand-600 to-brand-400 dark:from-brand-400 dark:to-brand-300 bg-clip-text text-transparent mb-0.5">{stat.num}</p>
+            <p class="text-xs font-medium text-text-muted dark:text-text-dark-muted">{stat.label}</p>
           </div>
-        </div>
-      )}
-
-      <!-- Category Navigation Card -->
-      <div class="rounded-3xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark-alt p-7 flex flex-col min-h-[400px] transition-all duration-300 hover:shadow-xl">
-        <h3 class="text-base font-bold tracking-tight text-text dark:text-text-dark mb-1">Browse by Topic</h3>
-        <p class="text-xs text-text-muted dark:text-text-dark-muted mb-5">Pick where you want to start</p>
-        <nav class="flex flex-col gap-2 flex-grow">
-          {categories
-            .sort((a, b) => a.data.order - b.data.order)
-            .map((cat) => (
-              <a href={`/guides/${cat.id}`} class="group flex items-center gap-3 p-3 rounded-xl border border-transparent hover:border-brand-200 hover:bg-brand-50/50 dark:hover:border-brand-800/50 dark:hover:bg-brand-900/10 transition-all duration-200">
-                <span class="text-lg leading-none">{categoryIcons[cat.id] || "📄"}</span>
-                <span class="text-sm font-semibold text-text-muted group-hover:text-text dark:text-text-dark-muted dark:group-hover:text-text-dark transition-colors">{cat.data.name}</span>
-                <svg class="ml-auto w-3.5 h-3.5 text-text-muted/40 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
-              </a>
-            ))}
-        </nav>
+        ))}
       </div>
-
     </div>
   </section>
 
-  <!-- ═══ WHAT THIS IS ═══ -->
-  <section class="border-t border-b border-border/60 dark:border-border-dark/60 bg-surface-alt/50 dark:bg-surface-dark-alt/30 py-14">
-    <div class="mx-auto max-w-6xl px-6">
-      <div class="grid gap-8 md:grid-cols-3 items-center">
-        <div class="md:col-span-2">
-          <h2 class="text-2xl font-extrabold tracking-tight text-text dark:text-text-dark mb-4">What you get here</h2>
-          <p class="text-text-muted dark:text-text-dark-muted leading-relaxed mb-4">
-            I am an IT Operations Lead, not a software engineer. This site documents how I use AI
-            (DeepSeek + OpenCode) to build Python scripts, SQL pipelines, CLI tools, and IT automations I would never write from scratch. No fluff. No fake expertise.
-            Just real experiments with code — including the failures.
-          </p>
-          <a href="/about" class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline">
-            Learn more about this project →
-          </a>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          {[
-            { num: "69+", label: "Published guides" },
-            { num: "3", label: "New posts daily" },
-            { num: "7", label: "Topic categories" },
-            { num: "Real", label: "Tested experiments" },
-          ].map(stat => (
-            <div class="rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark p-5 text-center">
-              <p class="text-2xl font-extrabold text-brand-600 dark:text-brand-400 mb-1">{stat.num}</p>
-              <p class="text-xs font-medium text-text-muted dark:text-text-dark-muted">{stat.label}</p>
+  <!-- ═══ FEATURED ARTICLES ═══ -->
+  <section class="border-t border-border/60 dark:border-border-dark/60 bg-surface-alt/30 dark:bg-surface-dark-alt/20">
+    <div class="mx-auto max-w-6xl px-6 py-14">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-2xl font-extrabold tracking-tight text-text dark:text-text-dark">Featured</h2>
+        <a href="/blog" class="text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline">View all →</a>
+      </div>
+
+      <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        
+        <!-- Hero article (large, spans 2 cols on lg) -->
+        {heroArticle && (
+          <a href={`/blog/${heroArticle.id}`} class="group lg:col-span-2 lg:row-span-2 relative overflow-hidden rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-brand-600/50 dark:hover:border-brand-400/50">
+            <div class="relative overflow-hidden aspect-video lg:aspect-auto lg:h-full lg:min-h-[420px]">
+              {heroArticle.data.coverImage ? (
+                <img
+                  src={heroArticle.data.coverImage}
+                  alt={heroArticle.data.imageAlt || heroArticle.data.title}
+                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="eager"
+                />
+              ) : (
+                <div class="w-full h-full bg-gradient-to-br from-brand-600/10 via-brand-500/5 to-transparent flex items-center justify-center">
+                  <svg class="w-16 h-16 text-brand-600/20 dark:text-brand-400/15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>
+                </div>
+              )}
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-6 lg:p-8">
+                <span class="inline-block px-3 py-1 bg-brand-600 text-white rounded-full text-xs font-bold uppercase tracking-wider mb-3">
+                  {heroArticle.data.category.replace(/-/g, " ")}
+                </span>
+                <h3 class="text-xl lg:text-2xl xl:text-3xl font-extrabold text-white mb-2 line-clamp-2 leading-tight">
+                  {heroArticle.data.seoTitle || heroArticle.data.title}
+                </h3>
+                <p class="text-sm text-white/80 line-clamp-2 max-w-lg mb-3">
+                  {heroArticle.data.description}
+                </p>
+                <div class="flex items-center gap-3 text-xs text-white/60">
+                  <time>{formatDate(heroArticle.data.publishDate)}</time>
+                  <span class="w-1 h-1 rounded-full bg-white/40"></span>
+                  <span>{heroArticle.data.readingTime || calculateReadingTime(heroArticle.body || heroArticle.data.description)} min read</span>
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
+          </a>
+        )}
+
+        <!-- Secondary articles (stacked on the right) -->
+        {secondaryArticles.map((article) => (
+          <a href={`/blog/${article.id}`} class="group relative overflow-hidden rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-brand-600/50 dark:hover:border-brand-400/50">
+            <div class="relative overflow-hidden h-40">
+              {article.data.coverImage ? (
+                <img
+                  src={article.data.coverImage}
+                  alt={article.data.imageAlt || article.data.title}
+                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+              ) : (
+                <div class="w-full h-full bg-gradient-to-br from-brand-600/10 via-brand-500/5 to-transparent flex items-center justify-center">
+                  <svg class="w-10 h-10 text-brand-600/20 dark:text-brand-400/15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" /></svg>
+                </div>
+              )}
+              <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+              <span class="absolute top-3 left-3 px-2.5 py-0.5 bg-black/40 backdrop-blur-sm text-white rounded-full text-[10px] font-bold uppercase tracking-wider">
+                {article.data.category.replace(/-/g, " ")}
+              </span>
+            </div>
+            <div class="p-5 flex flex-col flex-grow">
+              <h3 class="text-base font-bold text-text dark:text-text-dark group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2 mb-2">
+                {article.data.seoTitle || article.data.title}
+              </h3>
+              <p class="text-xs text-text-muted dark:text-text-dark-muted line-clamp-2 mb-3">
+                {article.data.description}
+              </p>
+              <div class="mt-auto flex items-center gap-2 text-xs text-text-muted dark:text-text-dark-muted">
+                <time>{formatDate(article.data.publishDate)}</time>
+                <span class="w-1 h-1 rounded-full bg-border dark:bg-border-dark"></span>
+                <span>{article.data.readingTime || calculateReadingTime(article.body || article.data.description)} min read</span>
+              </div>
+            </div>
+          </a>
+        ))}
       </div>
     </div>
   </section>
 
-  <!-- ═══ LATEST ARTICLES ═══ -->
-  <section class="mx-auto max-w-6xl px-6 py-16">
-    <div class="flex items-center justify-between mb-10">
-      <h2 class="text-2xl font-extrabold tracking-tight text-text dark:text-text-dark">Latest Articles</h2>
-      <a href="/blog" class="text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline">
-        View all →
-      </a>
-    </div>
-    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {remainingArticles.map((article) => (
-        <ArticleCard article={article} />
-      ))}
-    </div>
-    <div class="mt-12 text-center">
-      <a
-        href="/blog"
-        class="inline-flex items-center gap-2 rounded-xl border border-border px-8 py-3 text-sm font-semibold text-text transition-all hover:bg-surface-alt hover:border-brand-600 hover:text-brand-600 dark:border-border-dark dark:text-text-dark dark:hover:bg-surface-dark-alt dark:hover:border-brand-400 dark:hover:text-brand-400"
-      >
-        Browse all {69}+ articles
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
-      </a>
-    </div>
-  </section>
-
-  <!-- ═══ EXPLORE TOPICS ═══ -->
-  <section class="border-t border-border/60 dark:border-border-dark/60 bg-surface-alt/50 dark:bg-surface-dark-alt/30 py-14">
-    <div class="mx-auto max-w-6xl px-6">
-      <h2 class="text-2xl font-extrabold tracking-tight text-text dark:text-text-dark text-center mb-8">Explore Topics</h2>
-      <div class="flex flex-wrap justify-center gap-3">
-        {categories
-          .sort((a, b) => a.data.order - b.data.order)
-          .map((cat) => (
+  <!-- ═══ CATEGORY CARDS ═══ -->
+  <section class="mx-auto max-w-6xl px-6 py-14">
+    <h2 class="text-2xl font-extrabold tracking-tight text-text dark:text-text-dark text-center mb-3">Explore by Topic</h2>
+    <p class="text-sm text-text-muted dark:text-text-dark-muted text-center mb-10 max-w-lg mx-auto">Pick a category to dive deep into guides, tutorials, and real-world experiments.</p>
+    <div class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+      {categories
+        .sort((a, b) => a.data.order - b.data.order)
+        .map((cat) => {
+          const meta = categoryMeta[cat.id] || { icon: "📄", color: "text-brand-600 dark:text-brand-400", gradient: "from-brand-600/15 to-brand-400/10" };
+          const count = categoryCounts[cat.id] || 0;
+          return (
             <a
               href={`/guides/${cat.id}`}
-              class="flex items-center gap-2 rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-medium transition-all hover:border-brand-600 hover:text-brand-600 hover:shadow-md dark:border-border-dark dark:bg-surface-dark dark:hover:border-brand-400 dark:hover:text-brand-400"
+              class={`group relative overflow-hidden rounded-2xl border border-border dark:border-border-dark p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-brand-600/40 dark:hover:border-brand-400/40 bg-gradient-to-br ${meta.gradient} dark:from-transparent dark:to-transparent dark:bg-surface-dark`}
             >
-              <span>{categoryIcons[cat.id] || "📄"}</span>
-              {cat.data.name}
+              <span class="text-3xl mb-3 block">{meta.icon}</span>
+              <h3 class="text-sm font-bold text-text dark:text-text-dark mb-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{cat.data.name}</h3>
+              <p class="text-xs text-text-muted dark:text-text-dark-muted">{count} {count === 1 ? "article" : "articles"}</p>
+              <svg class="absolute top-4 right-4 w-4 h-4 text-text-muted/30 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-all group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
             </a>
-          ))}
+          );
+        })}
+    </div>
+  </section>
+
+  <!-- ═══ LATEST ARTICLES GRID ═══ -->
+  <section class="border-t border-border/60 dark:border-border-dark/60 bg-surface-alt/30 dark:bg-surface-dark-alt/20">
+    <div class="mx-auto max-w-6xl px-6 py-16">
+      <div class="flex items-center justify-between mb-10">
+        <h2 class="text-2xl font-extrabold tracking-tight text-text dark:text-text-dark">Latest Articles</h2>
+        <a href="/blog" class="text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline">View all →</a>
+      </div>
+      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {gridArticles.map((article) => (
+          <ArticleCard article={article} />
+        ))}
+      </div>
+      <div class="mt-12 text-center">
+        <a
+          href="/blog"
+          class="group inline-flex items-center gap-2 rounded-xl border border-border px-8 py-3 text-sm font-semibold text-text transition-all hover:bg-brand-600 hover:border-brand-600 hover:text-white hover:shadow-lg hover:shadow-brand-600/20 hover:-translate-y-0.5 dark:border-border-dark dark:text-text-dark dark:hover:bg-brand-600 dark:hover:border-brand-600"
+        >
+          Browse all {allArticles.length}+ articles
+          <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+        </a>
       </div>
     </div>
   </section>
+
+  <!-- ═══ ABOUT CTA ═══ -->
+  <section class="mx-auto max-w-6xl px-6 py-16">
+    <div class="relative overflow-hidden rounded-3xl border border-border dark:border-border-dark bg-gradient-to-br from-brand-600/5 via-surface to-accent-500/5 dark:from-brand-600/10 dark:via-surface-dark dark:to-accent-500/10 p-8 md:p-12">
+      <div class="absolute top-0 right-0 w-80 h-80 rounded-full bg-brand-600/5 dark:bg-brand-400/5 blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+      <div class="relative max-w-2xl">
+        <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight text-text dark:text-text-dark mb-4">
+          This is not a tutorial mill
+        </h2>
+        <p class="text-text-muted dark:text-text-dark-muted leading-relaxed mb-6">
+          Every article on this site comes from a real project I've worked on. I prompt AI to write code, it breaks, I fix it, and I document the whole process. If you're an IT professional looking to use AI without the hype, you're in the right place.
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <a href="/about" class="group inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-700 hover:shadow-lg hover:shadow-brand-600/25 hover:-translate-y-0.5">
+            About this project
+            <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+          </a>
+          <a href="/blog" class="inline-flex items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-semibold text-text transition-all hover:border-brand-600 hover:text-brand-600 hover:-translate-y-0.5 dark:border-border-dark dark:text-text-dark dark:hover:border-brand-400 dark:hover:text-brand-400">
+            Start reading
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </BaseLayout>
