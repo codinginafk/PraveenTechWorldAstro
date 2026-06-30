@@ -713,9 +713,25 @@ export async function runOrchestrator() {
   log(`  Daily: ${activeSprint.dailyTarget} articles`);
   log("============================================");
 
-  await dailyReset(state);
-  await dailyCycles(state);
-  await orchestratorCycle(state);
+  const runOnce = process.argv.includes("once") || process.argv.includes("--once");
+
+  try {
+    await dailyReset(state);
+    await dailyCycles(state);
+    await orchestratorCycle(state);
+  } catch (err) {
+    log(`Orchestrator cycle failed: ${err.message}`);
+    if (runOnce) {
+      releaseLock();
+      process.exit(1);
+    }
+  }
+
+  if (runOnce) {
+    log("Run once flag detected. Releasing lock and exiting.");
+    releaseLock();
+    process.exit(0);
+  }
 
   setInterval(async () => {
     state = loadState();
