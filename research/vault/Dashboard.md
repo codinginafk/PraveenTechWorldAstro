@@ -9,18 +9,18 @@ Welcome to your central Content Ops Vault! This Obsidian space is inter-linked w
 - **Daily Article Quota:** 3 Posts / Day
 - **Latest Live Build:** [Astro Local Preview](http://localhost:3000)
 - **Active Sprint Categories:** 
-  - `[[vault/Topics/ai-automation-scripts]]`
-  - `[[vault/Topics/windows-fixes]]`
-  - `[[vault/Topics/technical-seo]]`
+  - `[[Topics/ai-automation-scripts]]`
+  - `[[Topics/windows-fixes]]`
+  - `[[Topics/technical-seo]]`
 
 ---
 
 ## 📂 Vault Directories
 
-- 💡 **[[vault/Topics/|Research & Topics]]:** Keywords, SEO metrics, and AI topic briefs.
-- ✍️ **[[vault/Drafts/|Active MDX Drafts]]:** Generated articles waiting for user verification before publishing.
-- 🚀 **[[vault/Published/|Published Articles]]:** Archive of live pages and their syndication links.
-- 🔗 **[[vault/Social-Hooks/|Social Media Hooks]]:** Draft hooks for LinkedIn, Buffer, and X/Twitter.
+- 💡 **[[Topics/|Research & Topics]]:** Keywords, SEO metrics, and AI topic briefs.
+- ✍️ **[[Drafts/|Active MDX Drafts]]:** Generated articles waiting for user verification before publishing.
+- 🚀 **[[Published/|Published Articles]]:** Archive of live pages and their syndication links.
+- 🔗 **[[Social-Hooks/|Social Media Hooks]]:** Draft hooks for LinkedIn, Buffer, and X/Twitter.
 
 ---
 
