@@ -21,9 +21,9 @@ socialHook: "My AI API bill hit $2,300 in one month. I built a token dashboard w
 
 ## I Built an AI Token Dashboard and Tracked Every API Call
 
-It started with a credit card notification. A $2,300 charge from OpenAI that I did not approve. I dug into the usage logs and found the problem: four developers, seven microservices, and zero visibility into how many tokens each one was burning. For a comparison of AI tools that can help you work more efficiently, check our [ChatGPT vs Claude vs Gemini guide](/blog/chatgpt-vs-claude-vs-gemini-which-ai-assistant-is-best-in-2026). The agent I thought was doing cheap classification work was actually streaming 12,000 tokens per request because the prompt had a copy-pasted context window from a prototype.
+It began with an unexpected $2,300 charge from OpenAI on my credit card. I dug into the usage logs and found the problem: four developers, seven microservices, and zero visibility into how many tokens each one was burning. For a comparison of AI tools that can help you work more efficiently, check our [ChatGPT vs Claude vs Gemini guide](/blog/chatgpt-vs-claude-vs-gemini-which-ai-assistant-is-best-in-2026). The agent I thought was doing cheap classification work was actually streaming 12,000 tokens per request because the prompt had a copy-pasted context window from a prototype.
 
-That was the moment I stopped treating AI API calls like utility bills and started treating them like production infrastructure. I built a token burn dashboard that intercepts every API call through a middleware proxy, logs every token, model, and endpoint to SQLite, and surfaces cost by agent, by user, and by hour. In 30 days, I cut our monthly bill by 60%. Not by using a cheaper model. By seeing where the waste actually lived.
+That’s when I shifted from treating AI API calls as utility bills to managing them like production infrastructure. I built a token burn dashboard that intercepts every API call through a middleware proxy, logs every token, model, and endpoint to SQLite, and surfaces cost by agent, by user, and by hour. In 30 days, I cut our monthly bill by 60%. Not by using a cheaper model. By seeing where the waste actually lived.
 
 This is the dashboard, the data it revealed, and the exact code you need to build your own.
 
@@ -35,13 +35,13 @@ Every AI agent burns tokens. Most teams have no idea how many. I built a transpa
 
 Here is the problem. OpenAI, Anthropic, and the rest give you per-organization usage dashboards. They show total tokens and total cost. They do not tell you which internal service, which agent, or which developer caused the spike. The API key is shared. The cost is aggregated. You see a number at the end of the month and have no idea what to fix.
 
-The standard response is to switch to a cheaper model. That helps, but it is the wrong fix. The real waste is not in the per-token price. It is in the per-request bloat. A single agent that sends 8,000 tokens of context per call when it only needs 200. A classification pipeline that re-reads the same PDF on every invocation instead of caching the summary. A chatbot that streams full document responses when the user wants a one-line answer.
+While switching to a cheaper model helps, it’s a band-aid solution. The real waste is not in the per-token price. It is in the per-request bloat. A single agent that sends 8,000 tokens of context per call when it only needs 200. A classification pipeline that re-reads the same PDF on every invocation instead of caching the summary. A chatbot that streams full document responses when the user wants a one-line answer.
 
 I found all three of these in my own stack. The dashboard showed me exactly which agent, which endpoint, and which hour the waste occurred. Without it, I would have switched to GPT-4o-mini and saved maybe 30%. With it, I cut 60% by fixing behavior, not just buying cheaper tokens.
 
 ### The Architecture: A Transparent Cost Proxy
 
-The system is dead simple. Four files:
+The system consists of just four key files:
 
 **1. The proxy middleware (proxy.py).** This is a Flask app that sits between your services and the OpenAI/Anthropic API. Your services point their base URL at `http://localhost:9090/v1` instead of `https://api.openai.com/v1`. The proxy forwards the request, captures the response, logs everything to SQLite, and returns the response unchanged. Zero impact on latency (a 3ms write to SQLite is invisible next to a 2-second LLM call).
 
@@ -157,7 +157,7 @@ It is not useful for teams with a single model endpoint and a single use case. I
 
 ### Decision Summary
 
-If your monthly AI API bill is under $100 ? use Helicone free tier or the OpenAI dashboard. You do not need a custom proxy.
+If your monthly AI API bill is under $100, use Helicone’s free tier or the OpenAI dashboard. You do not need a custom proxy.
 
 If your bill is $100-$1,000 ? build the SQLite proxy. It takes an afternoon and gives you per-agent cost attribution.
 

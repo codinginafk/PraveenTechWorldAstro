@@ -18,7 +18,7 @@ pillarId: ai-automation
 ---
 ## How Can AI Automate My Expense Reports Without Writing Code?  
 
-The short answer is: I used DeepSeek to generate a Python script that extracts data from receipt images, categorizes expenses, and formats them into a CSV report-all triggered by dragging files into a folder. The AI handled 80% of the code, while I focused on structuring the workflow and fixing library conflicts.  
+I used DeepSeek to create a Python script. This script extracts data from receipt images, categorizes expenses, and formats them into a CSV report. It’s triggered by dragging files into a folder. The AI handled 80% of the code, while I focused on structuring the workflow and fixing library conflicts.  
 
 ### The Problem: Expense Reports Were Killing My Productivity  
 
@@ -28,11 +28,11 @@ Every Friday, I wasted 2 hours manually:
 3. Assigning categories (Travel, Meals, etc.)  
 4. Calculating totals  
 
-Our finance team needed reports in a specific CSV format with columns for `Date`, `Vendor`, `Amount`, and `Category`. The worst part? I’d often transpose numbers (like typing $56.20 as $65.20), requiring rework.  
+Our finance team required reports in a specific CSV format, including columns for Date, Vendor, Amount, and Category. The worst part? I’d often transpose numbers (like typing $56.20 as $65.20), requiring rework.  
 
 ### The AI Attempt: A One-Shot Prompt to DeepSeek  
 
-I fed DeepSeek this prompt:  
+I provided DeepSeek with the following prompt:  
 
 ```  
 Prompt:  
@@ -61,7 +61,7 @@ DeepSeek generated a 47-line script using:
 ### Where It Broke: 3 Critical Failures  
 
 1. **Library Hell**  
-   The script required `pytesseract`, but failed because I didn’t have Tesseract OCR installed system-wide. Error:  
+   The script needed `pytesseract`, but it failed because Tesseract OCR wasn’t installed system-wide. Error:  
    ```  
    TesseractNotFoundError: tesseract is not installed or it's not in your PATH  
    ```  
@@ -80,7 +80,7 @@ DeepSeek generated a 47-line script using:
 ### What I Had to Fix  
 
 **1. The OCR Pipeline**  
-I switched to EasyOCR after finding pytesseract struggled with thermal receipts. Required changes:  
+I switched to EasyOCR because pytesseract had trouble reading thermal receipts. Required changes:  
 ```python  
 # Before (pytesseract)  
 text = pytesseract.image_to_string(image)  
@@ -103,7 +103,7 @@ def validate_date(date_str):
 ```  
 
 **3. Vendor Cleanup**  
-Used a hardcoded vendor list with fuzzy matching:  
+I used a predefined vendor list with fuzzy matching:  
 ```python  
 KNOWN_VENDORS = ['Starbucks', 'Uber', 'Amazon Web Services']  
 
@@ -116,7 +116,7 @@ def match_vendor(raw_text):
 
 ### The Working Result  
 
-Final script features:  
+The final script includes the following features:  
 - **Drag-and-drop processing**: Drop receipts into `~/expense_reports/receipts`  
 - **Human review**: Flags uncertain entries in yellow (requires manual confirmation)  
 - **Audit trail**: Logs all actions to `processing.log`  
@@ -134,15 +134,15 @@ Date,Vendor,Amount,Category
 
 
 
-### What I Learned  
+### Key Takeaways  
 
-1. **AI Can’t Handle Edge Cases Alone**  
+1. **AI Struggles with Edge Cases Without Human Intervention**  
    DeepSeek didn’t anticipate thermal receipt fade or handwritten notes. I had to build manual review steps.  
 
-2. **Prompt Engineering = Specification Writing**  
+2. **Effective Prompt Engineering Requires Detailed Specifications**  
    The more precise my prompt (e.g., "include a 10% confidence threshold for OCR results"), the better the output.  
 
-3. **Library Choices Matter**  
+3. **The Importance of Choosing the Right Libraries**  
    EasyOCR worked better than pytesseract for my use case, but added 300MB to the deployment size.  
 
 ### The Exact Prompt  
@@ -189,5 +189,5 @@ A: Only via Termux (Linux environment for Android). For iOS, you’d need a clou
 **Q: How much did this cost to build?**  
 A: $0 in tools (all open-source), but 3 hours of prompt tuning and debugging.  
 
-What expense workflow would you automate with this approach? Drop a comment with your nightmare process!  
+Which expense workflow would you automate using this approach? Drop a comment with your nightmare process!  
 

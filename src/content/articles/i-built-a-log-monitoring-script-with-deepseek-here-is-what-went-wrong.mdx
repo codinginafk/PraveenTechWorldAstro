@@ -36,7 +36,7 @@ The short answer is: I built a log monitoring Python script using DeepSeek, but 
 
 My production servers were spitting out hundreds of error lines every night, and I was spending an hour each morning scrolling through `/var/log/nginx/error.log` just to see if anything new had popped up. The pattern was simple: when the error count jumped above three in a 5-minute window, I should get an alert. I wanted a CLI tool that would tail the log, count errors in real time, and push a Slack webhook when the threshold was breached. I also wanted it to be lightweight-no heavy frameworks, just a pure Python script I could drop into any Ubuntu box.
 
-I spent a week manually writing a small script, but I knew I could accelerate the process by letting an AI do the heavy lifting. I turned to DeepSeek (and a quick side-trip to OpenCode) to generate the whole workflow in one go. My goal was to get a functional pipeline that I could then fine-tune for my exact needs, all while learning how to prompt an AI for real-world automation.
+After a week of manual scripting, I turned to AI to speed up the process. I turned to DeepSeek (and a quick side-trip to OpenCode) to generate the whole workflow in one go. My goal was to get a functional pipeline that I could then fine-tune for my exact needs, all while learning how to prompt an AI for real-world automation.
 
 ## How I Asked DeepSeek (and OpenCode) to Write the Script?
 
@@ -91,7 +91,7 @@ The AI also assumed `requests` was present, which is fine, but it didn�t inclu
 [INFO] No errors in the last 300 seconds.
 ```
 
-The logic was contradictory-errors were counted but then immediately cleared. The webhook payload was also malformed; the AI used a non-serializable datetime object, causing:
+The logic was flawed: errors were counted but then immediately cleared, leading to inconsistent behavior. The webhook payload was also malformed; the AI used a non-serializable datetime object, causing:
 
 ```
 TypeError: Object of type datetime is not JSON serializable
@@ -303,7 +303,7 @@ Running `./log_monitor.py --log /var/log/nginx/error.log --webhook https://hooks
 
 6. **Logging is your friend** - Adding structured logging to `monitor.log` turned a cryptic �webhook failed� into a clear error message with stack trace. It also helped me see how many times the evaluation loop ran (�180 evaluations per hour).
 
-Overall, the experiment reinforced that AI is a great junior developer when you treat it like a co-pilot: you still need to review, test, and own the final product. The prompt you see above is now part of my �prompt engineering playbook� for any future automation project.
+The experiment showed that AI can assist like a junior developer, but thorough review and testing are essential. The prompt you see above is now part of my �prompt engineering playbook� for any future automation project.
 
 For another real-world example, see how I [automated server health checks with DeepSeek](/blog/automated-server-health-checks-with-deepseek) and what went wrong there too.
 

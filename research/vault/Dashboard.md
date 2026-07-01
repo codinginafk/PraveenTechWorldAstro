@@ -10,6 +10,7 @@ Welcome to your central Content Ops Vault! This Obsidian space is inter-linked w
 - **Total Published Articles:** 69 notes
 - **Total Published Articles:** 69 notes
 - **Total Published Articles:** 69 notes
+- **Total Published Articles:** 69 notes
 - **Latest Live Build:** [Astro Local Preview](http://localhost:3000)
 - **Active Sprint Categories:** 
   - `[[Topics/ai-automation-scripts]]`

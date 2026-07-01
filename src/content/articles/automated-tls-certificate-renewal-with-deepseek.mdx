@@ -32,7 +32,7 @@ The short answer is I automated TLS certificate renewal using a DeepSeek‑gener
 
 ## What problem drove me to automate TLS certificate renewal?
 
-For months I was manually renewing TLS certs on my Nginx front‑ends every 90 days. Each renewal required SSHing into three servers, backing up configs, running `certbot renew`, and then restarting services. The process was tedious, error‑prone, and ate into my weekend. I also had to keep track of expiry dates across a handful of domains, and one missed renewal would trigger an alert from my monitoring stack. The pain point was simple: **a repeatable, safe, and auditable renewal workflow that I could set and forget**. I wanted a script that would check expiration, pull new certs, and roll out changes without human intervention-something I could run as a cron job at 2 AM and not have to debug at 3 AM.
+For months I was manually renewing TLS certs on my Nginx front‑ends every 90 days. Each renewal required SSHing into three servers, backing up configs, running `certbot renew`, and then restarting services. The process was tedious, error‑prone, and ate into my weekend. I also had to keep track of expiry dates across a handful of domains, and one missed renewal would trigger an alert from my monitoring stack. The main issue was creating a reliable, automated renewal process that required no ongoing attention. I wanted a script that would check expiration, pull new certs, and roll out changes without human intervention-something I could run as a cron job at 2 AM and not have to debug at 3 AM.
 
 ## How I asked DeepSeek to write the renewal script
 
@@ -124,7 +124,7 @@ The root causes were:
 3. **Path issues** - the script tried to reload Nginx with `systemctl reload nginx` but the service name differed on some nodes (`nginx.service` vs `nginx`).
 4. **Permissions** - the cron job ran as `root` but the script wrote logs to `/var/log/tls_renewal.log` without proper ownership, causing subsequent runs to fail with permission errors.
 
-I also discovered that the AI’s JSON config example referenced a file that didn’t exist, and the script tried to open it when no `--config` was provided, raising a `FileNotFoundError`.
+The AI-generated script also had a bug: it referenced a missing config file, causing errors when run without the `--config` option.
 
 All of these issues made the script unusable in production. The AI had produced a “good enough” prototype, but it lacked the robustness required for a mission‑critical workflow.
 

@@ -23,14 +23,13 @@ socialHook: "Berkeley CS students ditched ChatGPT for autonomous sandboxed agent
 
 Every AI demo looks the same. A chat window, a text prompt, a response streamed character by character. The chat interface has become the default mental model for interacting with AI. It is also a trap. It reduces the most powerful technology in a generation to a typing interface that trains you to ask questions instead of building solutions. If you are comparing AI assistants, our [ChatGPT vs Claude vs Gemini comparison](/blog/chatgpt-vs-claude-vs-gemini-which-ai-assistant-is-best-in-2026) covers which tool works best for different tasks.
 
-Last semester, a group of Berkeley CS students noticed this trap. They were using ChatGPT for their algorithms homework, getting perfect answers, and failing their proctored midterms. The chat interface was making them dependent. So they stopped using it. Instead, they built autonomous agents that run in sandboxes, plan their own tasks, execute Python code, store results in SQLite, and email the output. No chat box. No streaming text. No typing prompts.
+Last semester, a group of Berkeley CS students noticed this trap. They were using ChatGPT for their algorithms homework, getting perfect answers, and failing their proctored midterms. The chat interface made them dependent, so they stopped using it and built autonomous agents. These agents run in sandboxes, plan tasks, execute Python code, store results in SQLite, and email the output. No chat box. No streaming text. No typing prompts.
 
 This is how they built it and why it works better.
 
 ### The Direct Answer
 
-Chat interfaces train passive consumption. Autonomous agents train active engineering. The Berkeley students built a system where the LLM is not a chat partner but a planning engine. It receives a high-level task, decomposes it into subtasks, executes each subtask via sandboxed Python, stores intermediate results in a local SQLite database, and emails the final output. The agent runs without human intervention. The student reviews the output the same way they would review a colleague's work — critically, with full context.
-
+Chat interfaces train passive consumption. Autonomous agents train active engineering. The Berkeley students built a system where the LLM is not a chat partner but a planning engine. It takes a high-level task, breaks it down into smaller steps, runs each step in a secure Python environment, saves progress in a local database, and emails the final result. The agent runs without human intervention. The student reviews the output critically, just as they would with a colleague’s work, and with full context.
 ### The Core Architecture
 
 The system has four components that run in sequence:
@@ -39,7 +38,7 @@ The system has four components that run in sequence:
 
 **2. Code Executor.** Each subtask is handed to a code-writing LLM that generates Python scripts. The scripts run inside a Docker sandbox with no network access, no filesystem persistence, and a 30-second timeout. The agent captures stdout, stderr, and return codes. If the script errors, the executor re-prompts the LLM with the error message and retries up to 3 times.
 
-**3. SQLite Store.** All intermediate results — parsed data, computed values, error logs — are written to a local SQLite database. The agent does not need to remember context between steps. It reads from the database. This is the key insight: the database replaces the chat context window. The agent can reference any past result without re-prompting the LLM.
+**3. SQLite Store.** All intermediate results — parsed data, computed values, error logs — are written to a local SQLite database. The agent doesn’t rely on memory between steps; instead, it reads from the database. This key insight means the database replaces the chat context window. The agent can reference any past result without re-prompting the LLM.
 
 **4. Email Aggregator.** When every subtask completes, the agent compiles a Markdown report of all outputs and emails it to the user. The email includes the task objective, the subtask list with completion status, the generated code, and any output files. The user never watches the agent work. They get the result when it is done.
 
@@ -53,9 +52,7 @@ The Berkeley students used it for their CS 170 algorithms problem sets. The agen
 
 ### When This Does NOT Work
 
-This does not work for creative or open-ended tasks. If the objective is vague — "explore this dataset and find interesting patterns" — the agent will produce generic output that misses the human insight a domain expert would catch.
-
-It also does not work when the task requires subjective judgment. Code reviews, design decisions, and architectural tradeoffs need human reasoning. The agent can generate options but cannot choose correctly without clear, measurable criteria.
+This does not work for creative or open-ended tasks. IfFor vague objectives like 'explore this dataset and find interesting patterns,' the agent produces generic output, lacking the human insight a domain expert would provide. also does not work when the task requires subjective judgment. Code reviews, design decisions, and architectural tradeoffs need human reasoning. The agent can generate options but cannot choose correctly without clear, measurable criteria.
 
 It will fail on tasks that require real-time data from external APIs that change state. The agent plan assumes a static environment. If a website changes between subtask execution, the agent may produce stale results.
 

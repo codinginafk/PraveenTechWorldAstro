@@ -19,11 +19,11 @@ pillarId: ai-automation
 ---
 ## I Asked DeepSeek to Build My Sysadmin Toolkit
 
-The short answer is that I used DeepSeek to build a suite of Python scripts for log parsing, disk monitoring, and user management by providing high-level business logic and letting the AI handle the syntax. While the AI successfully generated about 80% of the functional code, it hallucinated two non-existent library methods and failed on specific Linux permission handling, which I had to fix manually through iterative prompt engineering. For more DeepSeek automation experiments, check out my [TLS certificate renewal script](/blog/automated-tls-certificate-renewal-with-deepseek) and [log monitoring tool](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong).
+I leveraged DeepSeek to create Python scripts for log parsing, disk monitoring, and user management by outlining the business logic and delegating the syntax to the AI. The AI produced around 80% of the functional code but introduced two imaginary library methods and struggled with Linux permissions, requiring manual fixes and refined prompts. For more DeepSeek automation experiments, check out my [TLS certificate renewal script](/blog/automated-tls-certificate-renewal-with-deepseek) and [log monitoring tool](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong).
 
 ## Why was I spending 5 hours a week on manual log audits?
 
-As an IT Operations Lead, my day is a constant battle between high-level strategy and the "grunt work" of system maintenance. For the last six months, I’ve been manually parsing `/var/log/syslog` and `/var/log/auth.log` to find failed SSH attempts and disk space anomalies. It’s tedious, boring, and honestly, a waste of my salary.
+As an IT Operations Lead, my day juggles high-level strategy with the nitty-gritty of system maintenance. For the last six months, I’ve been manually parsing `/var/log/syslog` and `/var/log/auth.log` to find failed SSH attempts and disk space anomalies. It’s tedious, boring, and honestly, a waste of my salary.
 
 I’m not a hardcore developer. I can read Python, and I know how to run a script, but writing a robust CLI tool from scratch? That’s where I usually hit a wall. I’ve tried using other LLMs before, but I wanted to see if DeepSeek’s coding capabilities could actually handle the "messiness" of system-level automation without me having to babysit every single line of code.
 
@@ -59,7 +59,7 @@ Requirements:
 
 ## Where did the AI hallucinate and break?
 
-DeepSeek spit out the code in about 12 seconds. It looked beautiful. The indentation was perfect, the variable names were descriptive, and the `main.py` wrapper was a clean implementation of a switch-case logic. I felt like a genius for about five minutes. Then, I actually ran the code.
+DeepSeek generated the code in 12 seconds. The indentation was flawless, variable names were clear, and the `main.py` wrapper elegantly implemented switch-case logic. I felt like a genius for about five minutes. Then, I actually ran the code.
 
 The first failure happened with `disk_check.py`. The AI used a method called `psutil.disk_partitions().get_usage()`. I ran the script and immediately got this:
 `AttributeError: 'list' object has no attribute 'get_usage'`
@@ -131,7 +131,7 @@ If I select `1`, it generates a `security_audit.csv` that I can import into a sp
 
 ## What I learned from this experiment
 
-This experiment proved that AI is a fantastic "syntax engine," but a terrible "architect." If I had just blindly copied and pasted the first output, I would have crashed a server or ignored a critical permission error.
+This experiment showed that AI excels at syntax but struggles with architectural design. If I had just blindly copied and pasted the first output, I would have crashed a server or ignored a critical permission error.
 
 Here are my key takeaways:
 1. **The "Line-by-Line" Rule:** Whenever an AI writes a script that reads a file, always check if it's using `.readlines()`. If it is, tell it to iterate through the file object instead. This is a common AI pattern that kills production servers.

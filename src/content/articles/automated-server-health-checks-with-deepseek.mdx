@@ -30,7 +30,7 @@ faq:
     answer: "Not yet, but you can wrap it in a Docker container with a simple COPY of the script and a CMD entrypoint. The script only needs Python 3.8+ and the requests library for webhooks."
 ---
 
-The short answer is: I used DeepSeek to generate a server health check script, and the first version would have crashed under real server load. After fixing the concurrency logic and adding proper thresholds, I now have a lightweight health checker that runs across 4 servers and emails me only when something is actually wrong.
+In short, I used DeepSeek to generate a server health check script, but the first version would have failed under real server load. After fixing the concurrency logic and adding proper thresholds, I now have a lightweight health checker that runs across 4 servers and emails me only when something is actually wrong.
 
 ## What Problem Made Me Build This?
 
@@ -43,7 +43,7 @@ systemctl status --failed
 uptime
 ```
 
-It took 15 minutes of grunt work. I kept telling myself I would set up Nagios or Zabbix, but those felt like overkill for 4 boxes. I wanted a single Python script I could run from my laptop that would check all servers, collect the metrics, and alert me if anything was wrong.
+This manual process took 15 minutes of repetitive work. I kept telling myself I would set up Nagios or Zabbix, but those felt like overkill for 4 boxes. I wanted a single Python script I could run from my laptop that would check all servers, collect the metrics, and alert me if anything was wrong.
 
 ## The Prompt I Fed DeepSeek
 
@@ -71,7 +71,7 @@ Build a Python CLI tool that connects to multiple Linux servers via SSH and runs
 Please output the complete script with comments and a usage example.
 ```
 
-DeepSeek returned a 450-line script that looked impressive. It had asyncssh, a config parser, threshold checks, and even a colorful summary table. It quoted around 780 tokens for the output, costing me roughly $0.002 on DeepSeek's API.
+DeepSeek generated a 450-line script with all the requested functionality, including async SSH connections and threshold checks. It had asyncssh, a config parser, threshold checks, and even a colorful summary table. It quoted around 780 tokens for the output, costing me roughly $0.002 on DeepSeek's API.
 
 ## Three Things That Were Wrong
 
@@ -82,7 +82,7 @@ The error I got:
 Connection refused by remote host. Possible rate limiting.
 ```
 
-**Threshold logic was inverted.** The script checked each metric individually but used OR logic to trigger alerts. A single high CPU core would fire an alert even if disk and memory were fine. Worse, it would keep firing the same alert every 300 seconds because it never tracked which alerts had already been sent. My test inbox filled up with 47 identical Slack messages in 10 minutes.
+**Threshold logic was inverted.** The script checked each metric individually but used OR logic to trigger alerts. A single high CPU core would fire an alert even if disk and memory were fine. Worse, it would keep firing the same alert every 300 seconds because it never tracked which alerts had already been sent. Within 10 minutes, I received 47 identical Slack messages, flooding my test inbox.
 
 **No error handling on SSH failures.** When one server was down for maintenance, the script crashed entirely instead of skipping it and checking the remaining servers. The async task raised an unhandled exception that killed the whole loop.
 
@@ -95,7 +95,7 @@ asyncssh.misc.PermissionDenied: Permission denied (publickey).
 
 ## What I Had to Fix
 
-I broke the fixes into four layers.
+I organized the fixes into four key improvements.
 
 **Connection reuse.** I rewrote the SSH logic to open one connection per server, run all 4 checks through that single connection, then close it. This dropped from 12 connections to 3 per check cycle.
 

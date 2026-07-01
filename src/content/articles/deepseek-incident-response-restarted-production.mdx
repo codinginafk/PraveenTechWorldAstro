@@ -80,7 +80,7 @@ Then things got interesting.
 
 ### Mistake 1: It restarted production during peak hours
 
-The script ran at 2:15 PM on a Tuesday. Our PostgreSQL serves an e-commerce API that averages 400 requests per second during business hours. The AI's script checked the service status, found it was running, and printed "OK". Good so far.
+The script ran at 2:15 PM on a Tuesday. Our PostgreSQL serves an e-commerce API that averages 400 requests per second during business hours. The AI’s script checked the service status and printed “OK”.
 
 Then I deliberately stopped PostgreSQL to test the restart logic. The AI's script immediately ran `systemctl restart postgresql`. No check for whether this was a maintenance window. No confirmation prompt. No "are you sure" dialog. Just straight to restart.
 
@@ -90,11 +90,11 @@ My colleague in the next room immediately messaged: "Did you just restart the DB
 
 This would have dropped about 400 active connections. The application has connection pooling and retry logic, but each retry adds 2-3 seconds of latency. For a few seconds, the site would have crawled. Not great when people are trying to check out.
 
-The AI had no concept of "production hours" or "maintenance windows."
+The AI didn’t account for peak traffic times or scheduled maintenance periods.
 
 ### Mistake 2: It rotated logs that were 2 hours old
 
-The log rotation logic was the second shocker. The AI's script did this:
+The log rotation logic was the second shocker. The AI’s script performed the following:
 
 ```python
 def rotate_logs(service):
@@ -106,11 +106,11 @@ def rotate_logs(service):
 
 It renamed the active log file. Including all the logs from the last 2 hours that contained the crash details. The very logs I would need to debug the incident were gone.
 
-Linux has `logrotate` for a reason. The AI ignored it completely. It treated log files as disposable.
+Linux has `logrotate` for a reason. The AI disregarded this, treating log files as disposable.
 
 ### Mistake 3: No health check before declaring success
 
-After restarting the service, the AI's script checked `systemctl is-active postgresql` and if the output was "active", it declared victory. But PostgreSQL can report itself as "active" while still refusing connections. The port might be open but the database could be in recovery mode. The AI never attempted an actual connection test.
+After restarting the service, the AI's script checked `systemctl is-active postgresql` and if the output was "active", it declared victory. But PostgreSQL can report itself as "active" while still refusing connections. The port might be open but the database could be in recovery mode. The AI didn’t verify if the service was fully operational.
 
 ### Mistake 4: It silently skipped permission errors
 
@@ -121,7 +121,7 @@ except Exception as e:
     print(f"Error: {e}")
 ```
 
-No logging to a file. No Slack notification for failures. If the Slack webhook was wrong (which it was on my first test), the script printed "Error: HTTP 400" and exited. I had to check the terminal output to know it failed. If this ran from a cron job, I would have never seen the error.
+It didn’t log errors or notify Slack about failures. If the Slack webhook was wrong (which it was on my first test), the script printed "Error: HTTP 400" and exited. I had to check the terminal output to know it failed. If this ran from a cron job, I would have never seen the error.
 
 ## What I had to fix
 

@@ -1,0 +1,183 @@
+# Content Audit Report
+
+**URL:** https://www.praveentechworld.com/blog/data-protection-for-universities-compliance-and-security-guide
+**Date:** 2026-07-01 18:29
+
+## Overview
+
+| Metric | Value |
+|--------|-------|
+| AI Score | **52/100** |
+| Readability | Fairly Difficult (Flesch: 35.7) |
+| Word Count | 1537 |
+| Sentence Count | 98 |
+
+## Statistical Breakdown
+
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Burstiness | 0.587 | >0.75 | ⚠️ | Low variance = robotic rhythm |
+| Lexical Diversity | 0.418 | >0.45 | ⚠️ | Low diversity = repetitive vocabulary |
+| AI Cliché Density | 0.0 | <2.0 | ✅ | High = flooded with AI catchphrases |
+| Conjunctive Adverb Density | 0.0 | <4.0 | ✅ | High = robotic transition spam |
+| Em Dash Density | 0.0 | <0.5 | ✅ | High = dramatic punctuation overuse |
+| Sentence Variation Ratio | 0.286 | >0.4 | ⚠️ | Low = all sentences same length |
+
+## Overall Critique
+
+The article is informative and well-structured but suffers from technical jargon and complex sentence structures that may hinder readability for a general audience. The content is dense and could benefit from simplification and more varied sentence lengths to improve flow.
+
+## Actionable Fixes (15 found)
+
+### 1. 📝 Complex Sentence Structure
+
+**Original:**
+
+> A university registrar’s office holds more private data than most government agencies.
+
+**Rewrite:**
+
+> A university registrar’s office manages vast amounts of private data, often more than many government agencies.
+
+### 2. 📝 Technical Jargon
+
+**Original:**
+
+> FERPA is the main US law that protects student education records.
+
+**Rewrite:**
+
+> FERPA, or the Family Educational Rights and Privacy Act, is the primary US law safeguarding student education records.
+
+### 3. 📝 Complex Sentence Structure
+
+**Original:**
+
+> GDPR applies to any school that handles data of EU residents, no matter where the school is located.
+
+**Rewrite:**
+
+> GDPR covers any school processing data of EU residents, regardless of the school's location.
+
+### 4. 📝 Technical Jargon
+
+**Original:**
+
+> California’s privacy law applies when a school collects personal info of California residents.
+
+**Rewrite:**
+
+> California’s privacy law, CCPA, comes into play when a school gathers personal information from California residents.
+
+### 5. 📝 Lack Of Clarity
+
+**Original:**
+
+> University email addresses are easy to guess and often public.
+
+**Rewrite:**
+
+> University email addresses are typically predictable and publicly available, making them easy targets.
+
+### 6. 📝 Lack Of Context
+
+**Original:**
+
+> Ransomware attacks on universities have doubled since 2023.
+
+**Rewrite:**
+
+> Since 2023, ransomware attacks targeting universities have surged, doubling in frequency.
+
+### 7. 📝 Complex Sentence Structure
+
+**Original:**
+
+> Departments and researchers often use cloud tools without IT approval.
+
+**Rewrite:**
+
+> Many departments and researchers frequently adopt cloud tools without seeking IT department approval.
+
+### 8. 📝 Lack Of Clarity
+
+**Original:**
+
+> Many schools still run old systems that no longer get security updates.
+
+**Rewrite:**
+
+> Numerous schools continue to rely on outdated systems that no longer receive critical security updates.
+
+### 9. 📝 Complex Sentence Structure
+
+**Original:**
+
+> With thousands of users on the network, the risk of data leaks is high.
+
+**Rewrite:**
+
+> The presence of thousands of users on the network significantly elevates the risk of data leaks.
+
+### 10. 📝 Technical Jargon
+
+**Original:**
+
+> Create a data governance group with members from IT, legal, compliance, academic affairs, and student services.
+
+**Rewrite:**
+
+> Form a data governance team comprising representatives from IT, legal, compliance, academic affairs, and student services.
+
+### 11. 📝 Lack Of Clarity
+
+**Original:**
+
+> No user should have more access than they need for their job.
+
+**Rewrite:**
+
+> Users should only have access to the data necessary for their specific job roles.
+
+### 12. 📝 Technical Jargon
+
+**Original:**
+
+> Encrypt all sensitive data using AES-256 for stored data and TLS 1.3 for data in transit.
+
+**Rewrite:**
+
+> Protect all sensitive data by encrypting stored information with AES-256 and securing data in transit with TLS 1.3.
+
+### 13. 📝 Technical Jargon
+
+**Original:**
+
+> MFA should be required for all faculty, staff, and students.
+
+**Rewrite:**
+
+> Multi-factor authentication (MFA) should be mandatory for every faculty member, staff, and student.
+
+### 14. 📝 Lack Of Context
+
+**Original:**
+
+> Human error is the top cause of data breaches.
+
+**Rewrite:**
+
+> Mistakes by individuals remain the leading cause of data breaches.
+
+### 15. 📝 Complex Sentence Structure
+
+**Original:**
+
+> Research data often falls outside normal IT protections because of how it is stored and shared.
+
+**Rewrite:**
+
+> Due to unique storage and sharing methods, research data frequently bypasses standard IT safeguards.
+
+---
+*Generated by Content Auditor*

@@ -30,7 +30,7 @@ faq:
 ---
 ## What Problem Drove Me to Build a Database Audit Script?
 
-The short answer is I built a database audit Python script using DeepSeek after three failed attempts. Every week I was staring at my Oracle and MySQL instances, wondering which tables had grown beyond a safe size, who owned unused schemas, and whether any columns were still using the deprecated `FLOAT` data type. I could run manual queries, but the process took 30‑45 minutes and I had to copy‑paste results into spreadsheets for my weekly compliance report. My team kept asking for an automated “audit‑once‑and‑forget” CLI tool that would scan a list of databases, flag anomalies, and email a PDF summary. I’m not a developer-I’m an IT Operations Lead who spends my days on runbooks and monitoring dashboards-so I turned to AI as my junior developer. I asked DeepSeek (and OpenCode) to write the script, expecting a few tweaks. What followed was a three‑act drama of perfect‑looking code that never ran, snippets that hallucinated libraries, and a final script that actually worked-after I spent a solid 4 hours fixing it.
+The short answer is I built a database audit Python script using DeepSeek after three failed attempts. Every week, I checked my Oracle and MySQL instances to identify oversized tables, unused schemas, and deprecated `FLOAT` columns. I could run manual queries, but the process took 30‑45 minutes and I had to copy‑paste results into spreadsheets for my weekly compliance report. My team kept asking for an automated “audit‑once‑and‑forget” CLI tool that would scan a list of databases, flag anomalies, and email a PDF summary. I’m not a developer-I’m an IT Operations Lead who spends my days on runbooks and monitoring dashboards-so I turned to AI as my junior developer. I asked DeepSeek (and OpenCode) to write the script, expecting a few tweaks. What followed was a three‑act drama of perfect‑looking code that never ran, snippets that hallucinated libraries, and a final script that actually worked-after I spent a solid 4 hours fixing it.
 
 ## How I Asked DeepSeek and OpenCode to Write the Script (The Prompt)
 
@@ -69,7 +69,7 @@ ERROR: Could not find a valid Oracle Instant Client package. Install manually.
 ```
 
 **Failure #2 - Hallucinated Schema Queries**  
-After I removed the Oracle check (to keep the script runnable), I asked DeepSeek for a “quick fix” to drop the Oracle block and replace it with a placeholder. The new script arrived with queries like `SELECT * FROM dba_tables WHERE bytes > 100*1024*1024`. That table doesn’t exist in MySQL. The AI had hallucinated Oracle‑specific views into a MySQL script. Running it produced:
+After I removed the Oracle check (to keep the script runnable), I asked DeepSeek for a “quick fix” to drop the Oracle block and replace it with a placeholder. The new script arrived with queries like `SELECT * FROM dba_tables WHERE bytes > 100*1024*1024`. That table doesn’t exist in MySQL. The AI mistakenly included Oracle-specific queries in the MySQL script. Running it produced:
 
 ```
 OperationalError: Unknown table 'dba_tables' in engine.
@@ -82,7 +82,7 @@ Each failure taught me a pattern: the AI writes great‑looking code but assumes
 
 ## What I Had to Fix: Human Intervention and Debugging
 
-For the fourth attempt I flipped the strategy. Instead of asking for a full script, I asked DeepSeek to generate **small, testable functions** that I could assemble. I also added a “validation step” in the prompt: “Please include a simple `if __name__ == '__main__':` block that prints a sample output so I can verify the JSON shape.” I also requested that the script **detect missing drivers** and skip the DB with a clear warning.
+For the fourth attempt, I changed my approach. I asked DeepSeek to create smaller, testable functions I could piece together. I also added a “validation step” in the prompt: “Please include a simple `if __name__ == '__main__':` block that prints a sample output so I can verify the JSON shape.” I also requested that the script **detect missing drivers** and skip the DB with a clear warning.
 
 Here’s the revised prompt (token count 378, cost $0.0051):
 
@@ -144,7 +144,7 @@ def audit_db(db_type, config):
     return {"db_name": config.get('name'), "timestamp": datetime.utcnow().isoformat()+'Z', "findings": findings}
 ```
 
-The script now meets the business logic, handles missing drivers, and outputs the exact JSON shape required.
+The script now works as needed, handling missing drivers and producing the correct JSON output.
 
 ## How the Final Script Works: Result and Output
 
