@@ -1,5 +1,5 @@
 ---
-title: "I Asked DeepSeek to Automate Incident Response — It Restarted Production During Peak Hours"
+title: "I Asked DeepSeek to Automate Incident Response - It Restarted Production During Peak Hours"
 description: "DeepSeek wrote an incident response script. It restarted production during peak hours, deleted crash logs, and had zero safety checks. The exact prompt and..."
 category: ai-automation
 publishDate: 2026-06-30
@@ -9,7 +9,7 @@ topic: "[[Topics/deepseek-incident-response-restarted-production]]"
 social: "[[Social-Hooks/deepseek-incident-response-restarted-production-social]]"
 ---
 
-# 🚀 Published: I Asked DeepSeek to Automate Incident Response — It Restarted Production During Peak Hours
+# 🚀 Published: I Asked DeepSeek to Automate Incident Response - It Restarted Production During Peak Hours
 
 ## Summary
 > DeepSeek wrote an incident response script. It restarted production during peak hours, deleted crash logs, and had zero safety checks. The exact prompt and...

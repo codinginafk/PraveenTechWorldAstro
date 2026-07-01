@@ -1,6 +1,6 @@
 ---
 title: "How to Build a Website from Scratch in 2026 (No Coding)"
-description: "Complete - Step-by-step guide to build a website from scratch in 2026. Perfect for beginners who want to create a portfolio, blog, or small business site"
+description: "Complete - Step-by-step guide to build a website from scratch in 2026. Perfect for beginners who want to create a portfolio, blog, or small business site."
 category: website-setup
 publishDate: 2026-05-01
 coverImage: "/images/generated/how-to-build-a-website-from-scratch-in-2026-a-complete-beginner-guide.svg"
@@ -12,7 +12,7 @@ social: "[[Social-Hooks/how-to-build-a-website-from-scratch-in-2026-a-complete-b
 # 🚀 Published: How to Build a Website from Scratch in 2026 (No Coding)
 
 ## Summary
-> Complete - Step-by-step guide to build a website from scratch in 2026. Perfect for beginners who want to create a portfolio, blog, or small business site
+> Complete - Step-by-step guide to build a website from scratch in 2026. Perfect for beginners who want to create a portfolio, blog, or small business site.
 
 ---
 - **Category Guide:** [[Topics/website-setup]]

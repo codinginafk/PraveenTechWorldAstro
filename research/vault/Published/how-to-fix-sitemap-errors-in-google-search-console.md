@@ -1,6 +1,6 @@
 ---
 title: "Sitemap Errors in Google Search Console? Fix Them in 5 Minutes"
-description: "Fix every Google Search Console sitemap error including couldn't fetch, has errors, and URLs not indexed. Step-by-step fixes with practical solutions"
+description: "Fix every Google Search Console sitemap error including couldn't fetch, has errors, and URLs not indexed. Step-by-step fixes with practical solutions."
 category: website-setup
 publishDate: 2026-06-10
 coverImage: "/images/generated/how-to-fix-sitemap-errors-in-google-search-console.svg"
@@ -12,7 +12,7 @@ social: "[[Social-Hooks/how-to-fix-sitemap-errors-in-google-search-console-socia
 # 🚀 Published: Sitemap Errors in Google Search Console? Fix Them in 5 Minutes
 
 ## Summary
-> Fix every Google Search Console sitemap error including couldn't fetch, has errors, and URLs not indexed. Step-by-step fixes with practical solutions
+> Fix every Google Search Console sitemap error including couldn't fetch, has errors, and URLs not indexed. Step-by-step fixes with practical solutions.
 
 ---
 - **Category Guide:** [[Topics/website-setup]]

@@ -1,5 +1,5 @@
 ---
-title: "ChatGPT Is Tracking Everything You Say — Here Is How to See It"
+title: "ChatGPT Is Tracking Everything You Say - Here Is How to See It"
 description: "I asked ChatGPT what it remembers about me. The response startled me. Here is how to see and delete your ChatGPT memory in 2026."
 category: privacy
 publishDate: 2026-06-04
@@ -9,7 +9,7 @@ topic: "[[Topics/chatgpt-has-been-tracking-everything-you-say-heres-how-to-see-w
 social: "[[Social-Hooks/chatgpt-has-been-tracking-everything-you-say-heres-how-to-see-what-it-knows-social]]"
 ---
 
-# 🚀 Published: ChatGPT Is Tracking Everything You Say — Here Is How to See It
+# 🚀 Published: ChatGPT Is Tracking Everything You Say - Here Is How to See It
 
 ## Summary
 > I asked ChatGPT what it remembers about me. The response startled me. Here is how to see and delete your ChatGPT memory in 2026.

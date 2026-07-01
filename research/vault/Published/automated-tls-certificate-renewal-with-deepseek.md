@@ -1,6 +1,6 @@
 ---
 title: "I Automated TLS Renewal with DeepSeek"
-description: "The short answer is I automated TLS certificate renewal using a DeepSeek‑generated Python script, but it almost broke production due to missing"
+description: "The short answer is I automated TLS certificate renewal using a DeepSeek‑generated Python script, but it almost broke production due to missing."
 category: it-operations
 publishDate: 2026-06-23
 coverImage: "/images/generated/automated-tls-certificate-renewal-with-deepseek.svg"
@@ -12,7 +12,7 @@ social: "[[Social-Hooks/automated-tls-certificate-renewal-with-deepseek-social]]
 # 🚀 Published: I Automated TLS Renewal with DeepSeek
 
 ## Summary
-> The short answer is I automated TLS certificate renewal using a DeepSeek‑generated Python script, but it almost broke production due to missing
+> The short answer is I automated TLS certificate renewal using a DeepSeek‑generated Python script, but it almost broke production due to missing.
 
 ---
 - **Category Guide:** [[Topics/it-operations]]

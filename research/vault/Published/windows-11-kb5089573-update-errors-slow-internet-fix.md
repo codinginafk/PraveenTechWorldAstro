@@ -1,5 +1,5 @@
 ---
-title: "Critical: Windows 11 KB5089573 Breaks Internet — Fix It in 3 Steps"
+title: "Critical: Windows 11 KB5089573 Breaks Internet - Fix It in 3 Steps"
 description: "Windows 11 KB5089573 update causes install errors and slow internet. Here is how to fix failed installations, restore network speed, or roll back."
 category: windows-fixes
 publishDate: 2026-06-08
@@ -9,7 +9,7 @@ topic: "[[Topics/windows-11-kb5089573-update-errors-slow-internet-fix]]"
 social: "[[Social-Hooks/windows-11-kb5089573-update-errors-slow-internet-fix-social]]"
 ---
 
-# 🚀 Published: Critical: Windows 11 KB5089573 Breaks Internet — Fix It in 3 Steps
+# 🚀 Published: Critical: Windows 11 KB5089573 Breaks Internet - Fix It in 3 Steps
 
 ## Summary
 > Windows 11 KB5089573 update causes install errors and slow internet. Here is how to fix failed installations, restore network speed, or roll back.

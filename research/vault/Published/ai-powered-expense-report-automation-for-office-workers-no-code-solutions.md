@@ -1,6 +1,6 @@
 ---
 title: "AI-Powered Expense Report Automation for Office Workers: No-Code Solutions"
-description: "The short answer is: I used DeepSeek to generate a Python script that extracts data from receipt images, categorizes expenses, and formats them into a"
+description: "The short answer is: I used DeepSeek to generate a Python script that extracts data from receipt images, categorizes expenses, and formats them into a."
 category: ai-automation
 publishDate: 2026-06-30
 coverImage: "/images/generated/ai-powered-expense-report-automation-for-office-workers-no-code-solutions.svg"
@@ -12,7 +12,7 @@ social: "[[Social-Hooks/ai-powered-expense-report-automation-for-office-workers-
 # 🚀 Published: AI-Powered Expense Report Automation for Office Workers: No-Code Solutions
 
 ## Summary
-> The short answer is: I used DeepSeek to generate a Python script that extracts data from receipt images, categorizes expenses, and formats them into a
+> The short answer is: I used DeepSeek to generate a Python script that extracts data from receipt images, categorizes expenses, and formats them into a.
 
 ---
 - **Category Guide:** [[Topics/ai-automation]]
