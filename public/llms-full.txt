@@ -3,8 +3,8 @@
 > Practical IT Operations, AI automation, and technology guides.
 > URL: https://www.praveentechworld.com
 > Language: English
-> Last updated: 2026-06-30
-> Total articles: 68
+> Last updated: 2026-07-01
+> Total articles: 69
 
 This file contains the full text of every article on the site. AI systems can extract specific passages for citations or answers.
 
@@ -108,6 +108,11 @@ Here’s the refined prompt that got me the final working version:
 
   
 
+Related Guides
+
+Ga4 Data Delayed Or Missing Check Measurement Id Consent
+Ga4 Events Automatic Recommended Custom Tracking Guide
+
 FAQ  
 
 Q: Can this handle multi-currency receipts?  
@@ -128,19 +133,131 @@ A: $0 in tools (all open-source), but 3 hours of prompt tuning and debugging.
 What expense workflow would you automate with this approach? Drop a comment with your nightmare process!  
 
 -- 
-Internal Links:  
+* 
 How I Used AI to Automate My Weekly Data Reports  
 The No-Code CLI Tool That Saved My Team 20 Hours/Month
 
+---
+
+## Building a CLI Tool to Automate Spreadsheet Data Cleaning with DeepSeek
+
+**Pillar:** AI Automation Scripts
+**URL:** https://www.praveentechworld.com/blog/building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek
+**Published:** 2026-06-30
+
+> The short answer is: I used DeepSeek to create a Python CLI tool that cleans messy Excel files in under 5 seconds per file.
+
+How I Built a CLI Tool to Automate Spreadsheet Data Cleaning with DeepSeek  
+
+The short answer is: I used DeepSeek to create a Python CLI tool that cleans messy Excel files in under 5 seconds per file. The AI wrote 90% of the code, but I had to fix critical gaps in file handling and error recovery. Here’s the battle-tested process.  
+
+The Problem: My Spreadsheet Nightmare  
+
+Every Monday, I get 12-15 Excel files from field teams filled with:  
+Merged cells that break pandas  
+Inconsistent date formats (MM/DD/YYYY vs DD-MM-YY)  
+Empty header rows  
+"N/A", "NULL", and "---" all representing missing data  
+
+Manual cleaning took 3 hours weekly. I needed a tool where I could just run:  
+  
+
+The AI Attempt: First Prompt to DeepSeek  
+
+I started with this exact prompt:  
+
+  
+
+DeepSeek output a 127-line script using:  
+ for data manipulation  
+ for CLI interface  
+ to handle merged cells  
+
+First red flag: It used 's  property, which only works on  files, not .  
+
+Where It Broke: 3 Critical Failures  
+
+1. File Format Blindness: Crashed on older  files with:  
+     
+
+2. Date Disaster: Tried to force-convert everything resembling a date, turning "Order #2024-1001" into a datetime object.  
+
+3. Silent Corruption: When encountering password-protected files, it created empty CSVs without warning.  
+
+What I Had to Fix  
+
+1. The File Format War  
+I modified the prompt to specify:  
+  
+
+2. Date Detection Logic  
+Added a regex check before date conversion:  
+  
+
+3. Error Handling Overhaul  
+Added explicit checks for:  
+Password-protected files  
+Binary corruption (using magic numbers)  
+Permission issues  
+
+The Working Result  
+
+Final command structure:  
+  
+
+Sample output:  
+  
+
+Key features added:  
+Batch processing with wildcards ()  
+Configurable null markers  
+Progress bar using   
+
+What I Learned  
+
+1. AI Misses Edge Cases  
+   DeepSeek didn’t consider that  and  require different libraries. Always specify file formats.  
+
+2. Prompt Iteration Beats Debugging  
+   Instead of fixing the code, I refined the prompt:  
+     
+   This got me 80% there vs. manual coding.  
+
+3. Validation is Non-Negotiable  
+   The AI-generated script would silently overwrite files. I added:  
+     
+
+The Exact Prompt  
+
+Here’s the final prompt that worked:  
+
+  
+
 Related Guides
 
- — The short answer is you can use a Python script with DeepSeek prompts to automatically pull grade da
- — An IT Ops Lead used DeepSeek to build a Python script tracking AI API costs across providers. The AI
- — A DeepSeek-generated AWS cleanup script identified 3,000 resources as deletable. The AI hallucinated
-
-Related Guides
+How I Used AI to Fix Our Broken CSV Pipeline
+The 3 Click CLI Patterns I Use Daily
 Ga4 Data Delayed Or Missing Check Measurement Id Consent
 Ga4 Events Automatic Recommended Custom Tracking Guide
+
+FAQ  
+
+1. Can this handle 100MB+ Excel files?  
+Yes, but add  to process in chunks. The initial AI code loaded everything into memory.  
+
+2. How do I add custom cleaning rules?  
+Extend the  function. The AI structured this well for modifications.  
+
+3. Why Click instead of argparse?  
+DeepSeek defaulted to Click for better CLI UX. I kept it for the auto-help generation.  
+
+4. Can this run on schedule?  
+Yes! I combined it with a cron job to auto-process files in our SFTP drop folder.  
+
+5. What about Google Sheets?  
+That’s my next experiment-using  with API auth.  
+
+What spreadsheet headache would you automate with this approach? Drop a comment with your worst data cleaning war story.
 
 ---
 
@@ -265,6 +382,8 @@ How Did I Ask DeepSeek to Build the Report Script?
 
 My first step was to write a prompt that described the exact workflow I needed. I kept it concise, listed the required libraries, and asked for a CLI tool so I could schedule it later.
 
+
+
 I pasted this into DeepSeek’s chat, selected the “Code” mode, and asked for the script. DeepSeek returned a 2.3 KB file with a shebang, imports, and the logic I described. The token count for the exchange was 248 tokens, and the cost was roughly $0.004 on the DeepSeek platform.
 
 Where Did the AI Output Break Down?
@@ -285,7 +404,9 @@ First, I installed pandas () to satisfy the dependency. Then I edited the script
 
 Before (DeepSeek’s version):
 
+
 After (my fixes):
+
 
 The changes were minimal but crucial: moved pandas import to top, fixed  to produce one row per student, added data cleaning, and corrected the logging. The final script is 2.5 KB (a few bytes larger due to comments) and runs in roughly 0.7 seconds on a typical Linux VM for a 500‑row CSV.
 
@@ -293,7 +414,11 @@ How Does the Final Script Work and What Output Does It Produce?
 
 I placed the script in  and made it executable. I also created a tiny wrapper shell script () that runs the Python script, logs the execution time, and uploads the resulting CSV to Dropbox using the official Dropbox API. The wrapper looks like this:
 
+
+
 The cron job is set to run every Friday at 08:00 AM:
+
+
 
 When the pipeline runs, the output file  is uploaded to a folder named  in the department’s Dropbox. The CSV now contains 45 rows (one per student) with total and average scores, and the log entry records a runtime of ~0.7 s and a Dropbox upload latency of ~1.2 s. The total cost per run (including the DeepSeek prompt cost) is about $0.006.
 
@@ -313,12 +438,15 @@ Can I Get the Exact Prompt to Replicate This?
 
 Here is the raw, unedited prompt I sent to DeepSeek (copy‑paste ready). I kept it exactly as I typed it, including line breaks and spacing.
 
+
+
 Feel free to tweak the column names or add extra fields-DeepSeek will adapt as long as you keep the structure clear.
 
-FAQ: Common Questions About Automating Grade Reports
 
-Q: Do I need a cloud account to run this?  
-A: No. The script runs locally; y
+
+Related Guides
+
+Ga4 Data Delayed Or Missing C
 
 ---
 
@@ -352,6 +480,8 @@ I figured DeepSeek could handle the grunt work. I can write basic boto3 calls, b
 How I Prompted It
 
 I wrote a detailed prompt describing the architecture. Standard approach — single prompt, complete spec, let the AI generate the skeleton.
+
+
 
 DeepSeek returned about 900 lines. Looked solid in the diff view. I created the config file, set up the cross-account roles, and ran it with .
 
@@ -395,7 +525,7 @@ I spent about four evenings rewriting the script.
 
 Tag matching (2 hours): I replaced the AI's binary check with a configurable tag mapping. The script now reads a  that defines which tags correspond to ownership for each account. Account 101 uses 'Project' and 'Owner'. Account 203 uses 'CostCenter' and 'Team'. The script checks each account's config before making a decision.
 
-Idle detection (1 hour): I changed the heuristic to check CloudWatch metrics for actual network traffic and CPU utilization instead of just instance state. A stopped instance is different from a running-but-idle instance. The AI treat
+Idle detection (1 hour): I changed the heuristic to check CloudWatch metrics for actual network traffic and CPU utilization instead of just instance state. A stopped
 
 ---
 
@@ -430,6 +560,8 @@ I wrote a single detailed prompt describing the full architecture. I wanted the 
 
 This is the prompt I fed it:
 
+
+
 DeepSeek returned about 800 lines of code. Looked great in the preview. Imported , , ,  — all standard. It even added a cute animated spinner while fetching data.
 
 Where Did the AI Output Break?
@@ -439,6 +571,8 @@ I pasted the code into , set my environment variables, and ran . It fell apart a
 Hallucinated API Endpoints
 
 The first crash was immediate. DeepSeek invented an endpoint for OpenAI's usage API:
+
+
 
 This endpoint does not exist. OpenAI's actual usage data comes through a different API. You have to hit the billing dashboard API or parse the CSV exports. The AI just made up a REST path that looked reasonable on paper.
 
@@ -469,6 +603,8 @@ Rate Limit Chaos
 
 I have 12 API keys across four providers (some personal, some team). The AI added a simple  between calls. That is fine for a single key, but when you have multiple keys hitting the same provider, you get rate limited fast. I saw:
 
+
+
 The script's "retry with backoff" was a single retry after 5 seconds. Not enough for the burst pattern of our team's usage.
 
 What I Had to Fix
@@ -481,9 +617,7 @@ Cost normalization (1 hour): I wrote a provider-specific cost calculator for eac
 
 Pagination (2 hours): I added pagination loops for each provider separately. This was the most tedious part because the patterns are all different. I used a generator pattern so the main loop just iterates over pages without caring about the specifics.
 
-Rate limiting (1 hour): I replaced the naive sleep with a proper token-bucket rate limiter that respects per-minute and per-hour limits for each provider. Each API key gets its own bucket. When one key is exhausted, the script rotates to another key if available.
-
-Cost dashboard (30 minutes): The AI generated a decent 
+Rate limiting (1 hour): I replaced the naive sleep with a proper token-bucket rate limiter that respects per-minute and per-hour limits for each provider. Each API key gets its own bucket. When one key is exhausted, the script rotates
 
 ---
 
@@ -774,11 +908,13 @@ I used the DeepSeek-Coder model. I fed it a comprehensive prompt that defined th
 
 Prompt:
 
+
 Where did the AI hallucinate and break?
 
 DeepSeek spit out the code in about 12 seconds. It looked beautiful. The indentation was perfect, the variable names were descriptive, and the  wrapper was a clean implementation of a switch-case logic. I felt like a genius for about five minutes. Then, I actually ran the code.
 
 The first failure happened with . The AI used a method called . I ran the script and immediately got this:
+
 
 DeepSeek had hallucinated a method. It treated the list of partitions as a single object that could be queried for usage. In reality, you have to iterate through the list and call  on each individual partition object. It looked like a perfect-looking function, but it used a library method that simply doesn't exist.
 
@@ -799,13 +935,11 @@ Here is the "Before" vs "After" for the log parser logic:
 
 Before (AI's first attempt Memory Hog):
 
+
 After (My corrected prompt Memory Efficient):
 
-The difference in execution time was negligible, but the memory footprint dropped from 1.2GB to about 14MB. That's the difference between a script that works on a laptop and a script that works on a production server.
 
-What is the working result?
-
-After three rounds 
+The difference in execution time was negligible, but the memory footprint dropped from 1.2GB to about 14MB. That's the difference between a script that works on a laptop and a script that works on a producti
 
 ---
 
@@ -936,7 +1070,7 @@ If your site is still private, turn off password protection for the test session
 
 In PageSpeed Insights, open the Largest Contentful Paint element section and look at the image URL listed there. In my experience, a 1.8 MB hero JPEG can push LCP past 5 seconds on mobile. Resize the image to the real display width, export it as WebP or AVIF, and aim for around 120 to 220 KB for a desktop hero image and 60 to 140 KB for a mobile hero image.
 
-If you use WordPress, go to Media, upload the optimized
+If you 
 
 ---
 
@@ -1020,9 +1154,13 @@ I usually see this happen after a CMS change, a migration, or an SEO plugin upda
 
 A common example is a sitemap that includes , while robots.txt has this rule:
 
+
+
 That URL is in the sitemap, but Googlebot is told not to crawl it. The fix is usually to remove  from the sitemap.
 
 Another common example is a live page under , while robots.txt has this rule:
+
+
 
 In that case, the sitemap may be fine, but robots.txt is too broad. I would edit robots.txt and let Google crawl the real blog pages.
 
@@ -1082,13 +1220,13 @@ Use  on Windows or  on Mac to search inside robots.txt. If the blocked URL is , 
 
 Look for rules like these:
 
+
+
 If your sitemap contains , the  rule is the problem.
 
 7. Decide which side is wrong.
 
-Ask one simple question: should Google crawl this URL or not? If the answer is yes, edit robots.txt. If the answer is no, remove the URL from the sitemap.
-
-Do not allow everything just to
+Ask one simple question: should Google crawl this URL or not? If the answer is yes, edit robots
 
 ---
 
@@ -1176,9 +1314,7 @@ Click View user snapshot if it appears. Check whether the event name is .
 
 If Realtime shows your visit, the tag is working. Your standard reports may still need time to process.
 
-If Realtime is empty, the problem is still before reporting. Go back to the tag check and consent check.
-
-5. Test with consent accepted and rejected
+If Realtime is empty, the problem is still before reporting. Go back to 
 
 ---
 
@@ -1334,6 +1470,8 @@ How Sitemaps Work
 
 An XML sitemap is a file that lists every URL on your site you want search engines to know about. It lives at  (or  for larger sites) and looks like this:
 
+
+
 When Googlebot reads this file, it adds all listed URLs to its crawl queue. It does not index them immediately — it just schedules a visit.
 
 The Indexing Pipeline
@@ -1397,11 +1535,7 @@ Quality flags. Google's automated systems may flag your page as low quality. Com
 
 Manual actions. In rare cases, a human reviewer may have flagged your site. Check Search Console for Manual Actions reports.
 
-Crawl budget limits. If your site has thousands of pages and only some are indexed, Google may be pacing its crawls based on your site's authority. Add more internal links to your most important pages and ensure your sitemap prioritizes them.
-
-Fixing Indexing Issues Step by Step
-
-When I see pages that are discovere
+Crawl budget limits. If your site has thousands of pages and only some are indexed, Google may be pacing its crawls based on your site's authority. Add more internal links to your most important pages and ensure your sitemap prioritizes th
 
 ---
 
@@ -1498,9 +1632,6 @@ For static sites like this one (built with Astro), TTFB should be under 100ms on
 
 Checking Your Results
 
-After making changes, verify with:
-
-PageSpeed Insights — Lab data and field data fro
 
 ---
 
@@ -1648,6 +1779,8 @@ If your site uses JavaScript to load content without full page reloads (like Rea
 
 The fix is to send custom  events in your SPA router. Every time the URL changes, call:
 
+
+
 I had to do this on a client project built with Next.js. Without it, GA4 showed about 60% of actual page views.
 
 Common Page Tracking Problems
@@ -1675,11 +1808,7 @@ Q: How long does it take for page view data to appear in GA4 reports?
 A: Standard reports update within a few hours. Real-time reports show data instantly. If you set up tracking today, expect to see meaningful data in 24 to 48 hours. Processing delays are normal.
 
 Q: Can I use both UA and GA4 page tracking at the same time?
-A: Yes, and you should during the transition. They use separate tracking codes and do not interfere with each other. Running both side by side lets you compare data and build a history in GA4 before UA stops processing new data.
-
-Comparing GA4 Page Views Across Reports
-
-One thing tha
+A: Yes, and you should during the transition. They use separate tracking codes and do not interfere with each other. Running both side by side lets you compare data and build a history in GA4 before UA stops p
 
 ---
 
@@ -1776,7 +1905,7 @@ Q: What if I cannot add a TXT record or upload a file?
 A: If you use a platform like WordPress.com, Wix, or Squarespace, check their documentation for Search Console setup. Many platforms have built-in verification options. You can also use the Google Analytics or Google Tag Manager methods if those are already connected.
 
 Q: Is Domain Property or URL Prefix better?
-A: Domain Property covers all subdomains (www, m, blog.yoursite.com) automatically. URL Prefix only covers the specific URL you entered. I recommend Domain Property for most sites because it includes everything and requires only a 
+A: Domain Property covers all subdomains (www, m, blog.yoursite.com) automatically. URL Prefix only covers the specific URL you entered. I recomme
 
 ---
 
@@ -1872,10 +2001,7 @@ The report updates daily. If you see no change after two weeks, revisit the page
 Frequently Asked Questions
 
 Q: How long does it take for Google to index a page after requesting indexing?
-A: Anywhere from a few days to a few weeks. New sites with low authority may take longer. If nothing changes after two weeks, the page likely has quality or technical issues that need fixing first.
-
-Q: Can I fix all index coverage errors at once?
-A: Some fixes 
+A: Anywhere from a few days to a few weeks. New sites with low authority may take longer. If nothing changes after two weeks, the page likely has quality or technical issues tha
 
 ---
 
@@ -2045,10 +2171,7 @@ MFA should be required for all faculty, staff, and students. Microsoft says MFA 
 Plan for Incidents
 
 Every school should have a written plan for security incidents. It should cover:
-How to find and stop the problem
-Who to tell and how
-What the law requires
-How to review and improve after
+How to find and stop the proble
 
 ---
 
@@ -2154,7 +2277,7 @@ Summary
 | IndexNow | 5 min | Minutes-hrs | Speed boost |
 | Natural discovery | Ongoing | Weeks-months | Passive growth |
 
-The fastest path: verify Search Console, submit your sitemap, request indexing on your homepage, and turn on IndexNow if available. That covers every 
+The fastest path: verify Search Console, submit your sit
 
 ---
 
@@ -2232,7 +2355,7 @@ Go to Admin and Data Settings and then Data Filters. Check if you have any activ
 
 Step 9: Check Server-Side Tagging Configuration
 
-If you use server-side tagging with Google Tag Manager, the setup is more complex and has more points of failure. Check that your server-side GTM container is running and that
+If you use server-side tagging with Google Tag Manager, the setup is more complex and has more points of fail
 
 ---
 
@@ -2274,6 +2397,11 @@ Fix 3: Verify All Four Property Versions
 
 Google treats every URL variation as a separate property. You need all four of these verified:
 
+
+
+
+
+
 If you only verified  but Google is sending traffic to , you will see partial or no data.
 
 The easiest way to fix this is to use a Domain property instead of a URL prefix property. A domain property covers all subdomains and protocol variations automatically. Just add your domain as  (with DNS verification) and you are covered.
@@ -2311,7 +2439,7 @@ Here is something Google does not tell you. A huge chunk of your GSC data is hid
 
 Google anonymizes queries that are not issued by enough unique users over a 2 to 3 month period. These queries simply do not appear in your reports. An Ahrefs study published in 2025 analyzed 22 billion clicks and found that anonymized queries accounted for 46.77% of all clicks on average. For some sites, the figure exceeded 80%.
 
-This means if your site targets niche long-tail keywords, you could be getting significant traffic that GSC simply does not report. The click
+This means if your site targets niche long-tail keywords, you co
 
 ---
 
@@ -2377,6 +2505,8 @@ If your sitemap exceeds either limit, Google will stop processing it. The fix is
 
 For example, create separate sitemaps for your blog posts, your product pages, and your category pages. Then create a sitemap index file that references all of them:
 
+
+
 Submit just the sitemap index file to GSC instead of the individual files.
 
 Error 5: Sitemap Contains Noindex URLs
@@ -2395,7 +2525,7 @@ Error 7: Sitemap URL is Blocked by robots.txt
 
 Googlebot reads your robots.txt file before attempting to crawl your sitemap. If your robots.txt blocks the  path or the directory where your sitemap lives, Googlebot cannot access it.
 
-Check your robots.txt file at . It should not disallow any paths that your sitemap is in. You should also explicitly declare your sit
+Check your robots.txt file at . It should not disallow an
 
 ---
 
@@ -2451,9 +2581,7 @@ How to Fix the KB5089573 Internet Slowdown Step by Step
 
 Here's what worked for me on ten different PCs in my repair queue. Follow these steps in order. Don't skip the restart.
 
-Step 1: Test the speed on your phone or another laptop connected to the same router. If every device is slow, restart your modem and stop reading. The problem isn't in Windows.
-
-Step 2: Click the Start button in the bo
+Step 1: Test the speed on your phone or another laptop connected to the same router. If every device is slow, restart your modem and stop reading. The problem isn't in Window
 
 ---
 
@@ -2559,7 +2687,7 @@ Windows 11 still includes the classic troubleshooter, but Microsoft hides it ins
 
 Step 4: Verify the Windows Search Service is Enabled
 
-The background service might be disabled by a rogue policy or third-party tool. Press Win + R on your keyboard. Type  and press Enter. In the Services window, scroll down to Windows Search in the list. Double-click it. If Startup type shows Disabled, open the dropdown and change it to Au
+The background service might be disabled by a rogue policy or third-party tool. Press Win + R on your keyboard. Type  and press Enter. In the Services window, scroll down to Windows Search in the list. Double-click it. If Startup type shows Disabled,
 
 ---
 
@@ -2761,7 +2889,7 @@ The way I like to do this is with a clean install, which is more effective than 
 
 Step 1: Back Up Your Important Data. Copy your documents, photos, and any other personal files from your  drive to an external hard drive or cloud service. A clean install will erase everything on the system drive.
 
-Step 2: Create Windows Installation Media. On another working computer, go to the official Microsoft "Download Windows 10" page. Click "Download tool now" to get the Me
+Step 2: Create Windows Installation Media. On another working computer, go to the official Microsoft "Download Windows 10
 
 ---
 
@@ -3274,7 +3402,7 @@ Best for: Users who want more server locations and a generous data cap for strea
 
 The Basics: Windscribe offers 10 GB of free data per month if you confirm your email, or 2 GB if you don't. They give you access to servers in over 10 countries. This is one of the most feature-rich free plans available.
 
-My Experience: The first thing I noticed was the server selection. Having access to servers in Canada, Germany, Hong Kong, and more made a big difference. I tested by watching geo-restricted content on a UK-based news site, and it worke
+My Experience: The first thing I noticed was the server selection. Having access to servers in Canada, Germany, Hong Kong, and more made a big difference. I tested by watching geo-restrict
 
 ---
 
@@ -3326,7 +3454,7 @@ Pricing: The free plan is the best on the market. The Premium plan is just $10 p
 
 Platform Support & Usability: Excellent cross-platform support. The apps are consistent across all devices. The browser extension works well, though occasionally the auto-fill isn't as slick as 1Password's. It might take an extra click here and there. But for the price, it’s unbeatable.
 
-Bottom Line: If you’re on a budget, want to see the source code, or just need a solid, no-nonsense manage
+Bottom Line: If you’re on a budget, want to see the source code, 
 
 ---
 
@@ -3928,7 +4056,7 @@ Let�s build something real. This scenario plagues freelancers and office worke
 
 Using Zapier (The Easiest Path):
 1.  Create a New Zap. Go to zapier.com and sign up for the free account. Click �Create Zap.�
-2.  Set Your Trigger. Search for �Gmail� (or Outlook). Choose the trigger event �New Email with Attachment.�
+2.  Set Your Trigger. Search for �Gmail� (or Outlook). Choose the trigger ev
 
 ---
 
@@ -4007,7 +4135,7 @@ The third finding: our peak burn hour was 2 PM, correlated with a cron job that 
 description: "Access Microsoft Copilot for free as a teacher or student. Learn how to use this AI tool for lesson planning, assignments, and classroom tasks."
 seoTitle: "Microsoft Free AI for Teachers and Students: Access Copilot Now"
 imageCredit: "Photo by BoliviaInteligente on Unsplash"
-coverImage: "https://images.unsplash.com/photo-1662947036644-ecfde1221ac7?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxNaWNyb3NvZnQlMjBGcmVlJTIwQUklMjBmb3J8ZW58MHx8fHwxNzgwNTgyODkxfDA&ixlib=rb-4.1.0&w=800&h=400&fit=crop"
+coverImage: "/images/generated/microsoft-free-ai-for-teachers-students-how-to-access-and-use-copilot-now.svg"
 imageAlt: "a glass of beer"
 publishDate: 2026-06-04
 author: praveen
@@ -4479,6 +4607,8 @@ Our technical SEO checklist covers step-by-step optimizations for your site.
 
 Before we dive into details, here is the framework that every page in this guide follows:
 
+
+
 Foundation — Is your site technically sound? Fast, secure, mobile-friendly, properly structured. If this is broken, nothing else matters.
 
 Content — Does your page actually answer the searcher's question better than every other result? This means original research, clear structure, and genuine value.
@@ -4516,9 +4646,7 @@ This is where you win or lose. Your content must satisfy search intent *betterth
 
 Keyword Research: Find the Gaps
 
-Start with Google itself. Type your topic into the search bar and look at three things:
-
-1. "People a
+Start with Google itself. Type your topic int
 
 ---
 
@@ -4611,7 +4739,7 @@ Where to Find the Good Stuff: Reports
 
 The left-hand menu is your command center. The Reports section is where you'll spend most of your time. Here's what to look at first. For a deeper look at how to measure content engagement specifically, check our GA4 content engagement tracking guide.
 
-Under Reports Engagement, click Overview. This is your mission control. You'll see a timeline graph of users and events. Scroll down to see which pages are getting the most views. This is gold. It tells you what content your audience actually finds valuable. If your "About Me" page is getting
+Under Reports Engagement, click Overview. This is your mission control. You'll see a timeline graph of users and events. Scroll down to see which pages are getting the most views. This is gold. It tells you what content your audience actually finds valuable. 
 
 ---
 
@@ -4668,9 +4796,7 @@ Pick the one that aligns with your goal. Most offer a free trial or a free plan 
 
 Building Your Site: A Practical Walkthrough
 
-Let's assume you've chosen a builder like Squarespace or Wix. Here's the step-by-step process you'll follow.
-
-Step 1: Pick a Templa
+Let's assume you've chosen a builder like Squarespace or Wix. Here's the step-by-step 
 
 ---
 
