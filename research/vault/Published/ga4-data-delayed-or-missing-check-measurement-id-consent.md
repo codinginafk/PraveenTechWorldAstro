@@ -3,7 +3,7 @@ title: "GA4 Data Delayed or Missing? 10 Troubleshooting Steps"
 description: "GA4 data delayed or missing after installation? Check Measurement ID, consent mode, filters, and Realtime before reinstalling the tag."
 category: website-setup
 publishDate: 2026-06-17
-coverImage: "https://images.unsplash.com/photo-1613347761513-0f37baebfd20?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxHQTQlMjBEYXRhfGVufDB8fHx8MTc4MTcxOTMyM3ww&ixlib=rb-4.1.0&w=800&h=400&fit=crop"
+coverImage: "/images/generated/ga4-data-delayed-or-missing-check-measurement-id-consent.svg"
 status: published
 topic: "[[Topics/ga4-data-delayed-or-missing-check-measurement-id-consent]]"
 social: "[[Social-Hooks/ga4-data-delayed-or-missing-check-measurement-id-consent-social]]"

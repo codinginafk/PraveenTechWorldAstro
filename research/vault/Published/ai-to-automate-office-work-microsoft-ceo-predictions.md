@@ -3,7 +3,7 @@ title: "AI to Automate Office Work in 12-18 Months: Microsoft CEO Predictions"
 description: "Scrolling my tech feed, I saw the headline: AI will automate office work in 12-18 months. Here is what Microsoft CEO said."
 category: automation
 publishDate: 2026-06-05
-coverImage: "https://images.unsplash.com/photo-1758626099012-2904337e9c60?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxBSSUyMEF1dG9tYXRlJTIwT2ZmaWNlfGVufDB8fHx8MTc4MDY3NDgxNHww&ixlib=rb-4.1.0&w=800&h=400&fit=crop"
+coverImage: "/images/generated/ai-to-automate-office-work-microsoft-ceo-predictions.svg"
 status: published
 topic: "[[Topics/ai-to-automate-office-work-microsoft-ceo-predictions]]"
 social: "[[Social-Hooks/ai-to-automate-office-work-microsoft-ceo-predictions-social]]"

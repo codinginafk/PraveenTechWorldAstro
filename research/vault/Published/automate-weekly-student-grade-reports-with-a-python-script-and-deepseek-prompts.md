@@ -3,7 +3,7 @@ title: "Automate Weekly Student Grade Reports with a Python Script and DeepSeek 
 description: "The short answer is you can use a Python script with DeepSeek prompts to automatically pull grade data and generate weekly student reports without"
 category: ai-automation
 publishDate: 2026-06-29
-coverImage: "https://images.unsplash.com/photo-1604177091072-b7b677a077f6?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxBdXRvbWF0ZSUyMFdlZWtseSUyMFN0dWRlbnR8ZW58MHx8fHwxNzgyNzY5OTE2fDA&ixlib=rb-4.1.0&w=1200&h=600&fit=crop"
+coverImage: "/images/generated/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts.svg"
 status: published
 topic: "[[Topics/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts]]"
 social: "[[Social-Hooks/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts-social]]"

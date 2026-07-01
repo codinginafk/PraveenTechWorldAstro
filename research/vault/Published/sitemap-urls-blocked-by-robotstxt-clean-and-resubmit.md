@@ -3,7 +3,7 @@ title: "Sitemap URLs Blocked by Robots.txt? Clean and Resubmit"
 description: "If Google Search Console says your sitemap URLs are blocked by robots.txt, clean up your sitemap and resubmit it in GSC with this guide."
 category: website-setup
 publishDate: 2026-06-18
-coverImage: "https://images.unsplash.com/photo-1625296276188-1d149bdaf560?ixid=M3w5NjkzNDF8MHwxfHNlYXJjaHwxfHxTaXRlbWFwJTIwVVJMcyUyMEJsb2NrZWR8ZW58MHx8fHwxNzgxNzkwNjIzfDA&ixlib=rb-4.1.0&w=800&h=400&fit=crop"
+coverImage: "/images/generated/sitemap-urls-blocked-by-robotstxt-clean-and-resubmit.svg"
 status: published
 topic: "[[Topics/sitemap-urls-blocked-by-robotstxt-clean-and-resubmit]]"
 social: "[[Social-Hooks/sitemap-urls-blocked-by-robotstxt-clean-and-resubmit-social]]"

@@ -3,7 +3,7 @@ title: "GA4 Events: Automatic, Recommended, and Custom"
 description: "Automatic, recommended, or custom GA4 events — learn the difference and how to track button clicks, form submissions, file downloads, and scroll depth."
 category: website-setup
 publishDate: 2026-06-12
-coverImage: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop"
+coverImage: "/images/generated/ga4-events-automatic-recommended-custom-tracking-guide.svg"
 status: published
 topic: "[[Topics/ga4-events-automatic-recommended-custom-tracking-guide]]"
 social: "[[Social-Hooks/ga4-events-automatic-recommended-custom-tracking-guide-social]]"
