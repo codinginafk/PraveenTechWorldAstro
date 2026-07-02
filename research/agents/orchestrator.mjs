@@ -274,6 +274,21 @@ async function generateFromTopic(topic, existingTitles, sourceArticles, clusters
   const hubSlug = hubSlugMap[clusterId] || "website-setup";
   const hasHub = fs.existsSync(HUB_DIR) && fs.readdirSync(HUB_DIR).some(f => f.startsWith(hubSlug));
 
+  // RAG pre-step: enrich with Obsidian vault context
+  let obsidianContext = "";
+  try {
+    const ragPy = path.join(__dirname, "obsidian_rag.py");
+    if (fs.existsSync(ragPy)) {
+      const ragOut = execSync(`python "${ragPy}" "${title.replace(/"/g, '\\"')}"`, { encoding: "utf-8", timeout: 15000 });
+      const lines = ragOut.trim().split("\n").filter(l => !l.startsWith("[RAG]"));
+      if (lines.length > 0) {
+        obsidianContext = "\n\n## Obsidian Research Context\n" + lines.join("\n").slice(0, 2000);
+      }
+    }
+  } catch (ragErr) {
+    log(`  RAG pre-step skipped: ${ragErr.message}`);
+  }
+
   const result = await generateArticle({
     title,
     description: topic.topic?.snippet?.slice(0, 150) || `A practical guide to ${title.toLowerCase()}.`,
@@ -285,7 +300,7 @@ async function generateFromTopic(topic, existingTitles, sourceArticles, clusters
       : `Learn how to fix ${title.toLowerCase()}.`,
     pillarId: clusterId,
     publishDate: dateStr,
-    depthInstruction: "Write 1800-2500 words with specific steps. Include 3+ internal links to related articles in the same category.",
+    depthInstruction: "Write 1800-2500 words with specific steps. Include 3+ internal links to related articles in the same category." + obsidianContext,
     researchContext,
   });
 

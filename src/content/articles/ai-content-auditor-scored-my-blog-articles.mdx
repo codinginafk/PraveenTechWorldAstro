@@ -1,0 +1,127 @@
+---
+title: "I Built an AI Content Auditor to Score My Blog — Average Grade: 55/100"
+description: "I built a Python tool that scored all 69 articles on my blog across 7 metrics. The median score was 55/100. Here is what the audit found and how I fixed 350 issues."
+coverImage: "/images/generated/ai-content-auditor-scored-my-blog-articles.svg"
+imageAlt: "AI content auditor report showing a 55/100 score"
+imageCredit: ""
+publishDate: 2026-07-02
+author: praveen
+category: ai-automation
+tags:
+  - ai-automation
+  - python
+  - content-auditing
+  - blogging
+  - deepseek
+  - seo
+seoTitle: "AI Content Auditor Reviewed My Blog — Average Score 55/100"
+socialHook: "I built an AI tool to audit every article on my blog. The median score was 55/100. 76% of my articles had low lexical diversity. Here is what I fixed."
+pillarId: ai-automation
+faq:
+  - question: "Can I run this content auditor on my own blog?"
+    answer: "Yes. The script is in the research/agents/ directory of this site's repo. You need an OpenRouter API key. Install the dependencies from requirements-auditor.txt and run batch_audit.py with your article URLs."
+  - question: "Does a high score mean the content is good?"
+    answer: "No. The 7 statistical metrics measure specific dimensions like lexical diversity and sentence variation. They catch patterns common in AI-generated text, but they do not measure accuracy, usefulness, or originality. Use the score as a signal, not a verdict."
+  - question: "How accurate were the LLM rewrite suggestions?"
+    answer: "About 75% were useful. The other 25% were hallucinations — sentences that did not exist in the source, or minor punctuation changes not worth applying. I reviewed every suggestion before applying it."
+  - question: "What was the most common issue found?"
+    answer: "Low lexical diversity affected 52 out of 69 articles (76%). This means the vocabulary was too repetitive. The same set of words appeared over and over. That is a strong signal of AI-assisted writing."
+---
+## I Built an AI Content Auditor to Score My Blog — Average Grade: 55/100
+
+I knew my writing had problems. I just did not know how bad it was until I built a tool to measure it.
+
+I use AI tools to help me write. DeepSeek, ChatGPT, Gemini — I have tried them all. The result is a blog with 69 articles in 27 days. Decent volume. But I started to notice patterns that bothered me.
+
+Too many em dashes. Repetitive sentence structures. I could feel the AI influence in my drafts, but I could not quantify it.
+
+So I built a tool that could.
+
+### How the Auditor Works
+
+The content auditor scores each article on 7 statistical metrics:
+
+1. **Burstiness** — variation in sentence length. Humans naturally mix short and long sentences. AI text tends toward uniform lengths.
+2. **Lexical diversity** — how many unique words relative to total words. Low diversity means the same words on repeat.
+3. **AI cliché density** — phrases like "delve", "crucial", "pivotal", "evolving landscape". These are overrepresented in AI-generated text.
+4. **Conjunctive adverb density** — words like "however", "moreover", "furthermore". AI loves transition words.
+5. **Em and en dash density** — how many dashes per 1000 words. AI overuses em dashes for emphasis.
+6. **Flesch reading ease** — standard readability score. Measures how easy the text is to read.
+7. **Sentence variation ratio** — how much sentence structure changes from one sentence to the next.
+
+Each metric produces a score from 0 to 100. The overall article score is a weighted average of all 7.
+
+Then the tool sends the article text to an LLM (DeepSeek via OpenRouter) with a prompt asking for a critique and line-level rewrite suggestions. The LLM analysis does not change the statistical score. It only provides context and actionable fixes.
+
+I cover site-level optimization separately in the [technical SEO checklist](/blog/technical-seo-checklist-for-beginners-fix-these-issues-to-rank-better). This is about content quality specifically.
+
+### The Results Were Rough
+
+I ran the auditor across all 69 articles. Here is what came back:
+
+**Overall scores:**
+- Average score: 51 out of 100
+- Median score: 55 out of 100
+- Highest score: 72 (one article)
+- Lowest score: 23 (one article)
+
+**Pattern breakdown:**
+
+My writing was most predictable in ways I did not expect:
+
+- **76% of articles** (52 out of 69) had lexical diversity below 0.35. I was using the same words over and over. Words like "guide", "fix", "step", "issue", "solution" dominated my vocabulary.
+- **74% of articles** had low burstiness. My sentences were almost the same length throughout an article. Short short short, one after the other.
+- **23% of articles** had excessive em dash usage. I found 253 em dashes across 50 articles.
+- **462 total actionable fixes** identified across all articles. Some were minor. Some were entire paragraphs that read like they were copy-pasted from an AI prompt.
+
+The LLM critique was sometimes brutal. It flagged sentences that had no substance — transitions that padded word count without adding value. Paragraphs that restated the same idea three different ways.
+
+### What I Fixed
+
+I built two companion scripts to handle the fixes:
+
+- **apply_fixes.py** — reads the audit report, fuzzy-matches the suggested rewrites against the original MDX source files, and applies the changes. It uses 5 fallback strategies for matching because the LLM sees HTML-rendered text, not the raw MDX.
+- **clean_emdash.py** — systematically replaces em dashes with colons, parentheses, or commas depending on the context. It skips YAML frontmatter and code blocks to avoid breaking the site.
+
+The results after running both:
+
+- **350 fixes applied** across all 69 articles
+- **247 em dashes replaced** across 51 articles (mostly bold-label patterns like "**Heading** — text" → "**Heading**: text")
+- **9 meta description fixes** — descriptions missing trailing punctuation
+- **112 fixes skipped** — these were either already applied (duplicates), hallucinated by the LLM (it suggested rewrites for text that did not exist in the source), or in frontmatter sections
+
+Not every LLM suggestion was useful. About 25% were noise. But the ones that hit were genuinely helpful. The tool caught repetitive phrasing I had not noticed, even after multiple editing passes.
+
+I have been down this road before with similar automation projects — the [server health checks](/blog/automated-server-health-checks-with-deepseek) and the [database audit script](/blog/non-developer-built-database-audit-script-with-deepseek) both went through the same pattern of build, break, fix.
+
+### Em dashes were everywhere
+
+This was the most embarrassing finding. Two hundred fifty-three em dashes across 50 articles. In a single article about GA4 events, I had 18.
+
+The fix was straightforward:
+
+- **"**Bold heading** — text"** became **"**Bold heading**: text"**
+- **"parenthetical — content — text"** became **"(content) text"**
+- **"sentence — continuation"** became **"sentence: continuation"**
+
+After cleanup, the articles read cleaner. The dashes felt less like a crutch and more like intentional punctuation.
+
+### What I Learned
+
+Building the auditor taught me more about my own writing than any editing course could.
+
+Before I ran the tool, I would have guessed my articles scored around 70 or 75. Reality was 55. The gap between perception and data was humbling.
+
+The 7 metrics caught things I would never catch by reading. Lexical diversity is invisible when you are the one writing. But the tool tracks your vocabulary range across every sentence and shows you the cold numbers.
+
+The LLM suggested 462 fixes. I applied 350. That 25% rejection rate is not the LLM being wrong. It is me deciding which suggestions fit my voice and which did not. The tool advises. I decide.
+
+"Write better" is too vague. "Increase lexical diversity above 0.35" is measurable and actionable. I now run the auditor before publishing any new article.
+
+### Related Guides
+
+- [Technical SEO Checklist for Beginners: Fix These Issues to Rank Better](/blog/technical-seo-checklist-for-beginners-fix-these-issues-to-rank-better): A broader look at site optimization beyond content quality.
+- [How to Use Google Analytics 4 to Improve Your Content Strategy](/blog/how-to-use-google-analytics-4-to-improve-your-content-strategy): Track whether the fixes actually improve engagement.
+- [Backlink Building Guide for New Websites: Get Your First Quality Links](/blog/backlink-building-guide-for-new-websites-get-your-first-quality-links): The next step after fixing your content.
+- [I Automated Server Health Checks with DeepSeek](/blog/automated-server-health-checks-with-deepseek): Another example of building tools with AI and fixing what broke.
+- [DeepSeek API Cost Tracker Scripts](/blog/deepseek-api-cost-tracker-scripts): How I track the costs of running these AI-powered tools.

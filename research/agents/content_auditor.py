@@ -38,7 +38,6 @@ class TextMetrics:
         r'(?i)\b(however|therefore|moreover|furthermore|nevertheless|'
         r'consequently|additionally|meanwhile|accordingly|besides)\b'
     )
-    EM_DASH = re.compile(r'\u2014|\u2013')  # em dash, en dash
 
     def __init__(self, text: str):
         self.raw = text
@@ -72,10 +71,6 @@ class TextMetrics:
         # Conjunctive adverb density (per 1000 words)
         self.conj_adv_density = len(self.CONJUNCTIVE_ADVERBS.findall(self.raw)) / n_words * 1000
 
-        # Em/en dash density
-        self.em_dash_count = len(self.EM_DASH.findall(self.raw))
-        self.em_dash_density = self.em_dash_count / n_words * 1000
-
         # Flesch Reading Ease
         self.flesch = textstat.flesch_reading_ease(self.raw)
 
@@ -94,8 +89,6 @@ class TextMetrics:
             "mean_sentence_length": round(self.mean_sentence_length, 1),
             "ai_pattern_density": round(self.ai_pattern_density, 2),
             "conjunctive_adverb_density": round(self.conj_adv_density, 2),
-            "em_dash_count": self.em_dash_count,
-            "em_dash_density": round(self.em_dash_density, 2),
             "flesch_reading_ease": round(self.flesch, 1),
             "sentence_variation_ratio": round(self.sentence_variation_ratio, 3),
         }
@@ -269,11 +262,6 @@ class ContentAuditor:
         elif metrics["conjunctive_adverb_density"] > 4:
             score += 5
 
-        if metrics["em_dash_density"] > 1.0:
-            score += 10
-        elif metrics["em_dash_density"] > 0.5:
-            score += 5
-
         if metrics["sentence_variation_ratio"] < 0.3:
             score += 10
         elif metrics["sentence_variation_ratio"] < 0.4:
@@ -303,8 +291,6 @@ class ContentAuditor:
             issues.append(f"high AI cliche density ({metrics['ai_pattern_density']} per 1K words)")
         if metrics["conjunctive_adverb_density"] > 4:
             issues.append(f"excessive conjunctive adverbs ({metrics['conjunctive_adverb_density']} per 1K words)")
-        if metrics["em_dash_density"] > 0.5:
-            issues.append(f"em dash overuse ({metrics['em_dash_count']} found)")
         if metrics["sentence_variation_ratio"] < 0.4:
             issues.append("low sentence variation (all similar lengths)")
 
@@ -323,12 +309,20 @@ Key thresholds for reference:
 - Lexical diversity < 0.45 → limited vocabulary (AI indicator)
 - AI pattern density > 2.0 → excessive AI clichés
 - Conjunctive adverb density > 4.0 → robotic transitions
-- Em dash density > 0.5 → overuse of dramatic punctuation
 - Sentence variation > 0.4 → good mix of short/long sentences
 - Flesch < 40 → too difficult; > 70 → approachable
 
 ## Article Content
 {article_text}
+
+## Query Fan-Out Analysis
+Search engines use "query fan-out" to run 8-12 sub-queries per user intent.
+Identify missing sub-queries that this article should cover but does not.
+For example, if the article is about TLS cert renewals but only covers Nginx,
+flag missing sub-queries like "TLS renewal automation certbot" or "Let's Encrypt rate limits".
+
+In the overall_critique, include a "Query Fan-Out Gaps:" section listing 3-5 sub-queries
+the article missed.
 
 Provide your analysis as a structured audit with specific, line-level fixes."""
 
@@ -361,7 +355,6 @@ def generate_report(url: str, article_text: str, metrics: dict, report: AuditRep
         ("Lexical Diversity", metrics["lexical_diversity"], 0.45, ">", "Low diversity = repetitive vocabulary"),
         ("AI Cliché Density", metrics["ai_pattern_density"], 2.0, "<", "High = flooded with AI catchphrases"),
         ("Conjunctive Adverb Density", metrics["conjunctive_adverb_density"], 4.0, "<", "High = robotic transition spam"),
-        ("Em Dash Density", metrics["em_dash_density"], 0.5, "<", "High = dramatic punctuation overuse"),
         ("Sentence Variation Ratio", metrics["sentence_variation_ratio"], 0.4, ">", "Low = all sentences same length"),
     ]
     for name, val, target, op, note in checks:
@@ -443,10 +436,7 @@ def main():
 
     print(f"  Burstiness: {metrics['burstiness']}  "
           f"LexDiv: {metrics['lexical_diversity']}  "
-          f"Flesch: {metrics['flesch_reading_ease']}  "
-          f"Em dashes: {metrics['em_dash_count']}")
-    if metrics['em_dash_count'] > 0:
-        print(f"  [!] Found {metrics['em_dash_count']} em/en dashes — review punctuation overuse")
+          f"Flesch: {metrics['flesch_reading_ease']}")
 
     # LLM analysis
     model = args.model or os.environ.get("OPENAI_MODEL") or os.environ.get("LLM_MODEL", "gpt-4o-mini")

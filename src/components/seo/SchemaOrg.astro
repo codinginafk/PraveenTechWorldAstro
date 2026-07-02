@@ -27,9 +27,10 @@ export interface Props {
     totalTime?: string;
     image?: string;
   };
+  speakableItems?: Array<{ cssSelector?: string; xpath?: string }>;
 }
 
-const { type, articleData, breadcrumbItems, faqItems, howToData, personData } = Astro.props;
+const { type, articleData, breadcrumbItems, faqItems, howToData, personData, speakableItems } = Astro.props;
 ---
 
 {
@@ -99,6 +100,22 @@ const { type, articleData, breadcrumbItems, faqItems, howToData, personData } = 
       url: personData.url,
       image: personData.image,
       sameAs: personData.sameAs,
+    })} />
+  )
+}
+
+{
+  type === "speakable" && speakableItems && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: articleData?.title || "",
+      speakable: speakableItems.map((item) => ({
+        "@type": "SpeakableSpecification",
+        ...(item.cssSelector ? { cssSelector: item.cssSelector } : {}),
+        ...(item.xpath ? { xpath: item.xpath } : {}),
+      })),
+      url: articleData?.url,
     })} />
   )
 }

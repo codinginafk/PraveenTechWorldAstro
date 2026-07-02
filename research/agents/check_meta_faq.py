@@ -68,30 +68,25 @@ def fetch_meta(url: str) -> dict | str:
 def parse_faqs(mdx_text: str) -> list[dict]:
     """Extract FAQ items from an MDX file's ## FAQ section."""
     faqs = []
-    # Find ## FAQ section
     faq_match = re.search(r'^##\s*FAQ\s*$', mdx_text, re.MULTILINE)
     if not faq_match:
         return faqs
     faq_section = mdx_text[faq_match.end():]
-    # Stop at next ## heading or end
     next_h = re.search(r'^##\s', faq_section, re.MULTILINE)
     if next_h:
         faq_section = faq_section[:next_h.start()]
 
-    # Find Q/A pairs: ### Question? or **Question?**
     blocks = re.split(r'\n(?=###\s|\*\*)', faq_section.strip())
     current_q = None
     for block in blocks:
         block = block.strip()
         if not block:
             continue
-        # Check if this starts a new question
         q_match = re.match(r'(?:###\s)?\*\*(.+?\?)\*\*', block)
         if q_match:
             if current_q:
                 faqs.append(current_q)
             current_q = {"question": q_match.group(1).strip(), "answer": ""}
-            # Rest is the answer
             rest = block[q_match.end():].strip()
             if rest:
                 current_q["answer"] = rest
@@ -101,7 +96,6 @@ def parse_faqs(mdx_text: str) -> list[dict]:
     if current_q:
         faqs.append(current_q)
 
-    # Fallback: simple ### Question pattern
     if not faqs:
         qa_pairs = re.findall(
             r'###\s+\*\*(.+?\?)\*\*\s*\n+(.*?)(?=\n###|\n---|\Z)',
@@ -112,10 +106,67 @@ def parse_faqs(mdx_text: str) -> list[dict]:
 
     return faqs
 
+# ─── H2 → Frontmatter Injection ────────────────────────────────────
+
+def extract_question_h2s(mdx_text: str) -> list[dict]:
+    """Scan body for H2 headings that are questions, return as FAQ items."""
+    body = re.sub(r'^---.*?---\s*', '', mdx_text, count=1, flags=re.DOTALL)
+    faqs = []
+    for m in re.finditer(r'^##\s+(.+?)\s*$', body, re.MULTILINE):
+        h2_text = m.group(1).strip()
+        if not h2_text.endswith("?"):
+            continue
+        # Extract the following paragraph as answer
+        start = m.end()
+        next_h = re.search(r'^##\s', body[start:], re.MULTILINE)
+        section = body[start:start + (next_h.start() if next_h else 800)]
+        # Get first non-empty paragraph
+        para = ""
+        for line in section.split("\n"):
+            line = line.strip()
+            if line and not line.startswith("#") and not line.startswith(">"):
+                para = line[:500]
+                break
+        faqs.append({"question": h2_text, "answer": para or "See section above."})
+    return faqs
+
+def inject_h2_faqs_into_frontmatter(mdx_text: str) -> tuple[str, int]:
+    """Inject H2 question headings into the frontmatter faq: array. Returns (new_text, count)."""
+    # Parse existing frontmatter
+    fm_match = re.match(r'^(---\s*\n.*?\n---)\s*', mdx_text, re.DOTALL)
+    if not fm_match:
+        return mdx_text, 0
+    fm_raw = fm_match.group(1)
+    body = mdx_text[fm_match.end():]
+
+    h2_faqs = extract_question_h2s(mdx_text)
+    if not h2_faqs:
+        return mdx_text, 0
+
+    # Check if faq: already exists in frontmatter
+    has_faq = re.search(r'^faq:', fm_raw, re.MULTILINE)
+    if has_faq:
+        return mdx_text, 0  # already has faq, skip
+
+    # Build YAML faq block
+    faq_lines = ["faq:"]
+    for item in h2_faqs:
+        answer_escaped = item["answer"].replace('"', '\\"')
+        faq_lines.append(f'  - question: "{item["question"]}"')
+        faq_lines.append(f'    answer: "{answer_escaped}"')
+    faq_yaml = "\n" + "\n".join(faq_lines)
+
+    # Inject before the closing ---
+    new_fm = fm_raw.rstrip() + faq_yaml + "\n---"
+    result = new_fm + body
+    return result, len(h2_faqs)
+
 # ─── Main ───────────────────────────────────────────────────────────────
 
 def main():
     do_scrape = "--scrape" in sys.argv
+    do_inject = "--inject" in sys.argv
+    dry_run = "--dry-run" in sys.argv
     out_path = None
     for a in sys.argv[1:]:
         if a.startswith("--report="):
@@ -123,6 +174,27 @@ def main():
 
     if not out_path:
         out_path = str(REPORTS_DIR.parent / "meta-faq-audit.md")
+
+    # Auto-inject H2→FAQs into frontmatter (only for H2s that are already questions)
+    if do_inject:
+        slugs = sorted([p.stem for p in ARTICLES_DIR.glob("*.mdx")])
+        total_injected = 0
+        for slug in slugs:
+            mdx_path = ARTICLES_DIR / f"{slug}.mdx"
+            text = mdx_path.read_text(encoding="utf-8")
+
+            # Only inject H2 FAQ items for headings that are already questions
+            new_text, faq_count = inject_h2_faqs_into_frontmatter(text)
+            if faq_count > 0:
+                total_injected += faq_count
+                if not dry_run:
+                    mdx_path.write_text(new_text, encoding="utf-8")
+                print(f"[INJECT] {slug}: {faq_count} FAQ(s) injected")
+
+        print(f"\nSummary: {total_injected} FAQ items injected across {len(slugs)} articles")
+        if dry_run:
+            print("Mode: DRY RUN (no files written)")
+        return
 
     slugs = sorted([p.stem for p in ARTICLES_DIR.glob("*.mdx")])
     results = []

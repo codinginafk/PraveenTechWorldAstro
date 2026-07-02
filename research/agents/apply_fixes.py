@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
 """
 Read audit reports and apply original->rewrite fixes to the corresponding MDX files.
-Usage: python apply_fixes.py [--dry-run] [slug ...]
-  --dry-run:  show what would change without writing
-  slug ...:   one or more slugs to process (default: all reports)
+Also checks heading structure (30-50% target for question H2s) and injects
+a Quick Summary block at top of body (useful for readers and retrieval).
+
+Usage: python apply_fixes.py [--dry-run] [--pyramid] [--guidance] [slug ...]
+  --dry-run:   show what would change without writing
+  --pyramid:   check H2 question ratio (target 30-50%) and flag thin sections
+  --guidance:  generate and inject Quick Summary at top of body
+  slug ...:    one or more slugs to process (default: all reports)
 """
 
-import os, sys, re, glob
+import os, sys, re, glob, json
 from pathlib import Path
+from datetime import datetime
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent
@@ -171,7 +181,130 @@ def safe_print(text):
     except UnicodeEncodeError:
         print(text.encode('ascii', 'replace').decode('ascii'))
 
+# ─── Inverted Pyramid / Answer Block Enforcement ──────────────────────
+
+def h2_is_question(h2_text: str) -> bool:
+    """Check if an H2 heading is formatted as a question."""
+    q_words = r'(?i)\b(what|how|why|when|where|who|which|can|does|is|are|do|will|should|could|would|have|has|did)'
+    return bool(re.match(q_words, h2_text.strip())) or h2_text.strip().endswith("?")
+
+def enforce_inverted_pyramid(mdx_text: str) -> tuple[str, int]:
+    """
+    Encourage 30-50% of H2s to be questions (not forced on every heading).
+    Each H2 should be followed by a concise answer paragraph, then deeper explanation.
+    Returns (new_text, changes).
+    """
+    changes = 0
+    body = re.sub(r'^---.*?---\s*', '', mdx_text, count=1, flags=re.DOTALL)
+    frontmatter = mdx_text[:len(mdx_text) - len(body)]
+
+    lines = body.split("\n")
+    h2_count = 0
+    question_h2_count = 0
+    result = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        h2 = re.match(r'^##\s+(.+)$', line)
+        if h2:
+            h2_text = h2.group(1)
+            result.append(line)
+            h2_count += 1
+            if h2_is_question(h2_text):
+                question_h2_count += 1
+
+            # Check next non-empty lines have substantial content
+            next_lines = []
+            j = i + 1
+            while j < len(lines) and not lines[j].strip().startswith("##"):
+                if lines[j].strip():
+                    next_lines.append(lines[j].strip())
+                j += 1
+            next_text = " ".join(next_lines)
+
+            # Flag only if section is nearly empty
+            if not next_text or len(next_text.split()) < 15:
+                result.append(f"<!-- NOTE: Section after \"{h2_text}\" is thin — consider adding a lead paragraph then deeper explanation -->")
+                changes += 1
+            i = j - 1
+        else:
+            result.append(line)
+        i += 1
+
+    # Add advisory comment if question ratio is far from 30-50%
+    if h2_count >= 4:
+        ratio = question_h2_count / h2_count
+        if ratio < 0.2:
+            result.append(f"\n<!-- NOTE: Only {question_h2_count}/{h2_count} H2s are questions ({ratio:.0%}). Aim for 30-50% question-formatted headings naturally. -->")
+        elif ratio > 0.7:
+            result.append(f"\n<!-- NOTE: {question_h2_count}/{h2_count} H2s are questions ({ratio:.0%}). Don't force every heading — aim for 30-50% naturally. -->")
+
+    return frontmatter + "\n".join(result), changes
+
+
+# ─── LLM Guidance Summary ─────────────────────────────────────────────
+
+def generate_llm_guidance(body: str, title: str = "") -> str:
+    """Generate a 3-bullet machine-readable markdown summary for LLM Guidance."""
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("LLM_API_KEY")
+    if not api_key:
+        return ""
+    base_url = os.environ.get("OPENAI_BASE_URL") or os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1")
+    model = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+    client = OpenAI(api_key=api_key, base_url=base_url)
+
+    prompt = f"""Generate a 3-4 bullet summary for this article.
+Each bullet should be a concise takeaway — useful for both human readers and retrieval.
+Format: under 50 words each, covering: (1) what problem this solves, (2) the key approach/method, (3) the specific result/outcome, (4) any original data or experiment.
+
+Title: {title}
+
+Article:
+{body[:4000]}
+"""
+    try:
+        r = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "Output a 3-bullet markdown summary. No introduction, no explanation."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            max_tokens=512,
+        )
+        return r.choices[0].message.content.strip() or ""
+    except Exception:
+        return ""
+
+
+def inject_guidance_summary(mdx_text: str) -> tuple[str, str]:
+    """
+    Generate and inject an LLM Guidance summary block at the top of the body.
+    Returns (new_text, summary_block).
+    """
+    fm_end = mdx_text.find("---\n", 3) if mdx_text.startswith("---") else -1
+    if fm_end == -1:
+        fm_end = mdx_text.find("---\r\n", 3)
+    fm_end = fm_end + 4 if fm_end != -1 else 0
+
+    body = mdx_text[fm_end:]
+    title_match = re.search(r'title:\s*"(.+?)"', mdx_text[:fm_end])
+    title = title_match.group(1) if title_match else ""
+
+    summary = generate_llm_guidance(body, title)
+    if not summary:
+        return mdx_text, ""
+
+    # Strip any existing guidance block first
+    body_clean = re.sub(r'^> \*\*LLM Guidance:\*\*.*?(\n> .*)*\n\n', '', body, count=1, flags=re.DOTALL)
+    guidance_block = f"> **LLM Guidance:**\n> {summary.replace(chr(10), chr(10)+'> ')}\n\n"
+    result = mdx_text[:fm_end] + guidance_block + body_clean
+    return result, guidance_block
+
+
 def main():
+    do_pyramid = "--pyramid" in sys.argv
+    do_guidance = "--guidance" in sys.argv
     dry_run = "--dry-run" in sys.argv
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
@@ -185,6 +318,9 @@ def main():
     total_fixes = 0
     total_applied = 0
     total_missed = 0
+
+    pyramid_total = 0
+    guidance_total = 0
 
     for report_path in report_files:
         slug = slug_from_report(report_path)
@@ -213,11 +349,35 @@ def main():
         total_applied += count
         total_missed += missed
 
+        # Inverted Pyramid enforcement
+        if do_pyramid:
+            mdx_text = mdx_path.read_text(encoding="utf-8")
+            pyr_text, pyr_changes = enforce_inverted_pyramid(mdx_text)
+            if pyr_changes > 0:
+                pyramid_total += pyr_changes
+                if not dry_run:
+                    mdx_path.write_text(pyr_text, encoding="utf-8")
+                safe_print(f"  [PYRAMID] {pyr_changes} H2 heading(s) flagged")
+
+        # LLM Guidance injection
+        if do_guidance:
+            mdx_text = mdx_path.read_text(encoding="utf-8")
+            new_text, summary = inject_guidance_summary(mdx_text)
+            if summary:
+                guidance_total += 1
+                if not dry_run:
+                    mdx_path.write_text(new_text, encoding="utf-8")
+                safe_print(f"  [GUIDANCE] LLM guidance summary injected")
+
     safe_print(f"\n{'='*60}")
     safe_print(f"  SUMMARY:")
     safe_print(f"  Total fixes found:  {total_fixes}")
     safe_print(f"  Applied:            {total_applied}")
     safe_print(f"  Missed:             {total_missed}")
+    if do_pyramid:
+        safe_print(f"  H2 pyramid flags:   {pyramid_total}")
+    if do_guidance:
+        safe_print(f"  Guidance injected:  {guidance_total}")
     if dry_run:
         safe_print(f"  Mode:               DRY RUN (no files written)")
     else:
