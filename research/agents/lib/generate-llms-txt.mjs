@@ -110,6 +110,14 @@ export function generateLlmsTxt() {
 
 This file helps AI systems discover our content. Articles are organized by topic pillar.
 
+The site exposes the following WebMCP tools for agentic browsing:
+- SearchArticles (form): Search published articles by keyword
+- SendMessage (form): Submit a contact message
+- AcceptCookies (imperative): Accept analytics cookies
+- RejectCookies (imperative): Reject analytics cookies
+- ToggleTheme (imperative): Switch between light/dark mode
+- ToggleMobileMenu (imperative): Open/close the mobile navigation
+
 ## Navigation
 - [Home](${SITE_URL}/)
 - [All Articles](${SITE_URL}/blog)

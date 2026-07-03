@@ -35,7 +35,9 @@ const gaId = import.meta.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
     <meta name="view-transition" content="same-origin" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" /></noscript>
 
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://va.vercel-scripts.com; connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://www.google.com https://va.vercel-analytics.com; img-src 'self' data: https://www.google-analytics.com https://www.googletagmanager.com https://images.unsplash.com https://upload.wikimedia.org https://live.staticflickr.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
 
@@ -88,6 +90,55 @@ const gaId = import.meta.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
         </div>
       </div>
     </div>
+
+    <script is:inline>
+      // WebMCP tools
+      if (navigator.modelContext) {
+        try {
+          navigator.modelContext.registerTool({
+            name: "accept_cookies",
+            description: "Accept cookie consent for analytics tracking",
+            inputSchema: { type: "object", properties: {}, required: [] },
+            execute: async () => {
+              var acceptBtn = document.getElementById("cookie-accept");
+              if (acceptBtn) acceptBtn.click();
+              return { status: "accepted" };
+            }
+          });
+          navigator.modelContext.registerTool({
+            name: "reject_cookies",
+            description: "Reject cookie consent",
+            inputSchema: { type: "object", properties: {}, required: [] },
+            execute: async () => {
+              var rejectBtn = document.getElementById("cookie-reject");
+              if (rejectBtn) rejectBtn.click();
+              return { status: "rejected" };
+            }
+          });
+          navigator.modelContext.registerTool({
+            name: "toggle_theme",
+            description: "Toggle between light and dark color theme",
+            inputSchema: { type: "object", properties: {}, required: [] },
+            execute: async () => {
+              var btn = document.getElementById("theme-toggle");
+              if (btn) btn.click();
+              return { theme: document.documentElement.classList.contains("dark") ? "dark" : "light" };
+            }
+          });
+          navigator.modelContext.registerTool({
+            name: "toggle_mobile_menu",
+            description: "Open or close the mobile navigation menu",
+            inputSchema: { type: "object", properties: {}, required: [] },
+            execute: async () => {
+              var btn = document.getElementById("mobile-menu-btn");
+              if (btn) btn.click();
+              var menu = document.getElementById("mobile-menu");
+              return { open: menu ? !menu.classList.contains("hidden") : false };
+            }
+          });
+        } catch(e) { console.warn("WebMCP registration failed:", e); }
+      }
+    </script>
 
     <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
     <script is:inline>

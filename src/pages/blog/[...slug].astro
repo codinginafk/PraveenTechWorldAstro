@@ -303,17 +303,21 @@ const howToData = howToSteps ? {
   </div>
 
   <script>
-    // Reading progress bar
+    // Reading progress bar — cache docHeight to avoid forced reflow on scroll
     const progressBar = document.getElementById('reading-progress');
     if (progressBar) {
+      let docHeight = 0;
+      function measureHeight() {
+        docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      }
       function updateProgress() {
         const scrollTop = window.scrollY;
-        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
         const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
         progressBar.style.width = Math.min(progress, 100) + '%';
       }
+      measureHeight();
       window.addEventListener('scroll', updateProgress, { passive: true });
-      updateProgress();
+      window.addEventListener('resize', measureHeight, { passive: true });
     }
   </script>
 </BaseLayout>
