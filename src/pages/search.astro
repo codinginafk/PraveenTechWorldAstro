@@ -5,12 +5,51 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 <BaseLayout
   seo={{
     title: "Search Results — Find Tech Guides & Tutorials",
-    description: "Search all articles and guides on PraveenTechWorld. Find practical technology tutorials, AI workflows, productivity tips, and troubleshooting solutions.",
+    description: "Search all articles and guides on PraveenTechWorld.",
   }}
   noindex={true}
 >
   <div class="mx-auto max-w-3xl px-4 py-16">
-    <h1 class="mb-8 text-3xl font-bold">Search</h1>
-    <div data-pagefind-ui></div>
+    <h1 class="mb-8 text-3xl font-bold">Search Articles</h1>
+    <div id="search" data-pagefind-ui data-pagefind-ui-page-size="10"></div>
   </div>
 </BaseLayout>
+
+<script>
+  (function () {
+    var container = document.getElementById("search");
+    if (!container) return;
+
+    function loadPagefindUI() {
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "/pagefind/pagefind-ui.css";
+      document.head.appendChild(link);
+
+      var s = document.createElement("script");
+      s.src = "/pagefind/pagefind-ui.js";
+      s.onload = function () {
+        if (window.PagefindUI) {
+          var ui = new window.PagefindUI({
+            element: "#search",
+            pageSize: 10,
+            showImages: false,
+            resetStyles: false,
+          });
+          var params = new URLSearchParams(window.location.search);
+          var query = params.get("q");
+          if (query) {
+            setTimeout(function () { ui.triggerSearch(decodeURIComponent(query)); }, 100);
+          }
+        }
+      };
+      document.body.appendChild(s);
+    }
+
+    if (document.readyState === "complete") {
+      loadPagefindUI();
+    } else {
+      window.addEventListener("load", loadPagefindUI);
+    }
+  })();
+</script>
