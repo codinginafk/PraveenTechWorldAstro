@@ -93,73 +93,66 @@ const gaId = import.meta.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
 
     <script is:inline>
       // WebMCP tools
-      if (navigator.modelContext) {
+      var mc = document.modelContext || navigator.modelContext;
+      if (mc) {
         try {
-          navigator.modelContext.registerTool({
+          mc.registerTool({
             name: "accept_cookies",
             description: "Accept cookie consent for analytics tracking",
             inputSchema: { type: "object", properties: {}, required: [] },
-            execute: async () => {
-              var acceptBtn = document.getElementById("cookie-accept");
-              if (acceptBtn) acceptBtn.click();
+            execute: async function() {
+              var b = document.getElementById("cookie-accept");
+              if (b) b.click();
               return { status: "accepted" };
             }
           });
-          navigator.modelContext.registerTool({
+          mc.registerTool({
             name: "reject_cookies",
             description: "Reject cookie consent",
             inputSchema: { type: "object", properties: {}, required: [] },
-            execute: async () => {
-              var rejectBtn = document.getElementById("cookie-reject");
-              if (rejectBtn) rejectBtn.click();
+            execute: async function() {
+              var b = document.getElementById("cookie-reject");
+              if (b) b.click();
               return { status: "rejected" };
             }
           });
-          navigator.modelContext.registerTool({
-            name: "toggle_theme",
-            description: "Toggle between light and dark color theme",
-            inputSchema: { type: "object", properties: {}, required: [] },
-            execute: async () => {
-              var btn = document.getElementById("theme-toggle");
-              if (btn) btn.click();
-              return { theme: document.documentElement.classList.contains("dark") ? "dark" : "light" };
+          mc.registerTool({
+            name: "get_article",
+            description: "Navigate to a specific article by slug",
+            inputSchema: { type: "object", properties: { slug: { type: "string", description: "Article URL slug" } }, required: ["slug"] },
+            execute: async function(p) {
+              window.location.href = "/blog/" + p.slug;
+              return { navigated: true, url: "/blog/" + p.slug };
             }
           });
-          navigator.modelContext.registerTool({
-            name: "toggle_mobile_menu",
-            description: "Open or close the mobile navigation menu",
+          mc.registerTool({
+            name: "list_recent_articles",
+            description: "Get the list of recently published article titles and URLs",
             inputSchema: { type: "object", properties: {}, required: [] },
-            execute: async () => {
-              var btn = document.getElementById("mobile-menu-btn");
-              if (btn) btn.click();
-              var menu = document.getElementById("mobile-menu");
-              return { open: menu ? !menu.classList.contains("hidden") : false };
+            execute: async function() {
+              window.location.href = "/blog";
+              return { navigated: true, url: "/blog" };
             }
           });
         } catch(e) { console.warn("WebMCP registration failed:", e); }
       }
     </script>
 
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
     <script is:inline>
-      window.addEventListener("load", function () {
-        function initGA() {
-          gtag("js", new Date());
-          gtag("config", "${gaId}");
-        }
-        if ("requestIdleCallback" in window) {
-          requestIdleCallback(initGA, { timeout: 2000 });
-        } else {
-          setTimeout(initGA, 1000);
-        }
-      });
-    </script>
-
-    <script is:inline>
+      function loadGA() {
+        var s = document.createElement("script");
+        s.async = true;
+        s.src = "https://www.googletagmanager.com/gtag/js?id=${gaId}";
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag("js", new Date());
+        gtag("config", "${gaId}");
+      }
       function updateConsent(status) {
         try { localStorage.setItem("cookie-consent", status); } catch(e) {}
         if (status === "accepted") {
-          try { gtag('consent', 'update', { 'analytics_storage': 'granted' }); } catch(e) {}
+          loadGA();
         }
       }
       var banner = document.getElementById("cookie-banner");
@@ -167,7 +160,7 @@ const gaId = import.meta.env.PUBLIC_GA_ID || "G-TR2F3NPMVN";
       var rejectBtn = document.getElementById("cookie-reject");
       var consent = localStorage.getItem("cookie-consent");
       if (consent === "accepted") {
-        try { gtag('consent', 'update', { 'analytics_storage': 'granted' }); } catch(e) {}
+        loadGA();
       } else if (!consent && banner) {
         banner.classList.remove("hidden");
       }
