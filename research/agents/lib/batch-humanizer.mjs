@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 import { callAI } from "./shared.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -166,13 +167,13 @@ export async function humanizeArticle(filePath) {
   const { frontmatter, body } = splitArticle(content);
   const { cleanBody, codeBlocks } = isolateCodeBlocks(body);
 
-  // Load humanizer guidelines from SKILL.md if exists
-  let guidelines = "";
-  if (fs.existsSync(HUMANIZER_SKILL_FILE)) {
-    guidelines = fs.readFileSync(HUMANIZER_SKILL_FILE, "utf-8");
-  } else {
-    guidelines = "Remove AI writing cliches, em-dashes (—), promotional language, and robotic vocabulary (moreover, crucial, delve, testament). Keep it natural, conversational, and direct.";
-  }
+  // Use concise humanizer guidelines to keep prompt token size under OpenRouter free limits
+  const guidelines = `
+- Remove em dashes (—) and en dashes (–). Replace with commas, colons, or break sentences.
+- Avoid AI vocabulary: 'delve', 'tapestry', 'testament', 'fostering', 'pivotal', 'crucial', 'underscore', 'vibrant', 'landscape'.
+- Remove robotic transitions: 'Moreover', 'Furthermore', 'Additionally', 'Consequently', 'Therefore', 'In conclusion'.
+- Write in a natural, conversational, and direct tone. Use active voice where possible.
+  `.trim();
 
   const systemPrompt = `You are a professional IT editor tasked with humanizing article prose. 
 Your goal is to rewrite the text to make it sound human-written, engaging, and direct, following these guidelines:
@@ -188,7 +189,7 @@ CRITICAL RULE:
   
 ${cleanBody}`;
 
-  const humanizedProse = await callAI(systemPrompt, userPrompt, { model: "gemini", temperature: 0.3 });
+  const humanizedProse = await callAI(systemPrompt, userPrompt, { model: "gemini", temperature: 0.3, maxTokens: 1100 });
   
   // Clean up any AI wrapper text if returned
   let cleanResult = humanizedProse.trim();
@@ -197,6 +198,9 @@ ${cleanBody}`;
   } else if (cleanResult.startsWith("```")) {
     cleanResult = cleanResult.replace(/^```\r?\n|```$/g, "").trim();
   }
+
+  // Programmatically strip any remaining em/en dashes in prose to guarantee 0% density
+  cleanResult = cleanResult.replace(/—|–/g, ", ");
 
   // Restore the original code blocks into placeholders
   const finalBody = restoreCodeBlocks(cleanResult, codeBlocks);
@@ -208,6 +212,52 @@ ${cleanBody}`;
   fs.writeFileSync(filePath, finalContent, "utf-8");
   console.log(`[Batch Humanizer] Saved humanized article: ${filePath}`);
   return finalContent;
+}
+
+// Set of files that have already been humanized in the first and second phase
+const ALREADY_HUMANIZED = new Set([
+  // Phase 1 (>= 20%)
+  "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+  "website-speed-optimization-why-it-matters-for-seo-and-how-to-fix-it.mdx",
+  "retooled-my-ai-content-pipeline-after-expert-audit.mdx",
+  "is-chatgpt-safe-2026-security-privacy-guide.mdx",
+  "automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts.mdx",
+  "automated-tls-certificate-renewal-with-deepseek.mdx",
+  "i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong.mdx",
+  "ai-content-auditor-scored-my-blog-articles.mdx",
+  // Phase 2 (> 5%)
+  "how-to-use-chatgpt-to-summarize-long-pdfs-for-free.mdx",
+  "deepseek-api-cost-tracker-scripts.mdx",
+  "how-to-use-google-analytics-4-to-improve-your-content-strategy.mdx",
+  "google-analytics-for-beginners-how-to-track-your-website-traffic.mdx",
+  "how-to-set-up-google-search-console-for-your-new-website.mdx",
+  "what-is-domain-authority-and-how-to-improve-it-in-2026.mdx",
+  "windows-11-kb5089549-enable-xbox-mode-fix-white-flash.mdx",
+  "backlink-building-guide-for-new-websites-get-your-first-quality-links.mdx",
+  "best-password-managers-in-2026-security-features-and-pricing-compared.mdx",
+  "chatgpt-usage-and-adoption-patterns-at-work-in-2026-what-the-data-shows.mdx",
+  "how-to-write-seo-friendly-blog-posts-that-actually-rank-on-google.mdx",
+  "chatgpt-vs-claude-vs-gemini-which-ai-assistant-is-best-in-2026.mdx",
+  "chatgpt-has-been-tracking-everything-you-say-heres-how-to-see-what-it-knows.mdx",
+  "data-protection-for-universities-compliance-and-security-guide.mdx",
+  "will-reinstalling-windows-fix-blue-screen-errors.mdx"
+]);
+
+// Helper: check currently unstaged/staged modified files in git to avoid re-running on them
+function getModifiedFiles() {
+  try {
+    const stdout = execSync("git diff --name-only && git diff --cached --name-only", { encoding: "utf-8" });
+    const files = new Set();
+    for (const line of stdout.split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed && trimmed.endsWith(".mdx")) {
+        files.add(path.basename(trimmed));
+      }
+    }
+    return files;
+  } catch {
+    return new Set();
+  }
 }
 
 // Direct execution
@@ -227,8 +277,14 @@ async function run() {
   } else if (command === "fix-all") {
     const limit = parseInt(args[1] || "3", 10);
     const rankings = auditArticles();
-    // Filter out articles with < 20% AI score
-    const targetArticles = rankings.filter(r => r.score >= 20);
+    const currentMods = getModifiedFiles();
+    
+    // Filter out articles with <= 5% AI score OR already humanized articles OR currently modified files in git working copy
+    const targetArticles = rankings.filter(r => 
+      r.score > 5 && 
+      !ALREADY_HUMANIZED.has(r.file) && 
+      !currentMods.has(r.file)
+    );
     
     console.log(`\n[Batch Humanizer] Starting batch run of ${Math.min(limit, targetArticles.length)} articles (limit: ${limit})...`);
     
