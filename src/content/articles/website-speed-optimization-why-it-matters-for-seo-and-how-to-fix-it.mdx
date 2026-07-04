@@ -19,48 +19,48 @@ seoTitle: "14KB Web Bloat: I Replaced My 2MB Site With Vanilla HTML Files"
 socialHook: "I cut my site from 2MB to 14KB. Vanilla JS, SQLite via WASM, edge hosting. 0 frameworks, 0 build steps. Here is how much faster it got."
 ---
 
-## 14KB Web Bloat: Replacing a 2MB Site With Vanilla HTML
+# The 14KB Website: My Journey from Bloat to Barebones HTML
 
-The average webpage is projected to ship **2.3 MB** of data by 2026. My old site was above average: a React SPA with 87 npm dependencies, a Webpack bundle that took 14 seconds to build, and a Lighthouse score of 38 on mobile. I spent more time updating dependencies than writing content.
+Let's be honest - modern websites have gotten ridiculously heavy. The average page now weighs over 2MB, and my personal site was even worse. I had built it as a React single-page app with 87 npm dependencies. The Webpack build took 14 seconds, and Lighthouse gave me a depressing 38/100 on mobile. I was spending more time updating packages than writing content.
 
-I completely overhauled it, rebuilding the site with just 4 vanilla HTML files, SQLite via WebAssembly for search functionality, and edge hosting. Total payload: **14 KB**. Total build time: zero. No framework, no bundler, no node_modules folder.
+So I nuked it. I rebuilt everything with just four plain HTML files, added SQLite via WebAssembly for search functionality, and hosted it on the edge. The result? A featherlight 14KB site that loads before you can blink. No frameworks, no bundlers, no node_modules nightmares.
 
-Here’s how it turned out.
+Here's why this matters.
 
-### The Numbers That Matter
+## The Numbers Don't Lie
 
-| Metric | Old Site (React SPA) | New Site (14KB Vanilla) |
-|--------|----------------------|------------------------|
-| Total page weight | 2,341 KB | 14 KB |
-| DOM Content Loaded | 4.8s | 0.3s |
-| Lighthouse Performance | 38 | 99 |
-| Build step | 14s (Webpack) | None |
+| Metric | Old React Site | New Vanilla Site |
+|--------|----------------|------------------|
+| Page weight | 2,341 KB | 14 KB |
+| DOM ready | 4.8s | 0.3s |
+| Lighthouse score | 38 | 99 |
+| Build time | 14s | None |
 | Dependencies | 87 | 0 |
 | Files to deploy | 1,142 | 4 |
-| Server cost/month | $12 (VPS) | $0 (edge CDN) |
+| Hosting cost | $12/month | Free |
 
-A 99.4% reduction in page weight is not a marginal optimization. It changes what your site can do. The old site needed a loading spinner for the first render. The new site paints the hero text before the browser finishes parsing the HTML head.
+That 99.4% reduction changes everything. My old site needed a loading spinner. The new one shows content before your browser finishes processing the HTML.
 
-### What 14KB Gets You
+## What Can You Fit in 14KB?
 
-Fourteen kilobytes is smaller than most JPEG thumbnails. It is smaller than the Google Analytics tracking script. It is smaller than a single Tailwind CSS output file. Here is exactly what it includes:
+Fourteen kilobytes is smaller than most website icons. Smaller than Google's tracking scripts. Smaller than a single Tailwind CSS file. Here's what I managed to include:
 
-- **index.html**: the main page with embedded critical CSS (inline, no external stylesheet)
-- **blog.html**: blog listing with server-side rendered summaries
-- **search.html**: a full-text search page backed by SQLite via WebAssembly
-- **contact.html**: a contact form that posts to a mail endpoint
+- **index.html**: Main page with essential CSS baked in
+- **blog.html**: Blog listing with pre-rendered summaries  
+- **search.html**: Full-text search using SQLite/WASM
+- **contact.html**: Basic email form
 
-Each page uses the same 20-line CSS reset in a `<style>` tag, no classes, no BEM, no utility framework. Styling is done with semantic HTML selectors and two CSS custom properties for the color scheme. The entire visual design (which looks clean and readable on any screen) fits in 187 lines of CSS.
+For styling? A 20-line CSS reset in a `<style>` tag, semantic HTML selectors, and two CSS variables for colors. The entire design fits in 187 lines of CSS and works flawlessly on any device.
 
-### The SQLite Via WebAssembly Trick
+## The SQLite WASM Trick
 
-The most interesting technical decision was using SQLite compiled to WebAssembly for search. Instead of setting up a database server, I ship a 1.8 MB `.wasm` file that runs in the browser. The search index: a single `.sqlite3` file: is fetched on first interaction and cached via the Cache Storage API.
+Here's the clever bit: instead of setting up a search backend, I use SQLite compiled to WebAssembly. Here's how search works:
 
-The user types a query, the browser loads SQLite, runs a query against the local database, and returns results in under 50ms. No server round-trip, no API key, no rate limits. The database file is 340 KB compressed: still less than a single Unoptimized JPEG.
+1. Your browser downloads a 1.8MB `.wasm` file (cached after first load)
+2. Queries run against a local 340KB SQLite database
+3. Results appear in under 50ms - no waiting for a server
 
-This is the pattern that matters: **edge data, local compute**. Instead of renting a server to run a search backend, I use the visitor's own browser as the execution environment. The CDN serves files, the browser does the work.
-
-If you want to replicate this, the SQLite WASM project ships a ready-to-use ESM module:
+This is edge computing stripped to its essentials: your browser becomes the database server. Here's how it's implemented:
 
 ```html
 <script type="module">
@@ -71,59 +71,74 @@ const results = db.exec(`SELECT title, url FROM posts WHERE content MATCH ?`, { 
 </script>
 ```
 
-No server, no ORM, no connection pool. Just a file and a query.
+No servers. No ORMs. Just a file and a query.
 
-### Why Frameworks Are the Bloat
+## Why We're Stuck in Framework Land
 
-The web development industry has normalized shipping 100+ KB of JavaScript just to show a blog post. The average React page loads 327 KB of framework code before it can render the first meaningful paint. Astro, Next.js, and their ilk generate static HTML but still ship hydration scripts that inflate the baseline.
+We've accepted that websites need hundreds of KBs of JavaScript just to display text. The average React page loads 327KB before showing anything. Even "static" frameworks like Next.js come with hydration overhead.
 
-The reality is often overlooked: **a blog doesn’t necessarily require a framework**. A documentation site does not need a framework. A landing page does not need a framework. If your content is text and images, the HTML tag is the only framework you need.
+Here's the uncomfortable reality: most content sites don't need frameworks. My new site handles:
 
-I wrote the new site in plain `<form>` elements, `<article>` tags, and anchor links. The only JavaScript is:
-- **12 lines** for the dark mode toggle (localStorage + class toggle)
-- **8 lines** for the mobile nav hamburger
-- **40 lines** for the SQLite search interface
+- Dark mode toggle: 12 lines
+- Mobile menu: 8 lines  
+- Search functionality: 40 lines
 
-Total: 60 lines of JavaScript. Zero npm packages. Zero build tooling. Zero CI pipeline.
+Total: 60 lines of plain JavaScript. Zero dependencies. Zero build steps.
 
-### The Performance Payoff
+## Real Performance Gains
 
-Google Search Console data before and after the rebuild tells the story. The old site had a Core Web Vitals pass rate of 23% on mobile. The new site passes at 100%. Largest Contentful Paint dropped from 4.2s to 0.6s. Cumulative Layout Shift went from 0.18 to 0.02. For step-by-step instructions on fixing failing Core Web Vitals, see our [Core Web Vitals troubleshooting guide](/blog/core-web-vitals-fail-new-website-improve-lcp-inp-cls).
+The difference was night and day:
 
-More importantly, the site works on **any device**. I tested it on a Moto G Pure ($80 Android phone) over 3G. The old React SPA took 19 seconds to become interactive. The 14KB site painted content in 1.2 seconds and was fully interactive at 1.8 seconds.
+- Core Web Vitals pass rate: 23% → 100%
+- Largest Contentful Paint: 4.2s → 0.6s  
+- Layout shift: 0.18 → 0.02
 
-### When This Approach Does Not Work
+Testing on a budget Android phone over 3G:
+- React site: 19 seconds to interactive
+- Vanilla site: 1.8 seconds to interactive
 
-This is not the right architecture for every project. If you need real-time updates, collaborative editing, or complex client-side state management, a framework like React or Svelte will save you time. The tradeoff is payload size for developer velocity.
+## When This Approach Doesn't Work
 
-But for content sites (blogs, documentation, marketing pages, portfolios) the framework tax is almost never justified. Your visitors do not benefit from your developer experience choices. They pay for them with every kilobyte they download.
+This isn't a universal solution. If you need:
+- Live updates
+- Complex client-side state
+- Collaborative features
 
-### How to Start Your Own 14KB Site
+...use a framework. But for blogs, documentation, and marketing sites? The framework overhead isn't worth your visitors' bandwidth.
 
-1. **Write the HTML first.** Open a text editor and write the content in semantic HTML. No framework, no template language. Just `<header>`, `<main>`, `<article>`, and `<footer>`.
-2. **Inline your critical CSS.** Do not load a separate stylesheet. Put the 20-40 lines of CSS that control layout and typography in a `<style>` tag in the `<head>`.
-3. **Ship one script.** If you need interactivity, write one small vanilla JS file. Avoid jQuery, Alpine.js, or any third-party JavaScript for basic UI behavior.
-4. **Use the platform for routing.** Anchor tags and URLs work. You do not need React Router to navigate between pages.
-5. **Host on an edge CDN.** Cloudflare Pages, Vercel, Netlify, or any static host will serve your files faster than a VPS. The CDN handles caching, compression, and geographic distribution automatically.
-6. **Measure the payload.** Open DevTools, go to the Network tab, and reload with "Disable cache" checked. Look at the total transferred size. If it is over 100 KB for a content page, find what is adding weight and remove it.
+## How to Build Your Own
 
-### The Real Lesson
+1. **Start with HTML** - Just semantic tags, no templates
+2. **Inline essential CSS** - 20-40 lines in a `<style>` tag
+3. **Use one JS file** - Skip jQuery/Alpine for basic UI
+4. **Let browsers handle routing** - Anchor tags work fine
+5. **Host on the edge** - Cloudflare/Netlify/Vercel
+6. **Measure everything** - Aim for under 100KB total
 
-The web was designed for documents. HTML was designed to be read by humans and machines. The 14KB site loads in one network round-trip, works without JavaScript, and passes every accessibility audit I threw at it. The React SPA failed accessibility checks because the screen reader could not find content behind the JavaScript hydrator. For more advanced speed upgrades including CDN configuration and server tuning, see our [website speed upgrades guide](/blog/website-speed-upgrades-fix-crawling-delays-and-core-web-vitals).
+## Why This Matters
 
-Bloat isn’t inevitable, it’s a deliberate decision. Every dependency you add trades your visitors' bandwidth for your convenience. For a content site, that trade is not worth it.
+The web was designed for documents. My 14KB site:
+- Loads in one network request
+- Works without JavaScript
+- Passes all accessibility checks
 
-**Q: Is 14 KB realistic for a real website with analytics, images, and fonts?**
-**A:** No, 14 KB is the baseline page weight for the HTML, CSS, and JS. Images and fonts add more. But the key question is whether you need separate fonts at all. System font stacks render instantly and look good on every device. For analytics, a 1x1 pixel GIF with a server-side logging endpoint tracks page views without loading a 50 KB JavaScript SDK. The point is not to hit exactly 14 KB, but to question every kilobyte above the minimum.
+The React version actually failed accessibility because screen readers couldn't wait for hydration to finish.
 
-**Q: What about SEO? Does Google rank a vanilla HTML site differently?**
-**A:** Google prefers fast, accessible pages with clear HTML structure. A vanilla HTML site has better SEO fundamentals than a JavaScript-rendered SPA because the content is immediately parseable by Googlebot. My 14KB site saw a 40% improvement in indexed pages within two weeks of launch, purely because the crawler did not have to wait for JavaScript to execute.
+Bloat isn't accidental - it's a choice. Every dependency makes your visitors pay for your convenience. For content sites, that trade-off rarely makes sense.
 
-**Q: How do you handle comments or user-generated content?**
-**A:** You do not need a database for a static site. Comments can be handled by a third-party service like a GitHub issue embed or a lightweight comment API. Alternatively, you can use the SQLite WASM approach to ship a pre-generated comment database that updates with each deploy.
+## Common Questions
 
-**Q: Is SQLite via WebAssembly secure?**
-**A:** Yes. The SQLite WASM build runs entirely in the user's browser sandbox. It has no access to the server filesystem, no network socket, and no persistence outside the browser's storage. It is more secure than a server-side database because there is no SQL injection vector: the user queries their own local copy of the data.
+**Q: Is 14KB realistic with images/fonts?**  
+A: No - this covers just HTML/CSS/JS. Use system fonts and optimized images. The goal isn't hitting 14KB exactly, but questioning every unnecessary byte.
 
-**Q: Does this work for an e-commerce site?**
-**A:** No. E-commerce needs server-side session management, payment processing, and inventory tracking. But the product listing pages, blog, and documentation sections of an e-commerce site can absolutely be built with vanilla HTML. The checkout flow needs a backend; the marketing pages do not.
+**Q: What about SEO?**  
+A: Google loves fast, semantic HTML. My indexed pages increased 40% because crawlers didn't need to execute JavaScript.
+
+**Q: Handling comments?**  
+A: Use GitHub issues, a lightweight API, or pre-generate comments with SQLite.
+
+**Q: Is SQLite WASM secure?**  
+A: Yes - it runs in the browser sandbox with no server access.
+
+**Q: Works for e-commerce?**  
+A: Not for checkout flows, but perfect for product/marketing pages.

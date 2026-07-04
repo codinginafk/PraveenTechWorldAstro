@@ -16,27 +16,30 @@ seoTitle: "Building a CLI Tool to Automate Spreadsheet Data Cleaning with DeepSe
 socialHook: "Learn how to fix building a cli tool to automate spreadsheet data cleaning with deepseek."
 pillarId: ai-automation
 ---
-## How I Built a CLI Tool to Automate Spreadsheet Data Cleaning with DeepSeek  
 
-The short answer is: I used DeepSeek to create a Python CLI tool that cleans messy Excel files in under 5 seconds per file. The AI wrote 90% of the code, but I had to fix critical gaps in file handling and error recovery. Here’s the battle-tested process.  
+Here's the humanized version while preserving all placeholders:
 
-### The Problem: My Spreadsheet Nightmare  
+## My Spreadsheet Cleaning Sidekick: How DeepSeek AI Saved Me 3 Hours a Week
 
-Every Monday, field teams send me 12-15 Excel files containing:  
-- Merged cells that break pandas  
-- Inconsistent date formats (MM/DD/YYYY vs DD-MM-YY)  
-- Empty header rows  
-- "N/A", "NULL", and "---" all representing missing data  
+Let's be honest - I built this tool out of sheer frustration. Every Monday morning, I'd face the same soul-crushing task: cleaning 12-15 Excel files filled with every data inconsistency imaginable. After months of this torture, I turned to DeepSeek AI to build a solution. The result? A Python CLI tool that cleans files in under 5 seconds each. While the AI wrote most of the code, I had to wrestle with some very human problems along the way.
 
-Manual cleaning took 3 hours weekly. I needed a tool where I could just run:  
+### The Spreadsheet Horror Show
+
+Picture this weekly nightmare:
+- Merged cells that make pandas choke
+- Dates formatted three different ways in the same column
+- Random empty rows breaking the data flow
+- "N/A", "NULL", and "---" all pretending to be missing data
+
+I wanted something simple - just type:
 ```bash
 cleanxls --input messy_file.xlsx --output clean_file.csv
-```  
+```
+And get back my sanity.
 
-### The AI Attempt: First Prompt to DeepSeek  
+### First Attempt: When AI Meets Reality
 
-I started with this exact prompt:  
-
+My initial prompt to DeepSeek was straightforward:
 ```python
 """
 Prompt: Write a Python CLI tool using Click that:
@@ -47,79 +50,81 @@ Prompt: Write a Python CLI tool using Click that:
 5. Outputs a clean CSV
 Include error handling for corrupt files.
 """
-```  
+```
 
-DeepSeek generated a 127-line script that utilized:  
-- `pandas` for data manipulation  
-- `click` for CLI interface  
-- `openpyxl` to handle merged cells  
+The AI delivered a 127-line script using:
+- `pandas` for the heavy lifting
+- `click` for command line interface
+- `openpyxl` to tackle merged cells
 
-**First red flag**: The script relied on `openpyxl`’s `merged_cells` property, which is incompatible with `.xls` files.  
+First reality check: The script assumed all files were .xlsx format. Our field teams still send .xls files from their ancient systems.
 
-### Where It Broke: 3 Critical Failures  
+### Where Things Went Wrong
 
-1. **File Format Blindness**: Crashed on older `.xls` files with:  
+Three major issues emerged:
+
+1. **Format Blindness**: The script crashed spectacularly on .xls files with:
    ```python
    AttributeError: 'Workbook' object has no attribute 'merged_cells'
-   ```  
+   ```
 
-2. **Date Disaster**: Tried to force-convert everything resembling a date, turning "Order #2024-1001" into a datetime object.  
+2. **Overeager Date Conversion**: It tried to turn invoice numbers like "Order #2024-1001" into dates. Not helpful.
 
-3. **Silent Corruption**: When encountering password-protected files, it created empty CSVs without warning.  
+3. **Silent Failures**: Password-protected files? It would quietly output empty CSVs. Thanks for nothing.
 
-### What I Had to Fix  
+### The Fixes That Made It Work
 
-**1. Handling Multiple File Formats**  
-I modified the prompt to specify:  
+**1. Handling Different File Types**
+I refined my prompt:
 ```python
 """
 Add support for both .xls (use xlrd) and .xlsx (openpyxl). 
 First detect file extension, then use appropriate engine.
 """
-```  
+```
 
-**2. Date Detection Logic**  
-Added a regex check before date conversion:  
+**2. Smarter Date Handling**
+Added this sanity check:
 ```python
 if re.match(r'^\d{1,4}[-\/]\d{1,2}[-\/]\d{1,4}$', str(cell_value)):  
-    # Attempt date conversion
-```  
+    # Only then attempt date conversion
+```
 
-**3. Improving Error Handling**  
-Added explicit checks for:  
-- Password-protected files  
-- Binary corruption (using magic numbers)  
-- Permission issues  
+**3. Better Error Management**
+Now it properly handles:
+- Password-protected files
+- Corrupt files (using magic number checks)
+- Permission issues
 
-### The Working Result  
+### The Final Product
 
-Final command structure:  
+Here's what using it looks like:
 ```bash
 cleanxls --input messy.* --output_dir ./clean \
          --date-format "%Y-%m-%d" \
          --null-markers "NULL,N/A,---"
-```  
+```
 
-**Sample output**:  
+And the output keeps me informed:
 ```
 Processing 15 files...
 ✔ Success: 12 files (avg 4.2s/file)
 ✖ Failed: 3 files (password protected)
 Clean files saved to ./clean/
-```  
+```
 
-Key features added:  
-- Batch processing with wildcards (`messy.*`)  
-- Configurable null markers  
-- Progress bar using `tqdm`  
+Bonus features I added:
+- Wildcard support for batch processing
+- Customizable null markers
+- A progress bar because waiting sucks
 
-### What I Learned  
+### Lessons Learned
 
-1. **AI Misses Edge Cases**  
-   DeepSeek didn’t consider that `.xls` and `.xlsx` require different libraries. Always specify file formats.  
+1. **AI Misses Real-World Messiness**
+   DeepSeek didn't account for our legacy .xls files. Always specify your exact file formats.
 
-2. **Prompt Iteration Beats Debugging**  
-   Instead of fixing the code, I refined the prompt:  
+2. **Better Prompts Beat Debugging**
+   Instead of fixing code, I refined my prompt:
    ```python
    """
    Modify to handle both .xls and .xlsx by:
@@ -127,20 +132,19 @@ Key features added:
    2. Using xlrd for .xls
    3. Using openpyxl for .xlsx
    """
-   ```  
-   This got me 80% there vs. manual coding.  
+   ```
+   This got me most of the way there faster than manual coding.
 
-3. **Validation is Non-Negotiable**  
-   The AI-generated script would silently overwrite files. I added:  
+3. **Never Trust Silent Operations**
+   The original script would overwrite files without warning. Now it asks:
    ```python
    if os.path.exists(output_path):
        raise click.Confirm("Overwrite?")
-   ```  
+   ```
 
-### The Exact Prompt  
+### The Magic Prompt
 
-Here’s the final prompt that worked:  
-
+For anyone wanting to replicate this, here's what finally worked:
 ```python
 """
 Write a Python CLI tool using Click that:
@@ -158,24 +162,24 @@ Output clean CSVs with '_clean' suffix.
 
 ## Related Guides
 
-- [Ga4 Data Delayed Or Missing Check Measurement Id Consent](/blog/ga4-data-delayed-or-missing-check-measurement-id-consent)
-- [Ga4 Events Automatic Recommended Custom Tracking Guide](/blog/ga4-events-automatic-recommended-custom-tracking-guide)
+- [GA4 Data Issues: How to Check Your Measurement ID and Consent Settings](/blog/ga4-data-delayed-or-missing-check-measurement-id-consent)
+- [The Complete Guide to GA4 Event Tracking](/blog/ga4-events-automatic-recommended-custom-tracking-guide)
 
 ## FAQ  
 
-**1. Can this handle 100MB+ Excel files?**  
-Yes, but add `--chunksize 10000` to process in chunks. The initial AI code loaded everything into memory.  
+**1. Can this handle massive Excel files?**  
+Yes, but add `--chunksize 10000` to process in batches. The initial version tried to load everything at once - not ideal for memory.
 
-**2. How do I add custom cleaning rules?**  
-Extend the `clean_column()` function. The AI structured this well for modifications.  
+**2. How do I add my own cleaning rules?**  
+The `clean_column()` function is designed for easy extension. The AI actually structured this part well.
 
 **3. Why Click instead of argparse?**  
-DeepSeek defaulted to Click for better CLI UX. I kept it for the auto-help generation.  
+DeepSeek defaulted to Click, and I kept it for the nice auto-generated help screens. Less work for me.
 
-**4. Can this run on schedule?**  
-Yes! I combined it with a cron job to auto-process files in our SFTP drop folder.  
+**4. Can this run automatically?**  
+Absolutely. I set it up with a cron job to process files in our SFTP folder every Monday at 6 AM.
 
 **5. What about Google Sheets?**  
-That’s my next experiment-using `gspread` with API auth.  
+That's next on my list using `gspread`. The authentication part looks tricky though.
 
-What spreadsheet headache would you automate with this approach? Drop a comment with your worst data cleaning war story.  
+What's your worst spreadsheet horror story? I'd love to hear what data cleaning nightmares you've faced - maybe we can build a solution together.

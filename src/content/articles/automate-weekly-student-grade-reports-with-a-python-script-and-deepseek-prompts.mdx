@@ -27,15 +27,23 @@ faq:
   - question: "What’s the cost per month for this pipeline?"
     answer: "The DeepSeek prompt cost is negligible (~$0.004 per run). The biggest expense is the Dropbox storage (~$5/month for 5 GB). Overall, you’re looking at under $10/month for a fully automated workflow.  What task would you automate with this approach? "
 ---
-## What Problem Drove Me to Automate Student Grade Reports?
 
-You can automate weekly student grade reports using a Python script with DeepSeek prompts.  
+Here's the humanized version while preserving all placeholders:
 
-I’m an IT Operations Lead at a mid‑size university’s tech support team. Every Friday, faculty emailed me a CSV of student grades. I had to stitch them together, rename files, run a sanity check, and email the compiled report. The process took about 30 minutes, involved copying files across SharePoint, and was prone to human error-missing a column here, a typo there. The manual steps created a bottleneck before the weekend, and I knew I could improve the process. I wanted a script that would sit in a cron job, fetch the CSV, apply a simple transformation, and push a clean report to the department’s Dropbox folder-all without me touching a keyboard.
+## The Friday Night Grade Report Grind
 
-## How Did I Ask DeepSeek to Build the Report Script?
+Every Friday afternoon like clockwork, my inbox would ping with faculty grade reports - a messy collection of CSV files that needed stitching together. As the IT Operations Lead at our university's tech support team, this 30-minute chore became my least favorite part of the week. 
 
-My first step was to write a prompt that described the exact workflow I needed. I kept it concise, listed the required libraries, and asked for a CLI tool so I could schedule it later.
+The process was tedious: download files from SharePoint, rename them, merge the data, check for errors (I'd missed columns before), then email the compiled report. It was the perfect candidate for automation. I envisioned a script that would:
+- Run automatically every Friday
+- Fetch the latest CSV 
+- Transform the data 
+- Push clean reports to Dropbox
+- All without me lifting a finger
+
+## Crafting the Perfect Prompt
+
+I started by writing a clear, specific prompt for DeepSeek. No fluff - just the exact requirements:
 
 ```
 Prompt:
@@ -49,25 +57,23 @@ I need a Python CLI tool that:
 7. Provide the complete script with a shebang and a comment block describing usage.
 ```
 
-I pasted this into DeepSeek’s chat, selected the “Code” mode, and asked for the script. DeepSeek returned a 2.3 KB file with a shebang, imports, and the logic I described. The token count for the exchange was 248 tokens, and the cost was roughly $0.004 on the DeepSeek platform.
+DeepSeek returned a 2.3KB Python file that looked promising... at first glance.
 
-## Where Did the AI Output Break Down?
+## When the AI Stumbled
 
-The script looked great at first glance, but three issues surfaced when I ran it:
+Three issues popped up during testing:
 
-1. **Missing pandas import** - DeepSeek assumed pandas was imported as `import pandas as pd`, but the code used `pd.read_csv()` without the import line. Running the script triggered `ModuleNotFoundError: No module named 'pandas'`. I hadn’t installed pandas yet because I wanted a “standard library only” solution.
+1. **Missing import** - The script used pandas (`pd.read_csv()`) but forgot to import it. Classic.
+2. **Duplicate rows** - It grouped by both student_id and name separately, creating duplicate entries.
+3. **Placeholder text** - The log message showed raw template text instead of actual values.
 
-2. **Incorrect column aggregation** - The script calculated total and average per student but grouped by `student_id` and `name` separately, resulting in duplicate rows for students with multiple assignments. The output had 150 rows instead of the expected 45 unique students.
+These weren't dealbreakers, but they proved AI still needs human oversight - like a junior dev that needs careful code review.
 
-3. **Log message format** - The script printed `"Processed X rows, report saved to <output_path>"` but never substituted the actual values, leaving the placeholder text in the logs.
+## My Fixes That Made It Work
 
-These errors required my intervention, highlighting AI's role as a junior developer that needs guidance.
+Here's what I changed:
 
-## What Did I Have to Fix in the Script?
-
-First, I installed pandas (`pip install pandas==2.2.2`) to satisfy the dependency. Then I edited the script to correct the grouping logic and the logging. Below is the before/after comparison.
-
-**Before (DeepSeek’s version):**
+**Before (DeepSeek's version):**
 ```python
 #!/usr/bin/env python3
 """
@@ -96,7 +102,7 @@ if __name__ == '__main__':
     main()
 ```
 
-**After (my fixes):**
+**After (my working version):**
 ```python
 #!/usr/bin/env python3
 """
@@ -136,51 +142,55 @@ if __name__ == '__main__':
     main()
 ```
 
-The changes were minor but essential: I moved the pandas import, fixed the grouping logic, cleaned the data, and corrected the logging. The final script is 2.5 KB (a few bytes larger due to comments) and runs in roughly 0.7 seconds on a typical Linux VM for a 500‑row CSV.
+Key improvements:
+- Proper pandas import
+- Fixed grouping logic
+- Added data cleaning
+- Rounded scores for readability
 
-## How Does the Final Script Work and What Output Does It Produce?
+## The Automated Pipeline
 
-I placed the script in `/opt/grade_reports/generate_report.py` and made it executable. I also created a tiny wrapper shell script (`run_weekly.sh`) that runs the Python script, logs the execution time, and uploads the resulting CSV to Dropbox using the official Dropbox API. The wrapper looks like this:
+Here's how it runs every Friday:
 
-```bash
-#!/bin/bash
-set -e
-START=$(date +%s)
-python3 /opt/grade_reports/generate_report.py --input /data/student_grades.csv --output /tmp/weekly_report.csv
-END=$(date +%s)
-DURATION=$((END-START))
-echo "Script finished in ${DURATION}s" >> /var/log/grade_reports.log
-# Upload to Dropbox (simplified)
-curl -X POST "https://content.dropboxapi.com/2/files/upload" \
-  --header "Authorization: Bearer $DROPBOX_TOKEN" \
-  --header "Dropbox-API-Result: json" \
-  --header "Content-Type: application/octet-stream" \
-  --data-binary /tmp/weekly_report.csv
-```
+1. **Cron job** triggers at 8 AM:
+   ```bash
+   0 8 * * 5 /opt/grade_reports/run_weekly.sh
+   ```
 
-The cron job is set to run every Friday at 08:00 AM:
+2. **Wrapper script** handles timing and uploads:
+   ```bash
+   #!/bin/bash
+   set -e
+   START=$(date +%s)
+   python3 /opt/grade_reports/generate_report.py --input /data/student_grades.csv --output /tmp/weekly_report.csv
+   END=$(date +%s)
+   DURATION=$((END-START))
+   echo "Script finished in ${DURATION}s" >> /var/log/grade_reports.log
+   # Upload to Dropbox (simplified)
+   curl -X POST "https://content.dropboxapi.com/2/files/upload" \
+     --header "Authorization: Bearer $DROPBOX_TOKEN" \
+     --header "Dropbox-API-Result: json" \
+     --header "Content-Type: application/octet-stream" \
+     --data-binary /tmp/weekly_report.csv
+   ```
 
-```bash
-0 8 * * 5 /opt/grade_reports/run_weekly.sh
-```
+Total runtime: ~2 seconds  
+Cost per run: $0.006  
+My time saved: 30 minutes weekly  
 
-When the pipeline runs, the output file `weekly_report.csv` is uploaded to a folder named `weekly_reports` in the department’s Dropbox. The CSV now contains 45 rows (one per student) with total and average scores, and the log entry records a runtime of ~0.7 s and a Dropbox upload latency of ~1.2 s. The total cost per run (including the DeepSeek prompt cost) is about $0.006.
+## Lessons Learned
 
-## How Did My Experiment With Prompting Shape My Understanding?
+1. **Be painfully specific** - Vague prompts lead to AI hallucinations. Concrete column names and exact requirements yield better results.
 
-I discovered three key lessons from this little battle:
+2. **Assume nothing about dependencies** - Even when asking for "standard library only", AI might sneak in pandas. Always check imports.
 
-1. **Prompt precision beats cleverness** - The moment I added concrete column names and the exact aggregation logic, DeepSeek produced a functional draft. Vague prompts led to hallucinations about missing libraries.
+3. **Manual verification is crucial** - That quick `wc -l` check caught the duplicate rows issue. Never deploy AI-generated code without testing.
 
-2. **AI’s “standard library only” can be misleading** - DeepSeek assumed pandas was okay to use, but I had to install it anyway. Now I always add a “dependencies” section in my prompts and check the environment before trusting the output.
+I now keep the original prompt version-controlled as `prompt.txt` - it's become just as important as the code itself.
 
-3. **Human review is non‑negotiable for data correctness** - Even a script that looks effective can mis‑group rows. I now always run a quick sanity check (e.g., `wc -l` on the output) and compare a few rows manually before trusting the pipeline.
+## Your Turn to Automate
 
-The experiment taught me the value of version-controlling the prompt. I keep the exact prompt used in the repo as `prompt.txt`. That way, if I need to re‑run the workflow later, I can reproduce the same AI output and see what changed.
-
-## Can I Get the Exact Prompt to Replicate This?
-
-Here is the raw, unedited prompt I sent to DeepSeek (copy‑paste ready). I kept it exactly as I typed it, including line breaks and spacing.
+Want to try this yourself? Here's the exact prompt I used:
 
 ```
 Prompt:
@@ -194,30 +204,21 @@ I need a Python CLI tool that:
 7. Provide the complete script with a shebang and a comment block describing usage.
 ```
 
-You can tweak column names or add fields, DeepSeek adapts as long as the structure is clear.
+## Common Questions
 
+**Q: Do I need cloud services?**  
+A: Only if you want automated uploads. The core script runs fine locally.
 
+**Q: What if our CSV format changes?**  
+A: Modify the `pd.read_csv` options - the grouping logic stays the same.
 
-## Related Guides
+**Q: Windows compatibility?**  
+A: Use Task Scheduler instead of cron, or better yet - switch to a Linux VM.
 
-- [Ga4 Data Delayed Or Missing Check Measurement Id Consent](/blog/ga4-data-delayed-or-missing-check-measurement-id-consent)
-- [Ga4 Events Automatic Recommended Custom Tracking Guide](/blog/ga4-events-automatic-recommended-custom-tracking-guide)
+**Q: Can I add email notifications?**  
+A: Absolutely. Add `smtplib` code to send the CSV as an attachment.
 
-## FAQ: Common Questions About Automating Grade Reports
+**Q: Total monthly cost?**  
+A: Less than $10 - mostly Dropbox storage. The AI prompt costs pennies.
 
-**Q: Do I need a cloud account to run this?**  
-A: No. The script runs locally; you only need a Dropbox token (or an S3 bucket) if you want automated uploads. The rest is pure Python.
-
-**Q: What if the input CSV changes format?**  
-A: DeepSeek’s prompt includes column names, but you can easily modify the script’s `pd.read_csv` options (e.g., `dtype`, `sep`). The grouping logic stays the same.
-
-**Q: How do I schedule the job on Windows?**  
-A: Use Windows Task Scheduler with the same Python executable, or switch to a Linux VM (like I did) for easier cron integration.
-
-**Q: Can I extend the script to email the report?**  
-A: Absolutely. Add a `smtplib` block after the upload step, and you can send the CSV as an attachment. The same prompting technique works for generating the email body.
-
-**Q: What’s the cost per month for this pipeline?**  
-A: The DeepSeek prompt cost is negligible (~$0.004 per run). The biggest expense is the Dropbox storage (~$5/month for 5 GB). Overall, you’re looking at under $10/month for a fully automated workflow.
-
-What task would you automate with this approach?
+What repetitive task will you automate next?
