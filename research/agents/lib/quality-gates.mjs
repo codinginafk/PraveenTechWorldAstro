@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { parseArticle } from "./syndication.mjs";
+import { verifyCodeBlocks } from "./code-verifier.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "../../..");
@@ -41,6 +42,7 @@ const RULES = {
   T10: { id: "T10", gate: "Technical SEO", name: "publishDate valid", desc: "Required, valid date string", threshold: {} },
   T11: { id: "T11", gate: "Technical SEO", name: "author field valid", desc: "Required, must match existing author slug", threshold: {} },
   T12: { id: "T12", gate: "Technical SEO", name: "category field valid", desc: "Required, must match existing category", threshold: {} },
+  T13: { id: "T13", gate: "Technical SEO", name: "Code block syntax verification", desc: "All code blocks (Python, Node.js) must have valid syntax", threshold: {} },
 
   // Author/Link Quality Gates (L1-L4)
   L1: { id: "L1", gate: "Author & Links", name: "Author link text", desc: "Use 'Follow on LinkedIn' not just 'LinkedIn'", threshold: {} },
@@ -710,6 +712,22 @@ export function validateArticle(filePath, existingArticlePaths = []) {
       }
     }
   } catch {}
+
+  // ---- T13: Code block syntax verification ----
+  try {
+    const codeResults = verifyCodeBlocks(filePath);
+    if (!codeResults.passed) {
+      for (const err of codeResults.errors) {
+        failures.push({
+          gate: "T13",
+          rule: "Code block syntax verification",
+          message: `Syntax error in ${err.language} code block (index ${err.index}): ${err.error.trim().split("\n")[0]}`
+        });
+      }
+    }
+  } catch (err) {
+    console.error(`Code verification warning for ${filePath}: ${err.message}`);
+  }
 
   const score = Math.max(0, 100 - failures.length * 5);
   const passed = failures.length === 0;

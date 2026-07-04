@@ -12,6 +12,7 @@ import { generateArticle } from "./generate.mjs";
 import { runSyndication } from "./syndication-agent.mjs";
 import { syncObsidianVault } from "./lib/obsidian-sync.mjs";
 import { execSync } from "child_process";
+import { getGraphContext, buildKnowledgeGraph } from "./lib/knowledge-graph.mjs";
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -289,6 +290,17 @@ async function generateFromTopic(topic, existingTitles, sourceArticles, clusters
     log(`  RAG pre-step skipped: ${ragErr.message}`);
   }
 
+  // Knowledge Graph Context Hook
+  try {
+    const graphCtx = getGraphContext(title);
+    if (graphCtx) {
+      obsidianContext += graphCtx;
+      log("  Knowledge Graph context successfully added.");
+    }
+  } catch (graphErr) {
+    log(`  Knowledge Graph pre-step skipped: ${graphErr.message}`);
+  }
+
   const result = await generateArticle({
     title,
     description: topic.topic?.snippet?.slice(0, 150) || `A practical guide to ${title.toLowerCase()}.`,
@@ -369,6 +381,11 @@ async function orchestratorCycle(state) {
 
   // Phase 1: Research (focused on current cluster)
   log("Phase 1: Cluster Research");
+  try {
+    buildKnowledgeGraph();
+  } catch (graphBuildErr) {
+    log(`  Failed to build Knowledge Graph: ${graphBuildErr.message}`);
+  }
   const researchResult = await runResearch();
   state.lastResearchDate = new Date().toISOString();
   saveState(state);
@@ -608,6 +625,16 @@ Return ONLY a valid JSON array. No markdown. No extra text. Example: [{ "title":
     execSync(`git commit -m "Add: [${clusterForToday}] ${publishTitle.slice(0, 65)}"`, { cwd: ROOT_DIR, env });
     execSync("git push", { cwd: ROOT_DIR, env, timeout: 30000 });
     log(`  Published: ${slug}.mdx at ${dateStamp}`);
+
+    // Google Indexing API Integration
+    try {
+      const articleUrl = `https://www.praveentechworld.com/blog/${slug}`;
+      const { submitUrl } = await import("./seo-agent/google-indexer.mjs");
+      await submitUrl(articleUrl, "URL_UPDATED");
+      log(`  Google Indexing API submission triggered for: ${articleUrl}`);
+    } catch (indexErr) {
+      log(`  Google Indexing API submission failed: ${indexErr.message}`);
+    }
     
     state.articlesPublishedToday++;
     state.lastPublishDate = new Date().toISOString();
@@ -790,6 +817,17 @@ async function checkAndPublishApprovedVaultDrafts(state) {
         execSync("git push", { cwd: ROOT_DIR, env, timeout: 30000 });
 
         log(`[Obsidian Connector] Successfully published approved draft: ${slug}`);
+
+        // Google Indexing API Integration
+        try {
+          const articleUrl = `https://www.praveentechworld.com/blog/${slug}`;
+          const { submitUrl } = await import("./seo-agent/google-indexer.mjs");
+          await submitUrl(articleUrl, "URL_UPDATED");
+          log(`[Obsidian Connector] Google Indexing API submission triggered for: ${articleUrl}`);
+        } catch (indexErr) {
+          log(`[Obsidian Connector] Google Indexing API submission failed: ${indexErr.message}`);
+        }
+
         state.articlesPublishedToday++;
         state.lastPublishDate = new Date().toISOString();
         state.sprintProgress[category] = (state.sprintProgress[category] || 0) + 1;
