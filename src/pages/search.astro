@@ -9,10 +9,54 @@ import BaseLayout from "@layouts/BaseLayout.astro";
   }}
 >
   <div class="mx-auto max-w-3xl px-4 py-16">
-    <h1 class="mb-8 text-3xl font-bold">Search Articles</h1>
+    <h1 class="mb-8 text-3xl font-bold text-text dark:text-text-dark">Search Articles</h1>
     <div id="search" data-pagefind-ui data-pagefind-ui-page-size="10"></div>
   </div>
 </BaseLayout>
+
+<style is:global>
+  /* Pagefind UI Dark Mode and Brand Override Styling */
+  #search {
+    --pagefind-ui-text: var(--color-text);
+    --pagefind-ui-background: var(--color-surface);
+    --pagefind-ui-border: var(--color-border);
+    --pagefind-ui-primary: var(--color-brand-600);
+  }
+  
+  .dark #search {
+    --pagefind-ui-text: var(--color-text-dark);
+    --pagefind-ui-background: var(--color-surface-dark-alt);
+    --pagefind-ui-border: var(--color-border-dark);
+    --pagefind-ui-primary: var(--color-brand-400);
+  }
+
+  .pagefind-ui__result-title, 
+  .pagefind-ui__result-title a {
+    color: var(--color-text) !important;
+  }
+  .dark .pagefind-ui__result-title, 
+  .dark .pagefind-ui__result-title a {
+    color: var(--color-text-dark) !important;
+  }
+
+  .pagefind-ui__result-excerpt {
+    color: var(--color-text-muted) !important;
+  }
+  .dark .pagefind-ui__result-excerpt {
+    color: var(--color-text-dark-muted) !important;
+  }
+
+  .pagefind-ui__search-input {
+    color: var(--color-text) !important;
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+  }
+  .dark .pagefind-ui__search-input {
+    color: var(--color-text-dark) !important;
+    background-color: var(--color-surface-dark-alt) !important;
+    border-color: var(--color-border-dark) !important;
+  }
+</style>
 
 <script>
   (function () {
@@ -37,6 +81,19 @@ import BaseLayout from "@layouts/BaseLayout.astro";
             showImages: false,
             resetStyles: false,
           });
+          
+          // Decorate dynamically generated form & input with WebMCP attributes
+          setTimeout(function () {
+            var form = document.querySelector("#search form");
+            if (form) {
+              form.setAttribute("webmcp-action", "search_articles");
+            }
+            var input = document.querySelector("#search input");
+            if (input) {
+              input.setAttribute("webmcp-parameter", "query");
+            }
+          }, 150);
+
           var params = new URLSearchParams(window.location.search);
           var query = params.get("q");
           if (query) {
