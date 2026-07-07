@@ -28,13 +28,12 @@ faq:
     answer: "The DeepSeek prompt cost is negligible (~$0.004 per run). The biggest expense is the Dropbox storage (~$5/month for 5 GB). Overall, you’re looking at under $10/month for a fully automated workflow.  What task would you automate with this approach? "
 ---
 
-Here's the humanized version while preserving all placeholders:
-
 ## The Friday Night Grade Report Grind
 
-Every Friday afternoon like clockwork, my inbox would ping with faculty grade reports - a messy collection of CSV files that needed stitching together. As the IT Operations Lead at our university's tech support team, this 30-minute chore became my least favorite part of the week. 
+Every Friday afternoon, like clockwork, I’d find myself buried under a pile of faculty grade reports - a chaotic mix of CSV files that needed to be pieced together. As the IT Operations Lead at our university's tech support team, this 30-minute task quickly became my least favorite part of the week. 
 
-The process was tedious: download files from SharePoint, rename them, merge the data, check for errors (I'd missed columns before), then email the compiled report. It was the perfect candidate for automation. I envisioned a script that would:
+The whole process felt like a chore: downloading files from SharePoint, renaming them, merging the data, checking for mistakes (I’ve definitely overlooked columns before), and then emailing the final report. It was screaming for a bit of automation. So, I thought, why not create a script that would:
+
 - Run automatically every Friday
 - Fetch the latest CSV 
 - Transform the data 
@@ -43,7 +42,7 @@ The process was tedious: download files from SharePoint, rename them, merge the 
 
 ## Crafting the Perfect Prompt
 
-I started by writing a clear, specific prompt for DeepSeek. No fluff - just the exact requirements:
+I started by drafting a clear and specific prompt for DeepSeek. I aimed for clarity and precision—no fluff, just the essentials:
 
 ```
 Prompt:
@@ -57,21 +56,21 @@ I need a Python CLI tool that:
 7. Provide the complete script with a shebang and a comment block describing usage.
 ```
 
-DeepSeek returned a 2.3KB Python file that looked promising... at first glance.
+DeepSeek produced a Python file that looked promising at first glance... but there were some hiccups.
 
 ## When the AI Stumbled
 
-Three issues popped up during testing:
+During testing, I ran into three main issues:
 
-1. **Missing import** - The script used pandas (`pd.read_csv()`) but forgot to import it. Classic.
-2. **Duplicate rows** - It grouped by both student_id and name separately, creating duplicate entries.
-3. **Placeholder text** - The log message showed raw template text instead of actual values.
+1. **Missing import** - The script used pandas (`pd.read_csv()`) but forgot to actually import it. Classic rookie mistake.
+2. **Duplicate rows** - It incorrectly grouped by both student_id and name separately, which led to duplicate entries.
+3. **Placeholder text** - The log message displayed raw template text instead of actual values.
 
-These weren't dealbreakers, but they proved AI still needs human oversight - like a junior dev that needs careful code review.
+While these weren’t complete dealbreakers, they showed that AI still needs a bit of human oversight—kind of like a junior developer who requires a good code review.
 
 ## My Fixes That Made It Work
 
-Here's what I changed:
+Here’s what I changed:
 
 **Before (DeepSeek's version):**
 ```python
@@ -142,22 +141,22 @@ if __name__ == '__main__':
     main()
 ```
 
-Key improvements:
+Some key improvements I made:
 - Proper pandas import
-- Fixed grouping logic
-- Added data cleaning
-- Rounded scores for readability
+- Fixed the grouping logic
+- Added data type cleaning
+- Rounded scores for better readability
 
 ## The Automated Pipeline
 
-Here's how it runs every Friday:
+So, how does it all run every Friday? Here’s the setup:
 
 1. **Cron job** triggers at 8 AM:
    ```bash
    0 8 * * 5 /opt/grade_reports/run_weekly.sh
    ```
 
-2. **Wrapper script** handles timing and uploads:
+2. **Wrapper script** manages timing and uploads:
    ```bash
    #!/bin/bash
    set -e
@@ -174,23 +173,23 @@ Here's how it runs every Friday:
      --data-binary /tmp/weekly_report.csv
    ```
 
-Total runtime: ~2 seconds  
-Cost per run: $0.006  
-My time saved: 30 minutes weekly  
+The total runtime? Just about 2 seconds.  
+Cost per run? Roughly $0.006.  
+Time saved weekly? A solid 30 minutes! 
 
 ## Lessons Learned
 
-1. **Be painfully specific** - Vague prompts lead to AI hallucinations. Concrete column names and exact requirements yield better results.
+1. **Be painfully specific** - Vague prompts can lead to AI misunderstandings. Providing concrete column names and clear requirements really helps.
 
-2. **Assume nothing about dependencies** - Even when asking for "standard library only", AI might sneak in pandas. Always check imports.
+2. **Assume nothing about dependencies** - Even when asking for "standard library only," AI might sneak in pandas. Always double-check your imports.
 
-3. **Manual verification is crucial** - That quick `wc -l` check caught the duplicate rows issue. Never deploy AI-generated code without testing.
+3. **Manual verification is crucial** - A quick `wc -l` check helped me catch the duplicate rows issue. Never trust AI-generated code without thorough testing.
 
-I now keep the original prompt version-controlled as `prompt.txt` - it's become just as important as the code itself.
+I now keep the original prompt version-controlled as `prompt.txt`—it’s become just as vital as the code itself.
 
 ## Your Turn to Automate
 
-Want to try this yourself? Here's the exact prompt I used:
+Feeling inspired to try this out for yourself? Here’s the exact prompt I used:
 
 ```
 Prompt:
@@ -207,18 +206,18 @@ I need a Python CLI tool that:
 ## Common Questions
 
 **Q: Do I need cloud services?**  
-A: Only if you want automated uploads. The core script runs fine locally.
+A: Not unless you want automated uploads. The core script runs perfectly fine on your local machine.
 
 **Q: What if our CSV format changes?**  
-A: Modify the `pd.read_csv` options - the grouping logic stays the same.
+A: You can modify the `pd.read_csv` options as needed - the grouping logic will remain consistent.
 
-**Q: Windows compatibility?**  
-A: Use Task Scheduler instead of cron, or better yet - switch to a Linux VM.
+**Q: What about Windows compatibility?**  
+A: You can use Task Scheduler for that, or better yet, switch to a Linux VM for easier cron integration.
 
 **Q: Can I add email notifications?**  
-A: Absolutely. Add `smtplib` code to send the CSV as an attachment.
+A: Absolutely! You can implement `smtplib` to send the CSV as an email attachment.
 
-**Q: Total monthly cost?**  
-A: Less than $10 - mostly Dropbox storage. The AI prompt costs pennies.
+**Q: What’s the total monthly cost?**  
+A: It’s less than $10 - mainly for Dropbox storage. The AI prompt costs just pennies.
 
-What repetitive task will you automate next?
+So, what repetitive task are you thinking of automating next? I’d love to hear your thoughts!

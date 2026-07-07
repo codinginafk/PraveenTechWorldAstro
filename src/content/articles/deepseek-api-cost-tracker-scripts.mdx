@@ -30,29 +30,25 @@ faq:
     answer: "No. The script reads keys from environment variables by default. You can set OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, and DEEPSEEK_API_KEY in your shell or .env file. The config file only stores metadata like model names and cost-per-token."
 ---
 
-Here's the humanized version of your article:
-
----
-
-I built a Python script to track our AI API costs across four providers using DeepSeek. After a week of late-night debugging to fix the AI's hallucinations, it ended up saving my team about $2,000 per month in wasted spending. Here's how it all went down.
+I recently set out on a journey to build a Python script that tracks our AI API costs across four different providers using DeepSeek. After a week of late-night debugging (thanks to some interesting AI 'hallucinations'), I managed to save my team about $2,000 per month in unnecessary spending. Curious about how it all unfolded? Let me share my experience!
 
 ## The Problem That Started It All
 
-Our team was burning through AI API credits at an alarming rate. We had engineers using OpenAI for various tasks, a research project running on Anthropic Claude, my own experiments with DeepSeek, and the data team testing Google's Gemini. The result? Complete financial chaos.
+So, here's the deal: our team was burning through AI API credits faster than I could keep track. We had engineers using OpenAI for various tasks, a research project leveraging Anthropic Claude, my own experiments with DeepSeek, and the data team diving into Google's Gemini. The end result? Financial chaos!
 
-Each provider sent invoices in different formats at random times, with nobody keeping track. When I finally tallied everything up, the number made me physically recoil - $4,700 per month, with nearly half going to premium models for tasks that didn't need them.
+Invoices were arriving in different formats at totally unpredictable times, and when I finally added everything up, I was shocked—$4,700 per month! Almost half of that went to premium models for tasks that really didn’t need them.
 
-I needed a CLI tool that could:
+What I needed was a command-line tool that could:
 1. Pull usage data from all four providers
 2. Normalize costs into a single view
 3. Identify our most expensive models
 4. Generate a simple HTML dashboard for the team
 
-This was perfect for DeepSeek. While I know basic Python, wiring together four different API SDKs with authentication, rate limiting, and cost normalization sounded like exactly the kind of tedious work I wanted AI to handle.
+This felt like a job for DeepSeek! While I only have basic Python skills, I thought having AI handle the tedious work of wiring together four different API SDKs with authentication and cost normalization was a smart move.
 
 ## Building the Tracker with DeepSeek
 
-I crafted a detailed prompt outlining the entire architecture, hoping to get a working skeleton I could build upon:
+I decided to craft a detailed prompt for DeepSeek, hoping to generate a solid foundation to build upon:
 
 ```text
 Prompt:
@@ -78,60 +74,58 @@ Write a Python CLI tool that tracks AI API costs across multiple providers. Call
 Please output the complete script with comments, a sample config, and usage examples.
 ```
 
-DeepSeek returned about 800 lines of seemingly perfect code using standard libraries like `requests` and `datetime`. It even included a cute animated spinner for data fetching. Too good to be true? Absolutely.
+To my surprise, DeepSeek generated about 800 lines of code using standard libraries like `requests` and `datetime`. It even included a cute animated spinner for data fetching. I thought, "This is too good to be true!" 
 
 ## Where the AI Code Fell Apart
 
-The moment I ran `python track.py --days 30` with my actual API keys, the problems started piling up.
+But when I ran `python track.py --days 30` with my actual API keys, the issues began to surface.
 
 ### Imaginary API Endpoints
 
-First crash: DeepSeek had completely fabricated OpenAI's usage API endpoint:
+First, I discovered that DeepSeek had completely fabricated OpenAI's usage API endpoint:
 ```
 openai/usage?date=2026-06-01
 ```
-This URL doesn't exist. OpenAI's actual usage data comes through their billing dashboard API or CSV exports. The AI generated something that looked plausible but was pure fiction.
+This URL doesn't exist! OpenAI's usage data actually comes from their billing dashboard API or CSV exports. The AI generated something that looked plausible but was purely fictional.
 
 ### Cost Calculation Errors
 
-The script assumed all providers used identical pricing formulas. Reality was much messier:
+Then, I noticed that the script assumed all providers used the same pricing formulas. In reality, it was way more complicated:
 - Anthropic rounds token counts per request
 - Google returns costs in micros (millionths of a cent)
-- DeepSeek gives token counts but no cost data
+- DeepSeek provides token counts but no cost data
 
 ### Pagination Problems
 
-When testing with real production data, it only captured the most recent 100 records from each provider. Turns out every API handles pagination differently:
+When I tested it with real production data, it only captured the most recent 100 records from each provider. Each API handles pagination differently, which the AI code overlooked completely:
 - OpenAI uses cursor-based pagination
 - Anthropic uses offsets
 - Google uses page tokens
 - DeepSeek uses limit/offset
 
-The AI code ignored all these variations.
-
 ### Rate Limit Chaos
 
-With 12 API keys across four providers, the script's naive `time.sleep(1)` approach failed spectacularly. We immediately hit:
+With 12 API keys across four providers, the script's basic `time.sleep(1)` approach didn’t cut it. We quickly hit:
 ```
 429 Too Many Requests
 ```
-The single retry attempt after 5 seconds couldn't handle our actual usage patterns.
+The single retry attempt after 5 seconds was insufficient for our actual usage patterns.
 
 ## The Fixes That Made It Work
 
-Six evenings of debugging later, here's what I changed:
+After six evenings of debugging, here’s what I changed:
 
-**API Endpoints (2 hours)**: Replaced all fictional endpoints with real ones from each provider's documentation.
+**API Endpoints (2 hours)**: I replaced all fictional endpoints with the real ones from each provider's documentation.
 
-**Cost Calculations (1 hour)**: Built provider-specific cost calculators with hardcoded pricing tables (as of June 2026) and added a `--refresh-prices` flag to update them.
+**Cost Calculations (1 hour)**: I built provider-specific cost calculators with hardcoded pricing tables (as of June 2026) and added a `--refresh-prices` flag to keep them updated.
 
-**Pagination (2 hours)**: Implemented proper pagination for each provider using generator patterns to handle their different approaches.
+**Pagination (2 hours)**: I implemented proper pagination for each provider using generator patterns to handle their different approaches.
 
-**Rate Limiting (1 hour)**: Swapped the basic sleep for a proper token-bucket system that respects each provider's limits and rotates through available keys.
+**Rate Limiting (1 hour)**: I swapped the basic sleep for a proper token-bucket system that respects each provider's limits and rotates through available keys.
 
-**Dashboard (30 minutes)**: Rewired the AI-generated HTML template to use our actual normalized cost data instead of hallucinated numbers.
+**Dashboard (30 minutes)**: I rewired the AI-generated HTML template to use our actual normalized cost data instead of the hallucinated numbers.
 
-The final version spanned three files:
+The final version consisted of three files:
 - `track.py` (600 lines) - Main CLI
 - `providers.py` (500 lines) - Provider-specific logic
 - `dashboard.py` (300 lines) - HTML generation
@@ -140,46 +134,46 @@ Testing against 90 days of real usage showed costs within 3-5% of provider dashb
 
 ## The Real Savings
 
-Once we had visibility, the waste became obvious:
+With visibility into our costs, the waste became painfully clear:
 - **OpenAI GPT-5**: A forgotten background job using GPT-5 instead of GPT-4-mini - $800/month
 - **Anthropic Claude Opus**: Research team using Opus when Sonnet would suffice - $600/month
 - **DeepSeek**: Double-paying through a 30% markup aggregator - $400/month
 - **Google Gemini**: Unlimited test accounts running expensive experiments - $200/month
 
-Total savings: ~$2,000/month.
+Total savings: around $2,000/month!
 
 ## Lessons Learned
 
-This project taught me some hard truths about working with AI-generated code:
+This project taught me some valuable lessons about working with AI-generated code:
 
-1. **AI invents plausible-looking APIs** - That two-hour wild goose chase for a non-existent endpoint won't be my last. The AI is confidently wrong.
+1. **AI can invent plausible-looking APIs** - That two-hour wild goose chase for a non-existent endpoint was a real eye-opener. The AI can be confidently wrong.
 
-2. **Pricing changes constantly** - Hardcoded cost tables go stale fast. The `--refresh-prices` flag became essential.
+2. **Pricing changes frequently** - Hardcoded cost tables can go stale fast. The `--refresh-prices` flag became essential.
 
-3. **Rate limiting gets complex fast** - What works for one key fails spectacularly with twelve. Proper token buckets per key solved it.
+3. **Rate limiting can get complex quickly** - What works for one key may fail spectacularly with multiple. A proper token bucket system solved the issue.
 
-4. **Pagination is a silent killer** - Without proper handling, you'll miss most of your data and never know.
+4. **Pagination is a silent killer** - Without proper handling, you'll miss much of your data and never realize it.
 
-5. **Visibility enables savings** - The real value wasn't tracking costs, but finding optimization opportunities like that forgotten GPT-5 job.
+5. **Visibility enables savings** - The real value came not just from tracking costs but in finding optimization opportunities, like that forgotten GPT-5 job.
 
-For more AI coding adventures, check out how I [built a log monitoring script with DeepSeek](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong) and faced similar hallucinations.
+If you're curious about more AI coding adventures, check out how I [built a log monitoring script with DeepSeek](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong) where I faced similar challenges!
 
 ## FAQ
 
 **Q: Does this work with multiple providers?**  
-A: Yes - it handles OpenAI, Anthropic, Google, and DeepSeek simultaneously by normalizing their different data formats.
+A: Yes! It handles OpenAI, Anthropic, Google, and DeepSeek simultaneously by normalizing their different data formats.
 
 **Q: Do I need a web server for the dashboard?**  
-A: No, it generates a standalone HTML file you can open directly in any browser.
+A: Nope! It generates a standalone HTML file you can open directly in any browser.
 
 **Q: How accurate are the cost estimates?**  
-A: Within 3-5% of provider dashboards, accounting for different rounding methods.
+A: They're typically within 3-5% of provider dashboards, accounting for different rounding methods.
 
 **Q: What happens with invalid keys or rate limits?**  
-A: It logs errors and continues with remaining providers, with configurable retry logic.
+A: The script logs errors and continues with the remaining providers, with configurable retry logic.
 
 **Q: Are API keys stored securely?**  
-A: They're read from environment variables by default, never stored in plain text configs.
+A: Yes! They're read from environment variables by default, never stored in plain text configs.
 
 ## Related Guides
 

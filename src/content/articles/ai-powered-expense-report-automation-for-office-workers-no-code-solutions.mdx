@@ -18,21 +18,21 @@ pillarId: ai-automation
 ---
 ## How Can AI Automate My Expense Reports Without Writing Code?  
 
-I used DeepSeek to create a Python script. This script extracts data from receipt images, categorizes expenses, and formats them into a CSV report. It’s triggered by dragging files into a folder. The AI handled 80% of the code, while I focused on structuring the workflow and fixing library conflicts.  
+Have you ever felt bogged down by the tedious process of managing expense reports? I know I have! This is actually what led me to explore AI solutions. I turned to DeepSeek to create a Python script that extracts data from receipt images, categorizes expenses, and formats everything into a neat CSV report. The cool part? It all starts just by dragging files into a folder. DeepSeek took care of about 80% of the code, allowing me to focus on structuring the workflow and fixing a few library conflicts.  
 
 ### The Problem: Expense Reports Were Killing My Productivity  
 
-Every Friday, I wasted 2 hours manually:  
+Let’s be real—spending two hours every Friday on tasks that could be automated is frustrating! I was stuck doing things like:  
 1. Cropping receipt images  
 2. Typing amounts into Excel  
-3. Assigning categories (Travel, Meals, etc.)  
+3. Assigning categories (like Travel, Meals, etc.)  
 4. Calculating totals  
 
-Our finance team required reports in a specific CSV format, including columns for Date, Vendor, Amount, and Category. The worst part? I’d often transpose numbers (like typing $56.20 as $65.20), requiring rework.  
+To make matters worse, our finance team needed reports in a specific CSV format, including columns for Date, Vendor, Amount, and Category. I can't tell you how many times I transposed numbers (like typing $56.20 as $65.20), which meant I had to redo my work.  
 
 ### The AI Attempt: A One-Shot Prompt to DeepSeek  
 
-I provided DeepSeek with the following prompt:  
+So, I decided to give DeepSeek a shot with the following prompt:  
 
 ```  
 Prompt:  
@@ -49,38 +49,40 @@ Include error handling for bad OCR reads."
 ```  
 
 **First Output:**  
-DeepSeek generated a 47-line script using:  
+DeepSeek generated a script with 47 lines, utilizing:  
 - `pytesseract` for OCR  
 - `watchdog` for folder monitoring  
-- Regex patterns to find amounts/dates  
+- Regex patterns to identify amounts and dates  
 
 **Where It Worked:**  
-- The folder watcher logic was flawless  
-- CSV generation used proper escaping  
+- The folder watcher logic was on point  
+- The CSV generation handled proper escaping just fine  
 
 ### Where It Broke: 3 Critical Failures  
 
+Unfortunately, things weren’t all smooth sailing. Here are a few hiccups I ran into:  
+
 1. **Library Hell**  
-   The script needed `pytesseract`, but it failed because Tesseract OCR wasn’t installed system-wide. Error:  
+   The script needed `pytesseract`, but it failed because Tesseract OCR wasn’t installed system-wide. I got an error that said:  
    ```  
    TesseractNotFoundError: tesseract is not installed or it's not in your PATH  
    ```  
 
 2. **Vendor Detection Was Garbage**  
-   For a Starbucks receipt, it output:  
+   When I tested it with a Starbucks receipt, it spat out:  
    ```  
    Vendor: STARBUCKS INC 12345  
    Date: 2024-02-30 (invalid date)  
-   Amount: $12.SO (misread '5' as 'S')  
+   Amount: $12.SO (it mistook '5' for 'S')  
    ```  
 
 3. **False Positives**  
-   A screenshot of a Slack conversation triggered the script because it contained a dollar sign ($).  
+   A screenshot of a Slack conversation triggered the script because it contained a dollar sign ($). Yikes!  
 
 ### What I Had to Fix  
 
 **1. The OCR Pipeline**  
-I switched to EasyOCR because pytesseract had trouble reading thermal receipts. Required changes:  
+I had to switch to EasyOCR since pytesseract struggled with thermal receipts. Here’s how I adjusted the code:  
 ```python  
 # Before (pytesseract)  
 text = pytesseract.image_to_string(image)  
@@ -91,7 +93,7 @@ results = reader.readtext(image, detail=0)
 ```  
 
 **2. Date Validation**  
-Added a function to reject impossible dates (like February 30th):  
+I added a function to reject impossible dates (like February 30th):  
 ```python  
 from datetime import datetime  
 def validate_date(date_str):  
@@ -103,7 +105,7 @@ def validate_date(date_str):
 ```  
 
 **3. Vendor Cleanup**  
-I used a predefined vendor list with fuzzy matching:  
+To improve vendor detection, I used a predefined vendor list with fuzzy matching:  
 ```python  
 KNOWN_VENDORS = ['Starbucks', 'Uber', 'Amazon Web Services']  
 
@@ -116,10 +118,10 @@ def match_vendor(raw_text):
 
 ### The Working Result  
 
-The final script includes the following features:  
-- **Drag-and-drop processing**: Drop receipts into `~/expense_reports/receipts`  
-- **Human review**: Flags uncertain entries in yellow (requires manual confirmation)  
-- **Audit trail**: Logs all actions to `processing.log`  
+In the end, my script turned out to be pretty handy and included these features:  
+- **Drag-and-drop processing**: Just drop receipts into `~/expense_reports/receipts`  
+- **Human review**: It flags uncertain entries in yellow for manual confirmation  
+- **Audit trail**: It logs all actions in `processing.log`  
 
 **Sample Output CSV:**  
 ```  
@@ -129,25 +131,23 @@ Date,Vendor,Amount,Category
 ```  
 
 **Execution Time:**  
-- 0.8 seconds per image (tested on 20 receipts)  
-- 95% accuracy on typed receipts, 70% on handwritten  
-
-
+- It takes about 0.8 seconds per image (I tested it on 20 receipts)  
+- I noticed a 95% accuracy on typed receipts and about 70% on handwritten ones  
 
 ### Key Takeaways  
 
 1. **AI Struggles with Edge Cases Without Human Intervention**  
-   DeepSeek didn’t anticipate thermal receipt fade or handwritten notes. I had to build manual review steps.  
+   I found that DeepSeek didn’t quite handle thermal receipt fade or handwritten notes. I had to integrate manual review steps to make it effective.  
 
 2. **Effective Prompt Engineering Requires Detailed Specifications**  
-   The more precise my prompt (e.g., "include a 10% confidence threshold for OCR results"), the better the output.  
+   The more specific my prompt was (like saying "include a 10% confidence threshold for OCR results"), the better the output I received.  
 
 3. **The Importance of Choosing the Right Libraries**  
-   EasyOCR worked better than pytesseract for my use case, but added 300MB to the deployment size.  
+   In my case, EasyOCR performed better than pytesseract, but it did add about 300MB to the deployment size.  
 
 ### The Exact Prompt  
 
-Here’s the refined prompt that got me the final working version:  
+Here’s the refined prompt that led to the final working version:  
 
 ```  
 "Build a Python 3 script that:  
@@ -167,27 +167,26 @@ Here’s the refined prompt that got me the final working version:
 Include a function to manually review uncertain entries before CSV export."  
 ```  
 
-## Related Guides
+## Related Guides  
 
-- [Ga4 Data Delayed Or Missing Check Measurement Id Consent](/blog/ga4-data-delayed-or-missing-check-measurement-id-consent)
-- [Ga4 Events Automatic Recommended Custom Tracking Guide](/blog/ga4-events-automatic-recommended-custom-tracking-guide)
+- [Ga4 Data Delayed Or Missing Check Measurement Id Consent](/blog/ga4-data-delayed-or-missing-check-measurement-id-consent)  
+- [Ga4 Events Automatic Recommended Custom Tracking Guide](/blog/ga4-events-automatic-recommended-custom-tracking-guide)  
 
 ## FAQ  
 
 **Q: Can this handle multi-currency receipts?**  
-A: Not yet. The current regex only catches USD ($). You’d need to modify the amount detection pattern.  
+A: Not just yet. The current regex only catches USD ($). You’d need to tweak the amount detection pattern for that.  
 
 **Q: What about receipts in other languages?**  
-A: EasyOCR supports 80+ languages. Change the Reader initialization to `['en','es','fr']` as needed.  
+A: EasyOCR supports over 80 languages! You just need to change the Reader initialization to something like `['en','es','fr']` as necessary.  
 
 **Q: Is this GDPR compliant?**  
-A: No-the script stores raw receipt images alongside processed data. You’d need to add auto-deletion of images after processing.  
+A: Unfortunately, no—the script stores raw receipt images alongside processed data. You would need to implement an auto-deletion feature for images after processing.  
 
 **Q: Can I run this on my phone?**  
-A: Only via Termux (Linux environment for Android). For iOS, you’d need a cloud trigger like AWS Lambda.  
+A: You can only run it via Termux (which is a Linux environment for Android). For iOS, you’d likely need a cloud trigger like AWS Lambda.  
 
 **Q: How much did this cost to build?**  
-A: $0 in tools (all open-source), but 3 hours of prompt tuning and debugging.  
+A: It was free in terms of tools (all open-source), but I spent about 3 hours on prompt tuning and debugging.  
 
-Which expense workflow would you automate using this approach? Drop a comment with your nightmare process!  
-
+What about you? Which expense workflow would you like to automate using this approach? I'd love to hear your thoughts in the comments!

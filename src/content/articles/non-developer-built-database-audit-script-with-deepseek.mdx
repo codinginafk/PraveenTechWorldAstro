@@ -30,11 +30,11 @@ faq:
 ---
 ## What Problem Drove Me to Build a Database Audit Script?
 
-The short answer is I built a database audit Python script using DeepSeek after three failed attempts. Every week, I checked my Oracle and MySQL instances to identify oversized tables, unused schemas, and deprecated `FLOAT` columns. I could run manual queries, but the process took 30‑45 minutes and I had to copy‑paste results into spreadsheets for my weekly compliance report. My team kept asking for an automated “audit‑once‑and‑forget” CLI tool that would scan a list of databases, flag anomalies, and email a PDF summary. I’m not a developer-I’m an IT Operations Lead who spends my days on runbooks and monitoring dashboards-so I turned to AI as my junior developer. I asked DeepSeek (and OpenCode) to write the script, expecting a few tweaks. What followed was a three‑act drama of perfect‑looking code that never ran, snippets that hallucinated libraries, and a final script that actually worked-after I spent a solid 4 hours fixing it.
+So, here’s the thing: I really needed a database audit Python script, and after three attempts with AI, I finally got it right. Every week, I find myself checking my Oracle and MySQL instances to spot oversized tables, unused schemas, and those annoying deprecated `FLOAT` columns. While I could run manual queries, it usually took me about 30 to 45 minutes, plus I had to copy and paste results into spreadsheets for my weekly compliance report. My team kept asking for an automated "audit-once-and-forget" CLI tool that could scan a list of databases, flag anomalies, and even email a PDF summary. The catch? I’m not a developer—I’m just an IT Operations Lead who spends my days managing runbooks and monitoring dashboards. So, I thought, why not ask AI to help me out? I decided to give DeepSeek (and OpenCode) a shot, hoping for a simple script with just a few tweaks. What I got instead was a saga of coding chaos—three failed attempts, a lot of frustrations, and finally, a working script after spending about 4 hours fixing it.
 
 ## How I Asked DeepSeek and OpenCode to Write the Script (The Prompt)
 
-My first experiment was a simple prompt that described the business logic and requested a CLI tool. I copied the prompt into a markdown file, sent it to DeepSeek’s web interface, and got back a 30‑line Python script. The code looked sleek, but it never executed. Here’s the exact prompt I used (I kept the token count at 312 tokens, which DeepSeek quoted as a 0.004 USD cost):
+For my first try, I crafted a straightforward prompt that outlined the business logic and requested a CLI tool. I saved this prompt in a markdown file, threw it into DeepSeek’s web interface, and received a 30-line Python script. It looked beautiful, but it just wouldn’t run. Here’s the exact prompt I used (I kept it to 312 tokens, which DeepSeek said would cost me 0.004 USD):
 
 ```
 Prompt:
@@ -54,12 +54,12 @@ I need a Python CLI tool that audits a list of databases (Oracle, MySQL, Postgre
 Please provide the complete script with inline comments.
 ```
 
-The response arrived in 12.3 seconds, and the file size was 1.8 KB. I saved it as `db_audit.py` and ran `python db_audit.py --help`. The help text printed fine, but when I tried to run it against a dummy config, the script crashed with `ModuleNotFoundError: No module named 'cx_Oracle'`. I hadn’t installed Oracle’s binary, but the prompt explicitly said “assume the required DB drivers are installed.” That was my first failure.
+The response came back in about 12.3 seconds, and the file size was 1.8 KB. I saved it as `db_audit.py` and ran `python db_audit.py --help`. The help text displayed nicely, but when I tried to run it against a dummy config, the script crashed with `ModuleNotFoundError: No module named 'cx_Oracle'`. The prompt had said to "assume the required DB drivers are installed," but clearly, that assumption didn’t hold up. That was my first failure.
 
 ## Where the AI Attempts Broke: Three Failures I Faced
 
 **Failure #1 - Missing Drivers**  
-DeepSeek’s script assumed a perfect environment. My test VM only had `mysql‑connector‑python` and `psycopg2` installed. The `cx_Oracle` import blew up. I tried to install it via `pip install cx_Oracle`, but the package requires Oracle Instant Client libraries, which I didn’t have on this Linux container. The error log looked like this:
+DeepSeek’s script assumed a perfect environment. Unfortunately, my test VM only had `mysql‑connector‑python` and `psycopg2` installed. The `cx_Oracle` import blew up. I tried to install it via `pip install cx_Oracle`, but it turns out that this package requires Oracle Instant Client libraries, which I didn’t have set up on this Linux container. Here’s what the error log looked like:
 
 ```
 $ pip install cx_Oracle
@@ -69,22 +69,22 @@ ERROR: Could not find a valid Oracle Instant Client package. Install manually.
 ```
 
 **Failure #2 - Hallucinated Schema Queries**  
-After I removed the Oracle check (to keep the script runnable), I asked DeepSeek for a “quick fix” to drop the Oracle block and replace it with a placeholder. The new script arrived with queries like `SELECT * FROM dba_tables WHERE bytes > 100*1024*1024`. That table doesn’t exist in MySQL. The AI mistakenly included Oracle-specific queries in the MySQL script. Running it produced:
+After removing the Oracle check to make the script runnable, I asked DeepSeek for a “quick fix” to substitute the Oracle block with a placeholder. The new script came back with queries like `SELECT * FROM dba_tables WHERE bytes > 100*1024*1024`. The issue? That table doesn’t exist in MySQL! The AI mistakenly dropped Oracle-specific queries into the MySQL script. When I ran it, I got this delightful error:
 
 ```
 OperationalError: Unknown table 'dba_tables' in engine.
 ```
 
 **Failure #3 - Incorrect JSON Structure**  
-My third prompt asked DeepSeek to “just give me a working script that outputs the findings as a CSV instead of JSON.” The AI obliged with a 28‑line script that used `pandas` to write CSV, but it never imported `pandas`. The script crashed with `NameError: name 'pandas' is not defined`. Moreover, the CSV header I got was `db_name,timestamp,findings_type,object_name,details`, which didn’t match the business requirement of a nested JSON array. My team rejected the output because they needed the exact JSON format for their downstream reporting pipeline.
+On my third attempt, I asked DeepSeek to “just give me a working script that outputs the findings as a CSV instead of JSON.” The AI obliged, but the 28-line script it generated used `pandas` to write CSV without importing it first. So, of course, it crashed with `NameError: name 'pandas' is not defined`. Plus, the CSV header I received was `db_name,timestamp,findings_type,object_name,details`, which didn’t match my team's requirements for a nested JSON array. They flat-out rejected the output because they needed the exact JSON format for their downstream reporting pipeline.
 
-Each failure taught me a pattern: the AI writes great‑looking code but assumes an environment you may not have, and it can mix vendor‑specific syntax without warning. My next approach was to **design the prompt around constraints** and **validate the output before trusting it**.
+Through these failures, I learned a valuable lesson: the AI can produce visually appealing code, but it often assumes an environment that may not exist, and it can mix vendor-specific syntax without any warning. My next approach was to **design the prompt around constraints** and **validate the output before fully trusting it**.
 
 ## What I Had to Fix: Human Intervention and Debugging
 
-For the fourth attempt, I changed my approach. I asked DeepSeek to create smaller, testable functions I could piece together. I also added a “validation step” in the prompt: “Please include a simple `if __name__ == '__main__':` block that prints a sample output so I can verify the JSON shape.” I also requested that the script **detect missing drivers** and skip the DB with a clear warning.
+For my fourth attempt, I switched up my strategy. I asked DeepSeek to create smaller functions that I could test individually. I also added a “validation step” in the prompt: “Please include a simple `if __name__ == '__main__':` block that prints a sample output so I can verify the JSON shape.” I also requested that the script **detect missing drivers** and skip the DB with a clear warning.
 
-Here’s the revised prompt (token count 378, cost $0.0051):
+Here’s the revised prompt I used (token count 378, cost $0.0051):
 
 ```
 Prompt:
@@ -103,9 +103,9 @@ Write a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreS
 Please provide the full script with inline comments.
 ```
 
-DeepSeek returned a 22‑line script (file size 1.2 KB). The first time I ran it, it printed the warning for Oracle and proceeded with MySQL and PostgreSQL. The JSON output looked correct, but I noticed the timestamp was a naive string instead of ISO‑8601. My team’s downstream parser expected `2024‑09‑12T14:35:00Z`. I edited the script to use `datetime.utcnow().isoformat() + 'Z'`. I also added a `--quiet` flag to suppress warnings if the user wants clean output. The final script ran in **2.3 seconds** on my test VM, processing three databases, and produced a clean JSON file of 3.4 KB.
+DeepSeek returned a 22-line script (file size 1.2 KB). When I first ran it, it printed a warning for Oracle and proceeded with MySQL and PostgreSQL. The JSON output looked correct, but then I noticed the timestamp was a naive string instead of ISO‑8601. My team’s downstream parser expected `2024‑09‑12T14:35:00Z`. I edited the script to use `datetime.utcnow().isoformat() + 'Z'`. I also added a `--quiet` flag to suppress warnings if users wanted cleaner output. The final script ran in **2.3 seconds** on my test VM, processing three databases, and produced a clean JSON file of 3.4 KB.
 
-Here’s the before/after comparison:
+Here’s a before-and-after comparison:
 
 **Before (AI‑only) - broken snippet:**
 ```python
@@ -144,11 +144,11 @@ def audit_db(db_type, config):
     return {"db_name": config.get('name'), "timestamp": datetime.utcnow().isoformat()+'Z', "findings": findings}
 ```
 
-The script now works as needed, handling missing drivers and producing the correct JSON output.
+The script now runs as needed, handling missing drivers and producing the correct JSON output.
 
 ## How the Final Script Works: Result and Output
 
-Running `./db_audit.py --config config.json` on my lab environment (Ubuntu 22.04, Python 3.10) produced the following output in **2.3 seconds**:
+When I ran `./db_audit.py --config config.json` in my lab environment (Ubuntu 22.04, Python 3.10), here’s what popped up in **2.3 seconds**:
 
 ```
 $ python db_audit.py --config config.json --output report.json
@@ -159,7 +159,7 @@ $ python db_audit.py --config config.json --output report.json
 [INFO] Audit complete. Report written to report.json
 ```
 
-The `report.json` file (size 3.4 KB) contained:
+The `report.json` file (size 3.4 KB) contained:
 
 ```json
 {
@@ -189,19 +189,17 @@ The `report.json` file (size 3.4 KB) contained:
 }
 ```
 
-The script also supports a `--quiet` flag to suppress the informational logs, which is handy for cron jobs. I added it after my team complained about the noise in their CI pipelines. The final CLI tool is now part of our weekly automation pipeline, running every Monday at 02:00 UTC and feeding the JSON into our Slack bot for immediate alerts.
-
-
+Oh, and there’s a `--quiet` flag to suppress the informational logs, which is super handy for cron jobs. I added it after my team complained about the noise in their CI pipelines. Now, this final CLI tool is part of our weekly automation pipeline, running every Monday at 02:00 UTC and feeding the JSON into our Slack bot for immediate alerts.
 
 ## What I Learned About Prompt Engineering and AI Limitations
 
-1. **Be specific about constraints.** By explicitly asking for “under 25 lines” and “handle import errors,” I forced the AI to stay within realistic boundaries.  
+1. **Be specific about constraints.** By being clear about needing “under 25 lines” and “handling import errors,” I helped the AI stay within realistic boundaries.  
 2. **Validate before you trust.** The AI’s output looked perfect, but only after running `python -m py_compile db_audit.py` did I catch the missing import.  
-3. **Don’t assume the environment.** My first prompt said “assume drivers are installed.” The second prompt added a safety net, which cut my debugging time from 45 minutes to 10 minutes.  
-4. **Iterate with smaller pieces.** Breaking the script into functions reduced the chance of a single hallucinated query breaking the whole workflow.  
-5. **Document the AI’s cost.** DeepSeek quoted a cost of $0.004 for the first attempt and $0.0051 for the final one. For a non‑developer, that’s less than a coffee, and the ROI is immediate because the script saves ~2 hours per week.  
+3. **Don’t assume the environment.** My first prompt included “assume drivers are installed.” The second prompt added a safety net, which cut my debugging time from 45 minutes to just 10!  
+4. **Iterate with smaller pieces.** Breaking down the script into functions reduced the chance of a single hallucinated query breaking everything.  
+5. **Document the AI’s cost.** DeepSeek quoted a cost of $0.004 for the first attempt and $0.0051 for the final one. For a non‑developer, that’s less than a coffee, and the ROI is immediate since the script saves around 2 hours per week.  
 
-Overall, the experiment taught me that AI is an excellent “code junior” when you pair it with a senior’s eye for edge cases. The key is to ask the right questions and then iterate, not to expect a perfect hand‑off on the first try.
+Overall, this experience taught me that AI can be a fantastic “code junior,” especially when paired with someone who’s mindful of edge cases. The trick is to ask the right questions and iterate—don’t expect a perfect hand-off on the first try.
 
 ## The Exact Prompt You Can Copy‑Paste
 
@@ -222,7 +220,7 @@ Write a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreS
 Please provide the full script with inline comments.
 ```
 
-Copy the block above, paste it into DeepSeek (or OpenCode), and you’ll get the same 22‑line script I refined. Adjust the config JSON to match your environment, and you’re good to go.
+Feel free to copy the block above, paste it into DeepSeek (or OpenCode), and you should get the same 22-line script I refined. Just tweak the config JSON to match your setup, and you’re all set!
 
 ## FAQ: Real Questions About Building Scripts with DeepSeek
 
@@ -239,11 +237,11 @@ A: Yes-just add another `elif` block for the new DB type, update the size and co
 A: The script uses `json.load`. If it fails, argparse will raise `json.JSONDecodeError` and you’ll see a traceback. For a more robust solution you could wrap it in a try/except and log the error, but for a quick audit tool the default behavior is fine.
 
 **Q: How do I schedule this script?**  
-A: Add a cron entry like `*/7 * * * * /usr/bin/python3 /opt/scripts/db_audit.py --config /opt/configs/db_audit.json --output /var/log/db_audit_$(date +\%Y\%m\%d).json`. The script runs in under 3 seconds, so it fits comfortably within a weekly window.
+A: Add a cron entry like `*/7 * * * * /usr/bin/python3 /opt/scripts/db_audit.py --config /opt/configs/db_audit.json --output /var/log/db_audit_$(date +\%Y\%m\%d).json`. The script runs in under 3 seconds, so it fits comfortably within a weekly window.
 
 ---
 
-What task would you automate with this approach? Feel free to share your prompts and the AI’s output in the comments-let’s build in public together!
+What task would you automate with this approach? I’d love to hear your thoughts! Share your prompts and the AI’s output in the comments—let’s build in public together!
 
 ## Related Guides
 

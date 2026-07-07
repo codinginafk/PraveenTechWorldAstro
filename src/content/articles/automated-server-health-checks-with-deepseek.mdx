@@ -30,11 +30,11 @@ faq:
     answer: "Not yet, but you can wrap it in a Docker container with a simple COPY of the script and a CMD entrypoint. The script only needs Python 3.8+ and the requests library for webhooks."
 ---
 
-In short, I used DeepSeek to generate a server health check script, but the first version would have failed under real server load. After fixing the concurrency logic and adding proper thresholds, I now have a lightweight health checker that runs across 4 servers and emails me only when something is actually wrong.
+I recently decided to automate my server health checks using DeepSeek, and let me tell you, it was quite the journey! The first version of the script had some major hiccups that would have caused serious problems under real server loads. After some debugging and adjustments, I now have a lightweight health checker that monitors four servers and only alerts me when there’s an actual issue. 
 
-## What Problem Made Me Build This?
+## What Made Me Want to Do This?
 
-I manage 4 Ubuntu servers for different projects. One runs my monitoring stack. One hosts a small e-commerce site. Two run internal tools for clients. Every Saturday morning, I used to SSH into each one and run the same commands:
+I manage a handful of Ubuntu servers for various projects. One of them is dedicated to monitoring, another houses a small e-commerce site, and the other two are for internal tools for clients. Every Saturday morning, I found myself SSHing into each server and running the same commands:
 
 ```
 df -h
@@ -43,11 +43,11 @@ systemctl status --failed
 uptime
 ```
 
-This manual process took 15 minutes of repetitive work. I kept telling myself I would set up Nagios or Zabbix, but those felt like overkill for 4 boxes. I wanted a single Python script I could run from my laptop that would check all servers, collect the metrics, and alert me if anything was wrong.
+This manual process was a bit tedious and took about 15 minutes. I kept telling myself that I should set up Nagios or Zabbix, but honestly, that felt like overkill for just four servers. I wanted something simpler—a single Python script that I could run from my laptop to check all servers, gather the metrics, and alert me if anything was off.
 
-## The Prompt I Fed DeepSeek
+## The Prompt I Gave to DeepSeek
 
-I opened DeepSeek and wrote a single prompt that covered the full workflow:
+I opened up DeepSeek and crafted a single prompt that captured everything I wanted:
 
 ```
 Prompt:
@@ -71,45 +71,45 @@ Build a Python CLI tool that connects to multiple Linux servers via SSH and runs
 Please output the complete script with comments and a usage example.
 ```
 
-DeepSeek generated a 450-line script with all the requested functionality, including async SSH connections and threshold checks. It had asyncssh, a config parser, threshold checks, and even a colorful summary table. It quoted around 780 tokens for the output, costing me roughly $0.002 on DeepSeek's API.
+DeepSeek generated this impressive 450-line script with all the features I asked for, including async SSH connections and threshold checks. It even came with a colorful summary table! The output cost me around $0.002 on DeepSeek's API, which isn't too shabby.
 
-## Three Things That Were Wrong
+## What Went Wrong Initially
 
-**SSH connection pooling.** The AI used asyncssh but created a fresh connection for every single check instead of reusing the connection across metrics. On the first run, my laptop opened 12 simultaneous SSH connections to each server (one for CPU, one for disk, one for memory, one for services). My client's server flagged it as a brute force attempt and blocked my IP.
+Unfortunately, the first version had a few critical issues:
 
-The error I got:
-```
-Connection refused by remote host. Possible rate limiting.
-```
+1. **SSH Connection Pooling:** While the AI used asyncssh, it created a fresh connection for every single metric check. On the first run, my laptop opened 12 simultaneous SSH connections to each server, which caused my client’s server to flag it as a brute force attempt and block my IP. I received an error message that read:
+   ```
+   Connection refused by remote host. Possible rate limiting.
+   ```
 
-**Threshold logic was inverted.** The script checked each metric individually but used OR logic to trigger alerts. A single high CPU core would fire an alert even if disk and memory were fine. Worse, it would keep firing the same alert every 300 seconds because it never tracked which alerts had already been sent. Within 10 minutes, I received 47 identical Slack messages, flooding my test inbox.
+2. **Threshold Logic Was Inverted:** The script used OR logic for triggering alerts, which meant if one metric was high (like CPU), it would alert even if all the others were fine. This led to me getting bombarded with 47 identical Slack messages within 10 minutes!
 
-**No error handling on SSH failures.** When one server was down for maintenance, the script crashed entirely instead of skipping it and checking the remaining servers. The async task raised an unhandled exception that killed the whole loop.
+3. **No Error Handling on SSH Failures:** When one server was down for maintenance, the script crashed entirely instead of skipping it and checking the others. The unhandled exception caused the whole loop to stop.
 
-```
-Traceback (most recent call last):
-  File "health_checker.py", line 203, in check_server
-    async with asyncssh.connect(host, port=port, username=user, client_keys=[key_path]) as conn:
-asyncssh.misc.PermissionDenied: Permission denied (publickey).
-```
+   ```
+   Traceback (most recent call last):
+     File "health_checker.py", line 203, in check_server
+       async with asyncssh.connect(host, port=port, username=user, client_keys=[key_path]) as conn:
+   asyncssh.misc.PermissionDenied: Permission denied (publickey).
+   ```
 
-## What I Had to Fix
+## My Fixes
 
-I organized the fixes into four key improvements.
+After realizing all these issues, I made four key improvements:
 
-**Connection reuse.** I rewrote the SSH logic to open one connection per server, run all 4 checks through that single connection, then close it. This dropped from 12 connections to 3 per check cycle.
+1. **Connection Reuse:** I rewrote the SSH logic to open one connection per server, run all the checks through that single connection, and then close it. This reduced the number of connections from 12 to just 3 per cycle.
 
-**Alert deduplication.** I added a set of sent alerts keyed by server+metric. If the same metric was already alerted within the last hour, skip it. This turned 47 Slack messages into 1.
+2. **Alert Deduplication:** I added a mechanism to track sent alerts by server and metric. If an alert had already been sent within the last hour, it would skip it. This change reduced my Slack notifications from 47 to just 1.
 
-**Graceful failure handling.** I wrapped each server check in a try/except that logs the failure and moves on. A single down server no longer takes down the whole check cycle.
+3. **Graceful Failure Handling:** I wrapped each server check in a try/except block to log any failures and continue with the others, so one down server wouldn’t derail the entire process.
 
-**Parallel execution.** I kept DeepSeek's async structure but switched from asyncio.gather() to asyncio.wait() with return_when=FIRST_EXCEPTION, so I could collect partial results even when some servers failed.
+4. **Parallel Execution:** I retained DeepSeek's async structure but switched from asyncio.gather() to asyncio.wait() with return_when=FIRST_EXCEPTION, allowing me to collect results even when some servers failed.
 
-The final script is 4.1KB. It checks 4 servers in about 6 seconds (down from 45 seconds when connecting sequentially). Memory usage stays under 40MB.
+The final script is now 4.1KB and checks four servers in about 6 seconds (a significant improvement from the original 45 seconds). Plus, memory usage remains under 40MB!
 
 ## The Working Result
 
-Here is what the output looks like:
+Here’s a sneak peek of what the output looks like when I run the script:
 
 ```
 $ python health_checker.py --config servers.yml
@@ -123,7 +123,7 @@ $ python health_checker.py --config servers.yml
 [2026-06-26 08:15:08] Log written to health-check.log
 ```
 
-The config file is a simple YAML:
+The configuration file is simple and looks like this:
 
 ```yaml
 servers:
@@ -146,19 +146,19 @@ thresholds:
 webhook: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 ```
 
-## What I Learned About Prompting for Health Check Scripts
+## What I Learned About Crafting Prompts for Health Check Scripts
 
-**Be explicit about connection management.** DeepSeek assumed every check needed its own SSH connection because I listed each metric as a separate bullet point. Grouping them with "for each server, collect all of these" changed the output dramatically.
+1. **Be Clear About Connection Management:** I learned that DeepSeek assumed every metric needed its own SSH connection, so grouping them together in a single statement helped a lot.
 
-**Add deduplication to the prompt.** I had to add "track which alerts have been sent and do not send duplicates within 60 minutes" as a separate sentence. The AI did not infer this on its own.
+2. **Deduplication Needs to Be Explicit:** I had to clarify in the prompt that I wanted to track which alerts had been sent to avoid duplicates.
 
-**Test with a real unreachable server.** The AI never considered what happens when a server is down. Adding a "skip unreachable servers and continue" requirement to the prompt fixed the crash issue.
+3. **Consider Unreachable Servers:** The AI didn’t initially account for what happens when a server is down, so adding that to the prompt was crucial.
 
-**Cost comparison.** DeepSeek's output cost me $0.002 but took 90 minutes to debug and fix. Writing from scratch would have taken 3 hours. The AI saved me time on the initial structure but cost me time on edge cases. Net savings: about 90 minutes.
+4. **Cost vs. Time:** While DeepSeek’s output cost me $0.002, it took me 90 minutes to debug and fix the issues. Writing everything from scratch would have taken about 3 hours, so I saved some time, but there were trade-offs.
 
 ## The Exact Prompt
 
-Here is the raw, unedited prompt I sent to DeepSeek. You can copy-paste it and see the same output I received:
+In case you want to experiment with DeepSeek yourself, here’s the unedited prompt I used:
 
 ```text
 Prompt:
@@ -184,19 +184,19 @@ Please output the complete script with comments and a usage example.
 
 ## FAQ
 
-**Q: Does this script work on Windows servers?**
+**Q: Does this script work on Windows servers?**  
 A: Not directly. The script uses /proc and subprocess calls that assume a Linux environment. For Windows, you would need to swap the disk check to wmic or PowerShell Get-CimInstance and change the service check to Get-Service.
 
-**Q: Can I run this without email or Slack configured?**
+**Q: Can I run this without email or Slack configured?**  
 A: Yes. Omit the --webhook flag and the script logs everything to health.log and stdout. You can pipe the output to any other tool.
 
-**Q: How much CPU does this use?**
+**Q: How much CPU does this use?**  
 A: On a 2-core VPS, the script uses about 0.8% CPU during each check cycle and 35MB of RAM. The sleep interval between checks keeps it idle 99% of the time.
 
-**Q: What happens if a service restarts while the script is checking?**
+**Q: What happens if a service restarts while the script is checking?**  
 A: The script takes a snapshot of service states at the moment of the check. If the service was down for 2 seconds during restart, it reports it as down. I added a 3-second cooldown to avoid alerting on legit restarts.
 
-**Q: Is there a Docker version?**
+**Q: Is there a Docker version?**  
 A: Not yet, but you can wrap it in a Docker container with a simple COPY of the script and a CMD entrypoint. The script only needs Python 3.8+ and the requests library for webhooks.
 
 ## Related Guides
@@ -205,4 +205,4 @@ A: Not yet, but you can wrap it in a Docker container with a simple COPY of the 
 - [How I Automated TLS Certificate Renewal with DeepSeek: Production Lessons](/blog/automated-tls-certificate-renewal-with-deepseek): The short answer is I automated TLS certificate renewal using a DeepSeek-generated Python script, but it almost broke production.
 - [I Asked DeepSeek to Build My Sysadmin Toolkit: Here is What It Made and Broke](/blog/i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke): The short answer is I asked DeepSeek to build a complete sysadmin toolkit, and it generated scripts that looked great but had hidden bugs.
 
-What task would you automate with this approach?
+What do you think? What task would you want to automate using a similar approach?
