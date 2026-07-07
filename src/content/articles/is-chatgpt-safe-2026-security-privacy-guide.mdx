@@ -18,10 +18,9 @@ tags:
 seoTitle: "I Built an AI Token Dashboard and Cut My API Bill by 60%"
 socialHook: "My AI API bill hit $2,300 in one month. I built a token dashboard with SQLite and a proxy middleware. Found 40% waste from redundant agents. Here is the exact setup."
 ---
-
 ## My $2,300 OpenAI Bill Was a Wake-Up Call - Here's How I Fixed It
 
-You know that sinking feeling when you see an unexpected charge? Well, that was me staring at a $2,300 bill from OpenAI. It hit me that something was seriously off. As I started digging through the logs, the culprit became painfully obvious: we had four developers, seven microservices, and zero insight into which ones were draining our token budget. If you're curious, [our comparison of AI tools](/blog/chatgpt-vs-claude-vs-gemini-which-ai-assistant-is-best-in-2026) illustrates just how different the costs can be across providers. The biggest surprise? An agent I thought was just handling some basic classification tasks was actually sending 12,000 tokens per request—thanks to someone copy-pasting an entire context window from a prototype without cleaning it up. Yikes!
+You know that sinking feeling when you see an unexpected charge? Well, that was me staring at a $2,300 bill from OpenAI. It hit me that something was seriously off. As I started digging through the logs, the culprit became painfully obvious: we had four developers, seven microservices, and zero insight into which ones were draining our token budget. If you're curious, [our comparison of AI tools](/blog/chatgpt-vs-claude-vs-gemini-which-ai-assistant-is-best-in-2026) illustrates just how different the costs can be across providers. The biggest surprise? An agent I thought was just handling some basic classification tasks was actually sending 12,000 tokens per request--thanks to someone copy-pasting an entire context window from a prototype without cleaning it up. Yikes!
 
 That moment was my turning point. I decided to stop treating AI costs like a regular utility bill and instead manage them like an integral part of our production infrastructure. So, I rolled up my sleeves and built a dashboard that:
 
@@ -29,18 +28,18 @@ That moment was my turning point. I decided to stop treating AI costs like a reg
 2. Logs tokens, models, and endpoints into SQLite
 3. Breaks down costs by agent, user, and hour
 
-And guess what? We managed to cut our monthly bill by 60% in just 30 days—not because we switched to cheaper models, but because we finally saw where the waste was happening.
+And guess what? We managed to cut our monthly bill by 60% in just 30 days--not because we switched to cheaper models, but because we finally saw where the waste was happening.
 
 ### The Solution: A Simple Proxy That Reveals Everything
 
-Here’s the reality: every AI agent consumes tokens, but most teams have no clue how many. My solution? A straightforward HTTP proxy that:
+Here's the reality: every AI agent consumes tokens, but most teams have no clue how many. My solution? A straightforward HTTP proxy that:
 
 - Sits between your services and LLM providers
-- Logs every request’s model, tokens, latency, and cost
+- Logs every request's model, tokens, latency, and cost
 - Stores all that info in SQLite for easy access
 - Adds less than 5ms overhead
 
-Here’s a sneak peek of what the code looks like:
+Here's a sneak peek of what the code looks like:
 
 ```python
 from flask import Flask, request, jsonify
@@ -51,7 +50,7 @@ UPSTREAM = "https://api.openai.com"
 
 def log_to_db(model, prompt_tokens, completion_tokens, latency_ms, agent_id, cost):
   db = sqlite3.connect("token_burn.db")
-  db.execute("INSERT INTO token_log VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
+  db.execute("INSERT INTO token_log VALUES (', ', ', ', ', ', datetime('now'))",
     (model, prompt_tokens, completion_tokens, latency_ms, agent_id, cost))
   db.commit()
 
@@ -83,7 +82,7 @@ After a month of tracking, we discovered some tough truths:
 
 3. **Peak Hour Waste**: Our 2 PM cron job was reprocessing all daily data instead of just new changes, leading to a $180/hour spike.
 
-Here’s a quick before-and-after comparison:
+Here's a quick before-and-after comparison:
 
 | Metric | Before | After |
 |--------|--------|-------|
@@ -99,7 +98,7 @@ This approach might be a good fit if:
 - You want to pinpoint waste without changing models
 
 But it might not help if:
-- You're using providers that don’t return token counts
+- You're using providers that don't return token counts
 - Developers bypass the proxy
 - You have just a single, simple use case
 
@@ -116,4 +115,4 @@ But it might not help if:
 3. **Watch for peaks**: Uneven usage can signal inefficiencies in scheduling.
 4. **Tag everything**: Use `X-Agent-ID` headers to keep track of sources.
 
-The proxy code, schema, and dashboard queries are all laid out above. It took me just an afternoon to build, and it paid for itself on day one. If you’re tired of those surprise AI bills, I encourage you to give it a try! What do you think? Have you faced similar challenges?
+The proxy code, schema, and dashboard queries are all laid out above. It took me just an afternoon to build, and it paid for itself on day one. If you're tired of those surprise AI bills, I encourage you to give it a try! What do you think? Have you faced similar challenges'

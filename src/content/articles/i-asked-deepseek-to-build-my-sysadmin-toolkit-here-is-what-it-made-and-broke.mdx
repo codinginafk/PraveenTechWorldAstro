@@ -19,28 +19,26 @@ pillarId: ai-automation
 ---
 ## I Asked DeepSeek to Build My Sysadmin Toolkit
 
-So, I decided to give DeepSeek a shot at creating some Python scripts for tasks like log parsing, disk monitoring, and user management. I thought I could outline the logic and let the AI tackle the syntax. Initially, I was pretty excited—it churned out about 80% of functional code. But, there were a couple of hiccups along the way, including a few imaginary methods and some head-scratching moments with Linux permissions that needed a bit of manual fixing. If you're curious about my other adventures with DeepSeek, check out my [TLS certificate renewal script](/blog/automated-tls-certificate-renewal-with-deepseek) and [log monitoring tool](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong).
+So, I decided to give DeepSeek a shot at creating some Python scripts for tasks like log parsing, disk monitoring, and user management. I thought I could outline the logic and let the AI tackle the syntax. Initially, I was pretty excited--it churned out about 80% of functional code. But, there were a couple of hiccups along the way, including a few imaginary methods and some head-scratching moments with Linux permissions that needed a bit of manual fixing. If you're curious about my other adventures with DeepSeek, check out my [TLS certificate renewal script](/blog/automated-tls-certificate-renewal-with-deepseek) and [log monitoring tool](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong).
 
 ## Why was I spending 5 hours a week on manual log audits?
+As an IT Operations Lead, I find myself balancing high-level strategy with the nitty-gritty of system maintenance. For the past six months, I've been stuck manually parsing `/var/log/syslog` and `/var/log/auth.log` to track down failed SSH attempts and monitor disk space. Honestly, it's tedious, and I felt like I was wasting my time.
 
-As an IT Operations Lead, I find myself balancing high-level strategy with the nitty-gritty of system maintenance. For the past six months, I've been stuck manually parsing `/var/log/syslog` and `/var/log/auth.log` to track down failed SSH attempts and monitor disk space. Honestly, it’s tedious, and I felt like I was wasting my time.
-
-I’m not a hardcore developer—sure, I can read Python and run scripts, but crafting a robust CLI tool from scratch? That’s my kryptonite. I've dabbled with other language models before, but I was curious if DeepSeek could manage the "messiness" of system-level automation without me having to micromanage every line of code.
+I'm not a hardcore developer--sure, I can read Python and run scripts, but crafting a robust CLI tool from scratch? That's my kryptonite. I've dabbled with other language models before, but I was curious if DeepSeek could manage the "messiness" of system-level automation without me having to micromanage every line of code.
 
 My goal was pretty straightforward: build a "Sysadmin Toolkit" with three tools:
 1. A Log Parser that flags security anomalies.
 2. A Disk Monitor that alerts me when a partition hits 90%.
 3. A User Management script to audit stale accounts.
 
-I didn’t want a tutorial—I wanted a practical tool. So, I thought of DeepSeek as my junior developer. I would provide the architecture and business logic, and the AI would handle the syntax.
+I didn't want a tutorial--I wanted a practical tool. So, I thought of DeepSeek as my junior developer. I would provide the architecture and business logic, and the AI would handle the syntax.
 
 ## How did I prompt DeepSeek to build the toolkit?
-
-I didn’t kick things off with a vague "write me a script" prompt. I’ve learned from past experiments—like when I tried to automate my [server health checks](/blog/automated-server-health-checks-with-deepseek)—that being specific is crucial. I gave the AI a persona and a detailed set of requirements.
+I didn't kick things off with a vague "write me a script" prompt. I've learned from past experiments--like when I tried to automate my [server health checks](/blog/automated-server-health-checks-with-deepseek)--that being specific is crucial. I gave the AI a persona and a detailed set of requirements.
 
 Using the DeepSeek-Coder model, I crafted a comprehensive prompt that outlined the environment (Ubuntu 22.04), the required libraries (sticking to standard ones where I could), and the exact output format I needed (JSON for logs, plain text for alerts).
 
-Here’s the gist of my prompt:
+Here's the gist of my prompt:
 ```text
 Act as a Senior Python Developer specializing in Linux System Administration. I need a 'Sysadmin Toolkit' consisting of three separate scripts. 
 
@@ -58,28 +56,26 @@ Requirements:
 ```
 
 ## Where did the AI hallucinate and break?
-
-DeepSeek generated the code in a flash—just 12 seconds. The indentation was spot-on, variable names were clear, and the `main.py` wrapper had this nice switch-case logic. I felt like a genius for about five minutes. Then, I actually ran the code.
+DeepSeek generated the code in a flash--just 12 seconds. The indentation was spot-on, variable names were clear, and the `main.py` wrapper had this nice switch-case logic. I felt like a genius for about five minutes. Then, I actually ran the code.
 
 The first hiccup happened with `disk_check.py`. The AI used a method called `psutil.disk_partitions().get_usage()`. When I ran the script, I was met with this error:
 `AttributeError: 'list' object has no attribute 'get_usage'`.
 
-It turned out DeepSeek had invented a method. It treated the list of partitions as one object that could be queried for usage. In reality, I needed to iterate through the list and call `.usage()` on each individual partition object. It looked good on paper, but it relied on a library method that simply didn’t exist.
+It turned out DeepSeek had invented a method. It treated the list of partitions as one object that could be queried for usage. In reality, I needed to iterate through the list and call `.usage()` on each individual partition object. It looked good on paper, but it relied on a library method that simply didn't exist.
 
-The second issue came from the `user_audit.py` script. It tried reading `/etc/shadow` to check for the last login date. While that made sense logically, the script crashed with a `PermissionError: [Errno 13] Permission denied`. The AI didn’t account for the fact that I needed to run the script with `sudo` privileges—it just assumed it had root access.
+The second issue came from the `user_audit.py` script. It tried reading `/etc/shadow` to check for the last login date. While that made sense logically, the script crashed with a `PermissionError: [Errno 13] Permission denied`. The AI didn't account for the fact that I needed to run the script with `sudo` privileges--it just assumed it had root access.
 
-The third problem was with the log parser. It worked, but man, was it slow! On a 400MB log file, it took 42 seconds to execute and gobbled up 1.2GB of RAM by reading the entire file into memory with `.readlines()`. For a sysadmin tool, that’s a disaster waiting to happen. If I were to run this on a production server with a 2GB log file, I’d likely trigger an OOM (Out of Memory) killer and crash the server.
+The third problem was with the log parser. It worked, but man, was it slow! On a 400MB log file, it took 42 seconds to execute and gobbled up 1.2GB of RAM by reading the entire file into memory with `.readlines()`. For a sysadmin tool, that's a disaster waiting to happen. If I were to run this on a production server with a 2GB log file, I'd likely trigger an OOM (Out of Memory) killer and crash the server.
 
 ## What did I have to fix to make it production-ready?
-
-Here’s where my "IT Ops Lead" brain kicked in. I might not be the best at writing optimized Python, but I know how the system should behave. I went back to the AI, but instead of just asking it to "fix the code," I provided specific error messages and performance data.
+Here's where my "IT Ops Lead" brain kicked in. I might not be the best at writing optimized Python, but I know how the system should behave. I went back to the AI, but instead of just asking it to "fix the code," I provided specific error messages and performance data.
 
 For the `AttributeError`, I shared the exact traceback.
 For the `PermissionError`, I explained: "The script crashes because it lacks root access. Please add a check at the start of the script to verify if the user is root using `os.geteuid()`, and if not, exit with a helpful error message."
 
-For the memory issue, I mentioned: "The current log parser is reading the entire file into memory, which isn’t efficient for large files. Please rewrite the log parsing logic to use a generator or iterate through the file line-by-line to keep memory usage under 50MB."
+For the memory issue, I mentioned: "The current log parser is reading the entire file into memory, which isn't efficient for large files. Please rewrite the log parsing logic to use a generator or iterate through the file line-by-line to keep memory usage under 50MB."
 
-Here’s how the log parser logic looked before and after:
+Here's how the log parser logic looked before and after:
 
 **Before (AI's first attempt - Memory Hog):**
 ```python
@@ -100,10 +96,9 @@ def parse_logs():
                 # process line
 ```
 
-The execution time didn’t change much, but the memory footprint dropped from 1.2GB to about 14MB. That’s a huge difference between a script that works on my laptop and one that’s ready for a production server.
+The execution time didn't change much, but the memory footprint dropped from 1.2GB to about 14MB. That's a huge difference between a script that works on my laptop and one that's ready for a production server.
 
 ## What is the working result?
-
 After three rounds of iterative prompting and one manual fix to the CSV export logic, I finally have a working toolkit. 
 
 **The Toolkit Stats:**
@@ -134,14 +129,14 @@ If I select `1`, it generates a `security_audit.csv` that I can pop into a sprea
 This little venture showed me that while AI is great at syntax, it can struggle with architectural design. If I had just copied and pasted the initial output without any adjustments, I might have ended up crashing a server or ignoring a critical permission error.
 
 Here are some key takeaways:
-1. **The "Line-by-Line" Rule:** Whenever an AI writes a script that reads a file, check if it’s using `.readlines()`. If it is, ask it to iterate through the file object instead. This pattern can cause serious issues in production.
+1. **The "Line-by-Line" Rule:** Whenever an AI writes a script that reads a file, check if it's using `.readlines()`. If it is, ask it to iterate through the file object instead. This pattern can cause serious issues in production.
 2. **Permission Awareness:** AI tends to assume it has the permissions it needs. You have to explicitly instruct it to handle `sudo` requirements or add `try-except` blocks for `PermissionError`.
-3. **Hallucinated Methods:** Just because a method sounds plausible (like `.get_usage()`) doesn’t mean it exists. Always verify library methods against the official documentation if you encounter an `AttributeError`.
+3. **Hallucinated Methods:** Just because a method sounds plausible (like `.get_usage()`) doesn't mean it exists. Always verify library methods against the official documentation if you encounter an `AttributeError`.
 4. **Iterative Refinement:** My first prompt got me 80% of the way there. The last 20% (stability and performance) required three more prompts. The real value lies in the refinement, not just the initial generation.
 
 ## The Exact Prompt
 
-If you want to replicate this, here’s the exact prompt I used. I’ve updated it with the fixes I discovered during the build, so you won’t have to go through the same hallucinations I did.
+If you want to replicate this, here's the exact prompt I used. I've updated it with the fixes I discovered during the build, so you won't have to go through the same hallucinations I did.
 
 Prompt:
 ```text
@@ -162,17 +157,17 @@ Requirements:
 
 ## FAQ
 
-**Can I run this on Windows?**  
-Nope! This toolkit is specifically designed for Linux (`/var/log/auth.log` and `/etc/passwd` don’t exist on Windows). For Windows, you’d need to ask the AI to use `win32evtlog` for event logs and `wmi` for disk checks.
+**Can I run this on Windows'**  
+Nope! This toolkit is specifically designed for Linux (`/var/log/auth.log` and `/etc/passwd` don't exist on Windows). For Windows, you'd need to ask the AI to use `win32evtlog` for event logs and `wmi` for disk checks.
 
-**Is this safe to run on a production server?**  
-Yes, as long as you run it with the `sudo` check I implemented. Since it only reads files and doesn’t write to system directories (except for the CSV in the local folder), it’s read-only and safe.
+**Is this safe to run on a production server'**  
+Yes, as long as you run it with the `sudo` check I implemented. Since it only reads files and doesn't write to system directories (except for the CSV in the local folder), it's read-only and safe.
 
-**Which AI model is best for this?**  
+**Which AI model is best for this'**  
 I used DeepSeek-Coder, and it outperformed others in terms of speed and initial structure. However, the hallucination with the `psutil` method reminded me that no AI is 100% reliable. Always test in a staging environment first.
 
-**How do I install the dependencies?**  
+**How do I install the dependencies'**  
 The only non-standard library used is `psutil`, which you can install with:
 `pip install psutil`.
 
-What about you? What task would you automate with this approach? I’d love to hear your thoughts in the comments, and who knows, I might just try to tackle it in my next experiment!
+What about you? What task would you automate with this approach? I'd love to hear your thoughts in the comments, and who knows, I might just try to tackle it in my next experiment!

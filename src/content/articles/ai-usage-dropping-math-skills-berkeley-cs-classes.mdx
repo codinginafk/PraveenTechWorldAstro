@@ -18,14 +18,13 @@ tags:
 seoTitle: "Breaking the AI Chatbox: Berkeley Students Build Autonomous Agents"
 socialHook: "Berkeley CS students ditched ChatGPT for autonomous sandboxed agents. Task planning, code execution, SQLite storage, email output - no chat interface. Here is how they built it."
 ---
-
 ## Breaking the AI Chatbox: Berkeley's Autonomous Agents
 
 Have you ever felt trapped by the typical AI demo? You know the drill: a chat window, typing a question, and waiting for a response to appear line by line. While it seems convenient, this chat interface can actually limit how we use AI, turning us into passive consumers instead of active builders. If you're curious about how different AI assistants stack up, you might want to check out our [ChatGPT vs Claude vs Gemini comparison](/blog/chatgpt-vs-claude-vs-gemini-which-ai-assistant-is-best-in-2026). 
 
-Last semester, a group of Berkeley CS students realized they were falling into this trap. They relied on ChatGPT for their algorithms homework, scoring high marks but struggling during their midterms. So, they decided to ditch the chat interface and create their own autonomous agents. These agents operate in sandboxes, plan tasks, execute Python code, store results in SQLite, and email the outputs—without the need for any chat box or typing prompts!
+Last semester, a group of Berkeley CS students realized they were falling into this trap. They relied on ChatGPT for their algorithms homework, scoring high marks but struggling during their midterms. So, they decided to ditch the chat interface and create their own autonomous agents. These agents operate in sandboxes, plan tasks, execute Python code, store results in SQLite, and email the outputs--without the need for any chat box or typing prompts!
 
-Let’s dive into how they built it and why it’s working so well for them.
+Let's dive into how they built it and why it's working so well for them.
 
 ### The Direct Answer
 
@@ -37,15 +36,15 @@ Their system comprises four main components that work together:
 
 **1. Task Planner.** The planner utilizes a lightweight LLM (OpenRouter with a $0.10/M token model) to take the main objective and output a JSON array of subtasks. Each subtask includes a description, success criteria, and a list of dependencies. The planner continues until all tasks are marked as complete or the maximum iteration limit is reached.
 
-**2. Code Executor.** Each subtask is passed to a code-writing LLM, which generates Python scripts. These scripts are executed in a secure Docker sandbox without network access or filesystem persistence, with a timeout of 30 seconds. The agent captures standard output, error messages, and return codes. If there’s an error, the executor prompts the LLM again with the error message and will retry up to three times.
+**2. Code Executor.** Each subtask is passed to a code-writing LLM, which generates Python scripts. These scripts are executed in a secure Docker sandbox without network access or filesystem persistence, with a timeout of 30 seconds. The agent captures standard output, error messages, and return codes. If there's an error, the executor prompts the LLM again with the error message and will retry up to three times.
 
-**3. SQLite Store.** All intermediate results—like parsed data, computed values, and error logs—are stored in a local SQLite database. This design means the agent doesn’t depend on memory between steps; it reads from the database instead. This is crucial since it allows the agent to reference any past result without needing to re-prompt the LLM.
+**3. SQLite Store.** All intermediate results--like parsed data, computed values, and error logs--are stored in a local SQLite database. This design means the agent doesn't depend on memory between steps; it reads from the database instead. This is crucial since it allows the agent to reference any past result without needing to re-prompt the LLM.
 
-**4. Email Aggregator.** Once every subtask is finished, the agent compiles a Markdown report of all outputs and emails it to the user. The email includes the task objective, a list of subtasks with their completion status, the generated code, and any output files. Users don’t have to watch the agent work; they just receive the results when everything is done.
+**4. Email Aggregator.** Once every subtask is finished, the agent compiles a Markdown report of all outputs and emails it to the user. The email includes the task objective, a list of subtasks with their completion status, the generated code, and any output files. Users don't have to watch the agent work; they just receive the results when everything is done.
 
 ### When This Works
 
-This architecture shines for tasks that can be broken down into clear, verifiable subtasks. Think data analysis, web scraping, file processing, code generation, report generation, math computation, and algorithm implementation—these fit perfectly.
+This architecture shines for tasks that can be broken down into clear, verifiable subtasks. Think data analysis, web scraping, file processing, code generation, report generation, math computation, and algorithm implementation--these fit perfectly.
 
 It works best when each subtask has an objective success criterion. For example, "Sum this column and save to a CSV" can be easily verified. But tasks like "Write a compelling introduction" are more subjective and may need human evaluation.
 
@@ -53,13 +52,13 @@ The Berkeley students applied this system to their CS 170 algorithms problem set
 
 ### When This Does NOT Work
 
-However, it's essential to note that this approach isn't suitable for creative or open-ended tasks. For vague objectives like "explore this dataset and find interesting patterns," the agent tends to produce generic outputs, lacking the human insight a domain expert would bring. It also struggles when subjective judgment is necessary—like in code reviews, design decisions, or architectural choices—where it can generate options but can't make the final call without clear, measurable criteria.
+However, it's essential to note that this approach isn't suitable for creative or open-ended tasks. For vague objectives like "explore this dataset and find interesting patterns," the agent tends to produce generic outputs, lacking the human insight a domain expert would bring. It also struggles when subjective judgment is necessary--like in code reviews, design decisions, or architectural choices--where it can generate options but can't make the final call without clear, measurable criteria.
 
 Additionally, it won't work well for tasks that require real-time data from external APIs that may change state. The agent's plan assumes a static environment, so if a website alters between subtask executions, it may lead to outdated results.
 
 ### Step-by-Step: Build Your Own Agent Sandbox
 
-If you're feeling inspired and want to replicate this Berkeley setup in under 100 lines of Python, here’s a quick guide.
+If you're feeling inspired and want to replicate this Berkeley setup in under 100 lines of Python, here's a quick guide.
 
 **Step 1: Set up the planner.**
 
@@ -108,7 +107,7 @@ db = sqlite3.connect("agent_results.db")
 db.execute("CREATE TABLE IF NOT EXISTS subtask_results (id TEXT, description TEXT, stdout TEXT, stderr TEXT, returncode INT, completed_at TEXT)")
 for subtask in subtasks:
   result = execute_subtask(subtask)
-  db.execute("INSERT INTO subtask_results VALUES (?, ?, ?, ?, ?, datetime('now'))", (subtask["id"], subtask["description"], result["stdout"], result["stderr"], result["returncode"]))
+  db.execute("INSERT INTO subtask_results VALUES (', ', ', ', ', datetime('now'))", (subtask["id"], subtask["description"], result["stdout"], result["stderr"], result["returncode"]))
 db.commit()
 ```
 
@@ -129,7 +128,7 @@ def email_report(to_addr, objective, db_path):
     server.sendmail(os.getenv("EMAIL"), [to_addr], msg)
 ```
 
-The email arrives asynchronously, so there’s no need for polling or monitoring a dashboard. The agent runs, and you receive the result directly in your inbox.
+The email arrives asynchronously, so there's no need for polling or monitoring a dashboard. The agent runs, and you receive the result directly in your inbox.
 
 ### Why the Sandbox Matters
 
@@ -137,7 +136,7 @@ The sandbox is essential here. An agent that can write and execute code needs a 
 
 Without a sandbox, you risk introducing vulnerabilities. With one, you have a safe, auditable worker that can execute code without concern.
 
-The sandbox also enforces discipline. If the agent needs data or a library, it must be provided explicitly. There’s no ambient access to your filesystem, database, or API keys.
+The sandbox also enforces discipline. If the agent needs data or a library, it must be provided explicitly. There's no ambient access to your filesystem, database, or API keys.
 
 ### Alternatives
 
@@ -151,28 +150,28 @@ The sandbox also enforces discipline. If the agent needs data or a library, it m
 
 ### Decision Summary
 
-So, what should you do? Here’s a quick guide:
+So, what should you do? Here's a quick guide:
 
 - If you find yourself asking ChatGPT the same questions repeatedly → consider building an agent to automate those queries.
 - If your task has clear, objective success criteria → try using a code executor with a sandbox.
 - If subjective judgment is involved → keep a human in the loop and use chat for exploration.
 - If you need immediate results → run the planner synchronously.
-- If time isn’t an issue → let the agent run asynchronously and receive results via email.
-- If you’re still using chat interfaces for productivity → you might be wasting tokens and attention. It might be time to switch to autonomous agents.
+- If time isn't an issue → let the agent run asynchronously and receive results via email.
+- If you're still using chat interfaces for productivity → you might be wasting tokens and attention. It might be time to switch to autonomous agents.
 
-**Q: Is this just AutoGPT? How is it different?**  
+**Q: Is this just AutoGPT? How is it different'**  
 **A:** While AutoGPT was an early implementation of this pattern, it had a significant flaw: it utilized the GPT-4 context window as its memory, leading to exponential costs and context limits. The Berkeley approach, however, uses SQLite for external memory, allowing the agent to read and write to the database without inflating costs based on steps taken.
 
-**Q: Is it cheaper than ChatGPT Plus?**  
-**A:** Yes, it’s considerably cheaper. The Berkeley agent employs OpenRouter's gpt-4o-mini at $0.15/M input tokens. A typical algorithms problem set costs around $0.08 to solve, while a ChatGPT Plus subscription is $20/month. If you solve 10 problem sets per month, the agent will set you back only $0.80, and you keep all outputs in SQLite for review.
+**Q: Is it cheaper than ChatGPT Plus'**  
+**A:** Yes, it's considerably cheaper. The Berkeley agent employs OpenRouter's gpt-4o-mini at $0.15/M input tokens. A typical algorithms problem set costs around $0.08 to solve, while a ChatGPT Plus subscription is $20/month. If you solve 10 problem sets per month, the agent will set you back only $0.80, and you keep all outputs in SQLite for review.
 
-**Q: What if the agent generates incorrect code?**  
+**Q: What if the agent generates incorrect code'**  
 **A:** It happens, and the executor will retry with the error message, fixing about 70% of the failures. The remaining 30% will require human intervention. The key difference is that, when the agent fails, you receive a detailed error trace along with the generated code and test output. With ChatGPT, you might just get an incorrect answer without much context.
 
-**Q: Can this run on a laptop?**  
-**A:** Absolutely! The entire system can run on a 2020 MacBook Air. The LLM calls are remote, the code execution happens locally, and the SQLite database is just a file. No need for a GPU or cloud credits—Docker Desktop manages the sandbox.
+**Q: Can this run on a laptop'**  
+**A:** Absolutely! The entire system can run on a 2020 MacBook Air. The LLM calls are remote, the code execution happens locally, and the SQLite database is just a file. No need for a GPU or cloud credits--Docker Desktop manages the sandbox.
 
-**Q: Does this violate Berkeley's academic integrity policy?**  
+**Q: Does this violate Berkeley's academic integrity policy'**  
 **A:** That depends on the specific course policy. The students who developed this used it as a learning tool; they reviewed the output, understood the code, and could explain each decision made by the agent. This approach is quite different from simply copy-pasting ChatGPT's answers. Most professors can differentiate between "automating the output" and "using a tool to generate starter code for review." 
 
-What do you think? Would you consider building your own autonomous agent?
+What do you think? Would you consider building your own autonomous agent'
