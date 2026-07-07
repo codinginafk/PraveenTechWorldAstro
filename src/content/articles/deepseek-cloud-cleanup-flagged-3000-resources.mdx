@@ -19,7 +19,7 @@ socialHook: "I asked DeepSeek to write a script that finds orphaned cloud resour
 pillarId: ai-automation
 faq:
   - question: "Could the AI-generated cleanup script have deleted real resources?"
-    answer: "Yes. If I had run the first version without reviewing it, the script would have deleted 12 active EC2 instances that happened to be missing the 'Project' tag. The AI assumed any untagged resource was orphaned, which is wrong -- some of our teams don't use tagging consistently."
+    answer: "Yes. If I had run the first version without reviewing it, the script would have deleted 12 active EC2 instances that happened to be missing the 'Project' tag. The AI assumed any untagged resource was orphaned, which is wrong  -  some of our teams don't use tagging consistently."
   - question: "How do you verify a resource is actually orphaned?"
     answer: "I check three things: no network traffic in the last 30 days (CloudWatch), no recent console logins for the owner (CloudTrail), and no references in other resources (tag-based dependency scan). Only resources that fail all three checks go into the deletion queue."
   - question: "Do you still use AI to generate cleanup scripts?"
@@ -29,7 +29,7 @@ faq:
   - question: "What's the main lesson from this?"
     answer: "AI is great at generating infrastructure scripts fast. It is terrible at understanding your specific tagging conventions, team workflows, and what 'abandoned' actually means in your environment. Always add a dry-run mode. Always review the match list."
 ---
-I recently tasked [DeepSeek](/articles/automated-tls-certificate-renewal-with-deepseek) with crafting a [Python script](/articles/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts) to help me find orphaned cloud resources in an effort to trim our AWS bill. You would think this would be a straightforward task, right? Well, the first version of the script flagged an astonishing 3,000 resources for deletion -- way off from the estimated 20 true orphans. Let's dive into what happened, and how I managed to fix it.
+I recently tasked [DeepSeek](/articles/automated-tls-certificate-renewal-with-deepseek) with crafting a [Python script](/articles/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts) to help me find orphaned cloud resources in an effort to trim our AWS bill. You would think this would be a straightforward task, right? Well, the first version of the script flagged an astonishing 3,000 resources for deletion  -  way off from the estimated 20 true orphans. Let's dive into what happened, and how I managed to fix it.
 
 ## What Problem Made Me Build This?
 You know that creeping feeling when your AWS bill keeps climbing each month? That's exactly what I was dealing with. I had a hunch that orphaned resources, like forgotten EC2 instances, detached EBS volumes, and outdated snapshots, were hiding out there, accumulating costs like dust bunnies under a couch.
@@ -67,15 +67,15 @@ Write a Python CLI tool that finds orphaned cloud resources across multiple AWS 
    d. Snapshot: older than 90 days AND source volume no longer exists
 5. Flag any resource missing the 'Project' or 'Owner' tag.
 6. Output a CSV report with columns: account, region, resource_type, resource_id, age_days, status, tags, reason, deletable (yes/no).
-7. Include a --dry-run flag that prints the report without any deletions.
-8. Include a --delete flag that actually terminates/deletes/deregisters the flagged resources.
+7. Include a  - dry-run flag that prints the report without any deletions.
+8. Include a  - delete flag that actually terminates/deletes/deregisters the flagged resources.
 9. Log everything to cleanup.log with timestamps.
 10. Use boto3, PyYAML, and csv. Use only standard library beyond those.
 
 Please output the complete script with comments and usage examples.
 ```
 
-After running the script with `--dry-run`, I was met with a staggering 900 lines of code. But that's where things started to get a bit dicey.
+After running the script with ` - dry-run`, I was met with a staggering 900 lines of code. But that's where things started to get a bit dicey.
 
 ## Where Did the AI Output Break?
 The script had some major hiccups that could've led to serious issues. Let's break it down:
@@ -88,13 +88,13 @@ To make matters worse, the AI added a filter that checked for `'Project' in tags
 
 ### False Positive Cascade
 
-Since the tag matching didn't work, the script couldn't properly determine the ownership of numerous resources, defaulting to "deletable" for anything it couldn't classify. This resulted in 3,012 flagged resources -- a number that left me reeling. 
+Since the tag matching didn't work, the script couldn't properly determine the ownership of numerous resources, defaulting to "deletable" for anything it couldn't classify. This resulted in 3,012 flagged resources  -  a number that left me reeling. 
 
 Upon inspecting the CSV, I found that it had flagged:
 
 - **12 running EC2 instances** actively serving traffic but missing the 'Project' tag.
 - **4 production load balancers** that seemed idle during maintenance windows.
-- **2,800 EBS snapshots** that were over 90 days old -- many from decommissioned accounts, but around 30 were still in active use.
+- **2,800 EBS snapshots** that were over 90 days old  -  many from decommissioned accounts, but around 30 were still in active use.
 
 Among the flagged resources, only about 200 were actual orphans. Finding them amongst the sea of false positives? Nearly impossible.
 
@@ -104,7 +104,7 @@ The script only scanned the first page of results for each API call. AWS APIs pa
 
 ### Rate Limiting from Cross-Account Assumption
 
-The script sequentially assumed IAM roles for each account without any backoff. When you switch roles too quickly, the AWS API throttles you, and boom -- the script crashed on the fourth account with a `ThrottlingException`. No partial results, no retry.
+The script sequentially assumed IAM roles for each account without any backoff. When you switch roles too quickly, the AWS API throttles you, and boom  -  the script crashed on the fourth account with a `ThrottlingException`. No partial results, no retry.
 
 ## What I Had to Fix
 
@@ -163,8 +163,8 @@ Write a Python CLI tool that finds orphaned cloud resources across multiple AWS 
    d. Snapshot: older than 90 days AND source volume no longer exists
 5. Flag any resource missing the 'Project' or 'Owner' tag.
 6. Output a CSV report with columns: account, region, resource_type, resource_id, age_days, status, tags, reason, deletable (yes/no).
-7. Include a --dry-run flag that prints the report without any deletions.
-8. Include a --delete flag that actually terminates/deletes/deregisters the flagged resources.
+7. Include a  - dry-run flag that prints the report without any deletions.
+8. Include a  - delete flag that actually terminates/deletes/deregisters the flagged resources.
 9. Log everything to cleanup.log with timestamps.
 10. Use boto3, PyYAML, and csv. Use only standard library beyond those.
 
@@ -175,9 +175,9 @@ Please output the complete script with comments and usage examples.
 
 The AI made some bold assumptions that didn't hold up. It misinterpreted tag names, applied a one-size-fits-all idle threshold, and misunderstood pagination across AWS services.
 
-The dry-run flag was invaluable. Seriously, if I had run the first version without `--dry-run`, we would have lost 12 active EC2 instances. The AI was ready to delete resources that were actively serving traffic, simply because they were missing the specific tags it was programmed to look for.
+The dry-run flag was invaluable. Seriously, if I had run the first version without ` - dry-run`, we would have lost 12 active EC2 instances. The AI was ready to delete resources that were actively serving traffic, simply because they were missing the specific tags it was programmed to look for.
 
-The ongoing lesson I take from my DeepSeek experiments is that while AI can churn out infrastructure code quickly, it doesn't grasp the intricacies of your specific environment. Each organization has its quirks--custom tagging, varying backup policies, and teams that might not always follow the guidelines. The AI can't know these unless you spoon-feed it every little detail, and even then, it might still get things wrong.
+The ongoing lesson I take from my DeepSeek experiments is that while AI can churn out infrastructure code quickly, it doesn't grasp the intricacies of your specific environment. Each organization has its quirks - custom tagging, varying backup policies, and teams that might not always follow the guidelines. The AI can't know these unless you spoon-feed it every little detail, and even then, it might still get things wrong.
 
 I'd love to hear your thoughts on this. Have you had similar experiences with AI-generated code? Let's chat about it!
 
@@ -203,3 +203,8 @@ A: AI is great at generating infrastructure scripts fast. It is terrible at unde
 - [DeepSeek API Cost Tracker Saved Me $2K/Month](/blog/deepseek-api-cost-tracker-scripts): Same pattern of AI hallucination and manual fix, applied to [API cost](/articles/deepseek-api-cost-tracker-scripts) monitoring.
 - [I Built a Log Monitor with DeepSeek: Full Breakdown](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong): The AI generated code that flagged itself as suspicious. A story about false positives.
 - [Automated Server Health Checks with DeepSeek](/blog/automated-server-health-checks-with-deepseek): Infrastructure automation with AI that needed significant safety retrofitting.
+
+## References & Further Reading
+
+- [Wikipedia: Cloud computing](https://en.wikipedia.org/wiki/Cloud_computing)
+- [DeepSeek](https://deepseek.co/)

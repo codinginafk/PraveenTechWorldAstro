@@ -1,0 +1,254 @@
+[
+  {
+    "id": "block-1",
+    "file": "ai-usage-dropping-math-skills-berkeley-cs-classes.mdx",
+    "language": "python",
+    "code": "import json, sqlite3, smtplib, subprocess, os\nfrom openai import OpenAI\n\nclient = OpenAI(base_url=\"https://openrouter.ai/api/v1\", api_key=os.getenv(\"OPENROUTER_KEY\"))\n\ndef plan_task(objective):\n  prompt = f\"\"\"Given this objective: {objective}\nOutput a JSON array of subtasks. Each subtask must have:\n- id (unique string)\n- description (concrete action)\n- depends_on (list of subtask ids that must complete first)\n- success_criterion (how to verify completion)\n\nMax 8 subtasks. Output only valid JSON.\"\"\"\n  resp = client.chat.completions.create(model=\"gpt-4o-mini\", messages=[{\"role\": \"user\", \"content\": prompt}], temperature=0.1)\n  return json.loads(resp.choices[0].message.content.strip().removeprefix(\""
+  },
+  {
+    "id": "block-2",
+    "file": "ai-usage-dropping-math-skills-berkeley-cs-classes.mdx",
+    "language": "python",
+    "code": "def execute_subtask(subtask):\n  code_prompt = f\"\"\"Write a Python script that accomplishes this: {subtask['description']}\nThe script must print its result as JSON to stdout.\nHandle errors gracefully. Timeout after 30 seconds.\nOutput only the code inside a"
+  },
+  {
+    "id": "block-3",
+    "file": "ai-usage-dropping-math-skills-berkeley-cs-classes.mdx",
+    "language": "python",
+    "code": "db = sqlite3.connect(\"agent_results.db\")\ndb.execute(\"CREATE TABLE IF NOT EXISTS subtask_results (id TEXT, description TEXT, stdout TEXT, stderr TEXT, returncode INT, completed_at TEXT)\")\nfor subtask in subtasks:\n  result = execute_subtask(subtask)\n  db.execute(\"INSERT INTO subtask_results VALUES (', ', ', ', ', datetime('now'))\", (subtask[\"id\"], subtask[\"description\"], result[\"stdout\"], result[\"stderr\"], result[\"returncode\"]))\ndb.commit()"
+  },
+  {
+    "id": "block-4",
+    "file": "ai-usage-dropping-math-skills-berkeley-cs-classes.mdx",
+    "language": "python",
+    "code": "def email_report(to_addr, objective, db_path):\n  rows = db.execute(\"SELECT id, description, stdout, returncode FROM subtask_results\").fetchall()\n  report = f\"# Agent Report: {objective}\\n\\n\"\n  for row in rows:\n    report += f\"## {row[0]}: {row[1]}\\nStatus: {'PASS' if row[3] == 0 else 'FAIL'}\\n"
+  },
+  {
+    "id": "block-5",
+    "file": "automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts.mdx",
+    "language": "python",
+    "code": "#!/usr/bin/env python3\n\"\"\"\nWeekly Student Grade Report Generator\nUsage: ./generate_report.py  - input student_grades.csv  - output weekly_report.csv\n\"\"\"\nimport pandas as pd\n\ndef main():\n    import argparse\n    parser = argparse.ArgumentParser()\n    parser.add_argument(' - input', default='student_grades.csv')\n    parser.add_argument(' - output', default='weekly_report.csv')\n    args = parser.parse_args()\n\n    df = pd.read_csv(args.input)\n    # Wrong grouping\n    report = df.groupby(['student_id', 'name']).agg(\n        total_score=('score', 'sum'),\n        average_score=('score', 'mean')\n    ).reset_index()\n    report.to_csv(args.output, index=False)\n    print(f\"Processed {len(df)} rows, report saved to {args.output}\")\n\nif __name__ == '__main__':\n    main()"
+  },
+  {
+    "id": "block-6",
+    "file": "automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts.mdx",
+    "language": "python",
+    "code": "#!/usr/bin/env python3\n\"\"\"\nWeekly Student Grade Report Generator\nUsage: ./generate_report.py  - input student_grades.csv  - output weekly_report.csv\n\"\"\"\nimport argparse\nimport pandas as pd\n\ndef main():\n    parser = argparse.ArgumentParser()\n    parser.add_argument(' - input', default='student_grades.csv')\n    parser.add_argument(' - output', default='weekly_report.csv')\n    args = parser.parse_args()\n\n    # Load data\n    df = pd.read_csv(args.input)\n\n    # Ensure correct data types\n    df['score'] = pd.to_numeric(df['score'], errors='coerce')\n\n    # Group by student only (unique per student)\n    report = df.groupby(['student_id', 'name'], as_index=False).agg(\n        total_score=('score', 'sum'),\n        average_score=('score', 'mean')\n    )\n\n    # Round to 2 decimal places for cleanliness\n    report['total_score'] = report['total_score'].round(2)\n    report['average_score'] = report['average_score'].round(2)\n\n    # Save report\n    report.to_csv(args.output, index=False)\n    print(f\"Processed {len(df)} rows, report saved to {args.output}\")\n\nif __name__ == '__main__':\n    main()"
+  },
+  {
+    "id": "block-7",
+    "file": "automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts.mdx",
+    "language": "bash",
+    "code": "0 8 * * 5 /opt/grade_reports/run_weekly.sh"
+  },
+  {
+    "id": "block-8",
+    "file": "automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts.mdx",
+    "language": "bash",
+    "code": "#!/bin/bash\n   set -e\n   START=$(date +%s)\n   python3 /opt/grade_reports/generate_report.py  - input /data/student_grades.csv  - output /tmp/weekly_report.csv\n   END=$(date +%s)\n   DURATION=$((END-START))\n   echo \"Script finished in ${DURATION}s\" >> /var/log/grade_reports.log\n   # Upload to Dropbox (simplified)\n   curl -X POST \"https://content.dropboxapi.com/2/files/upload\" \\\n      - header \"Authorization: Bearer $DROPBOX_TOKEN\" \\\n      - header \"Dropbox-API-Result: json\" \\\n      - header \"Content-Type: application/octet-stream\" \\\n      - data-binary /tmp/weekly_report.csv"
+  },
+  {
+    "id": "block-9",
+    "file": "automated-server-health-checks-with-deepseek.mdx",
+    "language": "yaml",
+    "code": "servers:\n  web-01:\n    host: 192.168.1.10\n    port: 22\n    user: admin\n    key_path: ~/.ssh/id_ed25519\n  db-01:\n    host: 192.168.1.11\n    port: 22\n    user: admin\n    key_path: ~/.ssh/id_ed25519\n\nthresholds:\n  cpu_load: 2.0\n  disk_usage: 80\n  memory_usage: 90\n\nwebhook: https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+  },
+  {
+    "id": "block-10",
+    "file": "automated-server-health-checks-with-deepseek.mdx",
+    "language": "text",
+    "code": "Prompt:\nBuild a Python CLI tool that connects to multiple Linux servers via SSH and runs health checks. The tool should:\n\n1. Accept a YAML or JSON config file listing servers (host, port, user, key_path).\n2. For each server, collect:\n   - CPU load (load average from /proc/loadavg)\n   - Disk usage (df -h output, parse percentage)\n   - Memory usage (free -m output, parse used/total)\n   - Running services (systemctl list-units  - state=running, count)\n   - Failed services (systemctl  - failed, list them)\n3. Compare each metric against configurable thresholds (cpu_load > 2.0, disk_usage > 80%, memory_usage > 90%).\n4. If any threshold is exceeded, send a Slack webhook with the server name, metric, current value, and threshold.\n5. Run in a loop with a configurable interval ( - interval default 300 seconds).\n6. Log all checks to a file named health-check.log with timestamps.\n7. Use async SSH connections (asyncssh) so all servers are checked in parallel, not sequentially.\n8. Include a  - once flag to run a single check and exit.\n9. Include a  - version flag.\n\nPlease output the complete script with comments and a usage example."
+  },
+  {
+    "id": "block-11",
+    "file": "automated-tls-certificate-renewal-with-deepseek.mdx",
+    "language": "python",
+    "code": "I need a Python script that:\n1. Takes a list of domains (via CLI or config file)\n2. Checks current cert expiration using openssl or certbot\n3. Renews certs expiring within 30 days\n4. Validates new certs\n5. Gracefully restarts Nginx\n6. Logs everything with timestamps\n7. Has a dry-run mode\n8. Uses argparse for CLI options\n9. Handles errors gracefully\n10. Provides a summary of successes/failures"
+  },
+  {
+    "id": "block-12",
+    "file": "automated-tls-certificate-renewal-with-deepseek.mdx",
+    "language": "python",
+    "code": "REQUIRED_LIBS = [\"cryptography\"]\n\ndef ensure_dependencies():\n    missing = []\n    for lib in REQUIRED_LIBS:\n        try:\n            __import__(lib)\n        except ImportError:\n            missing.append(lib)\n    if missing:\n        logging.critical(f\"Missing libraries: {missing}\")\n        sys.exit(1)"
+  },
+  {
+    "id": "block-13",
+    "file": "automated-tls-certificate-renewal-with-deepseek.mdx",
+    "language": "python",
+    "code": "def get_cert_expiry(domain):\n    try:\n        # Try certbot first\n        result = subprocess.run([\"certbot\", \"certificates\", \" - domains\", domain], ...)\n        # Parse actual expiry date from output\n        return parse_date(result.stdout)\n    except Exception:\n        # Fall back to openssl\n        result = subprocess.run([\"openssl\", \"x509\", \"-noout\", \"-enddate\", ...], ...)\n        return parse_openssl_date(result.stdout)"
+  },
+  {
+    "id": "block-14",
+    "file": "automated-tls-certificate-renewal-with-deepseek.mdx",
+    "language": "bash",
+    "code": "# One-time test\npython3 tls_renewal.py  - domains=example.com  - verbose\n\n# Weekly cron job\n0 2 * * 0 /usr/bin/python3 /opt/scripts/tls_renewal.py >> /var/log/cron_tls_renewal.log 2>&1"
+  },
+  {
+    "id": "block-15",
+    "file": "automated-tls-certificate-renewal-with-deepseek.mdx",
+    "language": "python",
+    "code": "[Same prompt as original]"
+  },
+  {
+    "id": "block-16",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "bash",
+    "code": "cleanxls  - input messy_file.xlsx  - output clean_file.csv"
+  },
+  {
+    "id": "block-17",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "python",
+    "code": "\"\"\"\nPrompt: Write a Python CLI tool using Click that:\n1. Takes an Excel file as input\n2. Handles merged cells by unmerging and filling values downward\n3. Standardizes dates to YYYY-MM-DD\n4. Replaces all null markers (N/A, NULL, ---) with empty strings\n5. Outputs a clean CSV\nInclude error handling for corrupt files.\n\"\"\""
+  },
+  {
+    "id": "block-18",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "python",
+    "code": "AttributeError: 'Workbook' object has no attribute 'merged_cells?"
+  },
+  {
+    "id": "block-19",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "python",
+    "code": "\"\"\"\nAdd support for both .xls (use xlrd) and .xlsx (openpyxl). \nFirst detect file extension, then use the appropriate engine.\n\"\"\""
+  },
+  {
+    "id": "block-20",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "python",
+    "code": "if re.match(r'^\\d{1,4}[-\\/]\\d{1,2}[-\\/]\\d{1,4}$', str(cell_value)):  \n    # Only then attempt date conversion"
+  },
+  {
+    "id": "block-21",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "bash",
+    "code": "cleanxls  - input messy.*  - output_dir ./clean \\\n          - date-format \"%Y-%m-%d\" \\\n          - null-markers \"NULL,N/A,---\""
+  },
+  {
+    "id": "block-22",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "python",
+    "code": "\"\"\"\n   Modify to handle both .xls and .xlsx by:\n   1. Checking file extension\n   2. Using xlrd for .xls\n   3. Using openpyxl for .xlsx\n   \"\"\""
+  },
+  {
+    "id": "block-23",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "python",
+    "code": "if os.path.exists(output_path):\n       raise click.Confirm(\"Overwrite - )"
+  },
+  {
+    "id": "block-24",
+    "file": "building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek.mdx",
+    "language": "python",
+    "code": "\"\"\"\nWrite a Python CLI tool using Click that:\n1. Accepts multiple input files via wildcard (e.g., 'data/*.xls*')\n2. Detects file extension to use correct engine (xlrd for .xls, openpyxl for .xlsx)\n3. Unmerges cells by filling values downward\n4. Converts only valid dates to YYYY-MM-DD (skip strings with letters)\n5. Replaces configurable null markers (default: NULL,N/A,---)\n6. Validates output directory exists\n7. Shows progress bar with tqdm\n8. Skips password-protected files with a warning\nOutput clean CSVs with '_clean' suffix.\n\"\"\""
+  },
+  {
+    "id": "block-25",
+    "file": "deepseek-api-cost-tracker-scripts.mdx",
+    "language": "text",
+    "code": "Prompt:\nWrite a Python CLI tool that tracks AI API costs across multiple providers. Call it track.py. It should:\n\n1. Support OpenAI, Anthropic (Claude), Google (Gemini), and DeepSeek APIs.\n2. Read API keys from environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)\n3. Accept a  - days flag (default 7) to look back N days.\n4. For each provider:\n   a. Authenticate and call their usage/list endpoints\n   b. Extract: model name, prompt tokens, completion tokens, total cost\n   c. Handle 401 (bad key - skip provider), 429 (rate limit - retry with backoff), 5xx (log and continue)\n5. Normalize all costs to USD.\n6. Print a summary table grouped by provider showing:\n   - Total tokens (input/output split)\n   - Total cost\n   - Cost per million tokens\n7. Include a  - serve flag that generates a standalone HTML dashboard file (dashboard.html) with charts showing daily cost trends.\n8. Log all API errors to cost-tracker.log with timestamps.\n9. Use only standard library plus requests, with fallback handling if requests is missing.\n10. Output colorized status messages.\n\nPlease output the complete script with comments, a sample config, and usage examples."
+  },
+  {
+    "id": "block-26",
+    "file": "deepseek-cloud-cleanup-flagged-3000-resources.mdx",
+    "language": "text",
+    "code": "Prompt:\nWrite a Python CLI tool that finds orphaned cloud resources across multiple AWS accounts. Call it cleanup.py. It should:\n\n1. Read a list of AWS account IDs and roles to assume from a config file (config.yaml).\n2. For each account, assume the specified IAM role and scan us-east-1 and eu-west-1.\n3. Scan the following resource types:\n   a. EC2 instances (status, launch time, tags, last network activity)\n   b. EBS volumes (attachment state, size, tags, last write time)\n   c. ELB load balancers (number of targets, last activity, tags)\n   d. EBS snapshots (age, volume status, tags, owning account)\n4. For each resource, check if it has been idle for more than 30 days:\n   a. EC2: stopped state OR no network bytes in 30 days\n   b. EBS: unattached OR attachment count = 0\n   c. ELB: zero registered targets OR no requests in 30 days\n   d. Snapshot: older than 90 days AND source volume no longer exists\n5. Flag any resource missing the 'Project' or 'Owner' tag.\n6. Output a CSV report with columns: account, region, resource_type, resource_id, age_days, status, tags, reason, deletable (yes/no).\n7. Include a  - dry-run flag that prints the report without any deletions.\n8. Include a  - delete flag that actually terminates/deletes/deregisters the flagged resources.\n9. Log everything to cleanup.log with timestamps.\n10. Use boto3, PyYAML, and csv. Use only standard library beyond those.\n\nPlease output the complete script with comments and usage examples."
+  },
+  {
+    "id": "block-27",
+    "file": "deepseek-cloud-cleanup-flagged-3000-resources.mdx",
+    "language": "text",
+    "code": "Prompt:\nWrite a Python CLI tool that finds orphaned cloud resources across multiple AWS accounts. Call it cleanup.py. It should:\n\n1. Read a list of AWS account IDs and roles to assume from a config file (config.yaml).\n2. For each account, assume the specified IAM role and scan us-east-1 and eu-west-1.\n3. Scan the following resource types:\n   a. EC2 instances (status, launch time, tags, last network activity)\n   b. EBS volumes (attachment state, size, tags, last write time)\n   c. ELB load balancers (number of targets, last activity, tags)\n   d. EBS snapshots (age, volume status, tags, owning account)\n4. For each resource, check if it has been idle for more than 30 days:\n   a. EC2: stopped state OR no network bytes in 30 days\n   b. EBS: unattached OR attachment count = 0\n   c. ELB: zero registered targets OR no requests in 30 days\n   d. Snapshot: older than 90 days AND source volume no longer exists\n5. Flag any resource missing the 'Project' or 'Owner' tag.\n6. Output a CSV report with columns: account, region, resource_type, resource_id, age_days, status, tags, reason, deletable (yes/no).\n7. Include a  - dry-run flag that prints the report without any deletions.\n8. Include a  - delete flag that actually terminates/deletes/deregisters the flagged resources.\n9. Log everything to cleanup.log with timestamps.\n10. Use boto3, PyYAML, and csv. Use only standard library beyond those.\n\nPlease output the complete script with comments and usage examples."
+  },
+  {
+    "id": "block-28",
+    "file": "how-to-fix-sitemap-errors-in-google-search-console.mdx",
+    "language": "xml",
+    "code": "<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n  <sitemap>\n    <loc>https://www.yoursite.com/sitemap-posts.xml</loc>\n  </sitemap>\n  <sitemap>\n    <loc>https://www.yoursite.com/sitemap-pages.xml</loc>\n  </sitemap>\n</sitemapindex>"
+  },
+  {
+    "id": "block-29",
+    "file": "how-to-fix-sitemap-errors-in-google-search-console.mdx",
+    "language": "plaintext",
+    "code": "Sitemap: https://www.yoursite.com/sitemap.xml"
+  },
+  {
+    "id": "block-30",
+    "file": "i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke.mdx",
+    "language": "text",
+    "code": "Act as a Senior Python Developer specializing in Linux System Administration. I need a 'Sysadmin Toolkit' consisting of three separate scripts. \n\nScript 1: 'log_audit.py' - Parse /var/log/auth.log. Extract all 'Failed password' attempts. Output the IP address, the username attempted, and the timestamp. Save this to a CSV file called 'security_audit.csv'.\n\nScript 2: 'disk_check.py' - Check all mounted partitions. If any partition is over 90% capacity, print a CRITICAL alert. If between 70-90%, print a WARNING. Use the 'psutil' library.\n\nScript 3: 'user_audit.py' - Scan /etc/passwd. List all users with UID 0 (root privileges) and any users who haven't logged in for 30 days.\n\nRequirements:\n- Use Python 3.10+.\n- Include basic error handling (try-except blocks).\n- Ensure the scripts are CLI-compatible.\n- Add a main.py wrapper that allows me to run any of these three tools from a single menu."
+  },
+  {
+    "id": "block-31",
+    "file": "i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke.mdx",
+    "language": "python",
+    "code": "def parse_logs():\n    with open('/var/log/auth.log', 'r') as f:\n        lines = f.readlines() # This reads the whole file into RAM\n        for line in lines:\n            if \"Failed password\" in line:\n                # process line"
+  },
+  {
+    "id": "block-32",
+    "file": "i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke.mdx",
+    "language": "python",
+    "code": "def parse_logs():\n    with open('/var/log/auth.log', 'r') as f:\n        for line in f: # This iterates line by line (generator)\n            if \"Failed password\" in line:\n                # process line"
+  },
+  {
+    "id": "block-33",
+    "file": "i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke.mdx",
+    "language": "text",
+    "code": "--- Praveen's Sysadmin Toolkit ---\n1. Security Log Audit\n2. Disk Space Check\n3. User Privilege Audit\n4. Exit\nSelection: _"
+  },
+  {
+    "id": "block-34",
+    "file": "i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke.mdx",
+    "language": "text",
+    "code": "Act as a Senior Python Developer specializing in Linux System Administration. Build a 'Sysadmin Toolkit' consisting of three separate scripts.\n\nScript 1: 'log_audit.py' - Parse /var/log/auth.log. Iterate through the file line-by-line (do not use .readlines()) to extract 'Failed password' attempts. Output the IP address, the username attempted, and the timestamp. Save this to a CSV file called 'security_audit.csv'.\n\nScript 2: 'disk_check.py' - Use the 'psutil' library to check all mounted partitions. Iterate through the list returned by psutil.disk_partitions() and call .usage() on each. If any partition is over 90% capacity, print a CRITICAL alert. If between 70-90%, print a WARNING.\n\nScript 3: 'user_audit.py' - Scan /etc/passwd. List all users with UID 0. Also, check for users who haven't logged in for 30 days. IMPORTANT: Include a check using os.geteuid() to ensure the script is running as root; if not, print 'Error: This script must be run with sudo' and exit.\n\nRequirements:\n- Use Python 3.10+.\n- Use a main.py wrapper with a menu-driven interface to run these tools.\n- Include comprehensive try-except blocks for FileNotFoundError and PermissionError.\n- Keep memory usage low by avoiding loading large files into RAM."
+  },
+  {
+    "id": "block-35",
+    "file": "is-chatgpt-safe-2026-security-privacy-guide.mdx",
+    "language": "python",
+    "code": "from flask import Flask, request, jsonify\nimport requests, sqlite3, json, time\n\napp = Flask(__name__)\nUPSTREAM = \"https://api.openai.com\"\n\ndef log_to_db(model, prompt_tokens, completion_tokens, latency_ms, agent_id, cost):\n  db = sqlite3.connect(\"token_burn.db\")\n  db.execute(\"INSERT INTO token_log VALUES (', ', ', ', ', ', datetime('now'))\",\n    (model, prompt_tokens, completion_tokens, latency_ms, agent_id, cost))\n  db.commit()\n\n@app.route(\"/v1/<path:subpath>\", methods=[\"POST\", \"GET\"])\ndef proxy(subpath):\n  headers = {k: v for k, v in request.headers if k.lower() != \"host\"}\n  t0 = time.time()\n  resp = requests.request(request.method, f\"{UPSTREAM}/v1/{subpath}\",\n    headers=headers, json=request.get_json(silent=True), stream=False)\n  latency = int((time.time() - t0) * 1000)\n  agent = request.headers.get(\"X-Agent-ID\", \"unknown\")\n  data = resp.json()\n  usage = data.get(\"usage\", {})\n  pt = usage.get(\"prompt_tokens\", 0)\n  ct = usage.get(\"completion_tokens\", 0)\n  model = data.get(\"model\", \"unknown\")\n  cost = (pt * 0.00015 + ct * 0.0006) / 1000  # gpt-4o rates\n  log_to_db(model, pt, ct, latency, agent, cost)\n  return jsonify(data), resp.status_code"
+  },
+  {
+    "id": "block-36",
+    "file": "sitemap-urls-blocked-by-robotstxt-clean-and-resubmit.mdx",
+    "language": "text",
+    "code": "Disallow: /tag/"
+  },
+  {
+    "id": "block-37",
+    "file": "sitemap-urls-blocked-by-robotstxt-clean-and-resubmit.mdx",
+    "language": "text",
+    "code": "Disallow: /blog/"
+  },
+  {
+    "id": "block-38",
+    "file": "sitemap-urls-blocked-by-robotstxt-clean-and-resubmit.mdx",
+    "language": "text",
+    "code": "Disallow: /blog/"
+  },
+  {
+    "id": "block-39",
+    "file": "sitemap-urls-blocked-by-robotstxt-clean-and-resubmit.mdx",
+    "language": "text",
+    "code": "Allow: /blog/"
+  },
+  {
+    "id": "block-40",
+    "file": "understanding-sitemap-indexing-fix-crawling-issues.mdx",
+    "language": "xml",
+    "code": "<urlset>\n  <url>\n    <loc>https://www.yoursite.com/blog/article-title</loc>\n    <lastmod>2026-06-15</lastmod>\n  </url>\n</urlset>"
+  },
+  {
+    "id": "block-41",
+    "file": "website-speed-optimization-why-it-matters-for-seo-and-how-to-fix-it.mdx",
+    "language": "html",
+    "code": "<script type=\"module\">\nimport sqlite3InitModule from 'https://esm.sh/@sqlite.org/sqlite-wasm@3.45.0/sqlite-wasm.js';\nconst sqlite3 = await sqlite3InitModule();\nconst db = new sqlite3.oo1.DB('/search-index.sqlite3');\nconst results = db.exec(`SELECT title, url FROM posts WHERE content MATCH '`, { bind: [query] });\n</script>"
+  },
+  {
+    "id": "block-42",
+    "file": "windows-11-kb5089549-enable-xbox-mode-fix-white-flash.mdx",
+    "language": "cmd",
+    "code": "sfc /scannow"
+  }
+]

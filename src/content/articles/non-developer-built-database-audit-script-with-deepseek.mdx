@@ -18,7 +18,7 @@ socialHook: "I manage databases every day but I can't write Python. So I asked D
 pillarId: build-in-public
 faq:
   - question: "Do I need any Python packages beyond the DB connectors?"
-    answer: "Only `json` and `argparse` are required; they are part of the standard library. If you add `--quiet` or logging, you'll need `logging` (also standard). The script deliberately avoids extra dependencies. "
+    answer: "Only `json` and `argparse` are required; they are part of the standard library. If you add ` - quiet` or logging, you'll need `logging` (also standard). The script deliberately avoids extra dependencies. "
   - question: "How do I handle the Oracle driver if I don't have Instant Client?"
     answer: "The script checks for `cx_Oracle` import and prints a warning, then skips the Oracle DB. For a production environment you'll still need the client libraries; the script's warning helps you know which DBs are being ignored. "
   - question: "Can I extend the script to support SQLite or SQL Server?"
@@ -26,10 +26,10 @@ faq:
   - question: "What if the config file is malformed?"
     answer: "The script uses `json.load`. If it fails, argparse will raise `json.JSONDecodeError` and you'll see a traceback. For a more robust solution you could wrap it in a try/except and log the error, but for a quick audit tool the default behavior is fine. "
   - question: "How do I schedule this script?"
-    answer: "Add a cron entry like `0 7 * * 1 /usr/bin/python3 /opt/scripts/db_audit.py --config /opt/configs/db_audit.json --output /var/log/db_audit_$(date +%Y%m%d).json`. The script runs in under 3 seconds, so it fits comfortably within a weekly window."
+    answer: "Add a cron entry like `0 7 * * 1 /usr/bin/python3 /opt/scripts/db_audit.py  - config /opt/configs/db_audit.json  - output /var/log/db_audit_$(date +%Y%m%d).json`. The script runs in under 3 seconds, so it fits comfortably within a weekly window."
 ---
 ## What Problem Drove Me to Build a Database Audit Script?
-So, here's the thing: I really needed a database audit [Python script](/articles/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts), and after three attempts with AI, I finally got it right. Every week, I find myself checking my Oracle and MySQL instances to spot oversized tables, unused schemas, and those annoying deprecated `FLOAT` columns. While I could run manual queries, it usually took me about 30 to 45 minutes, plus I had to copy and paste results into spreadsheets for my weekly compliance report. My team kept asking for an automated "audit-once-and-forget" CLI tool that could scan a list of databases, flag anomalies, and even email a [PDF summary](/articles/how-to-use-chatgpt-to-summarize-long-pdfs-for-free). The catch? I'm not a developer--I'm just an IT Operations Lead who spends my days managing runbooks and monitoring dashboards. So, I thought, why not ask AI to help me out? I decided to give [DeepSeek](/articles/automated-tls-certificate-renewal-with-deepseek) (and OpenCode) a shot, hoping for a simple script with just a few tweaks. What I got instead was a saga of coding chaos--three failed attempts, a lot of frustrations, and finally, a working script after spending about 4 hours fixing it.
+So, here's the thing: I really needed a database audit [Python script](/articles/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts), and after three attempts with AI, I finally got it right. Every week, I find myself checking my Oracle and MySQL instances to spot oversized tables, unused schemas, and those annoying deprecated `FLOAT` columns. While I could run manual queries, it usually took me about 30 to 45 minutes, plus I had to copy and paste results into spreadsheets for my weekly compliance report. My team kept asking for an automated "audit-once-and-forget" CLI tool that could scan a list of databases, flag anomalies, and even email a [PDF summary](/articles/how-to-use-chatgpt-to-summarize-long-pdfs-for-free). The catch? I'm not a developer - I'm just an IT Operations Lead who spends my days managing runbooks and monitoring dashboards. So, I thought, why not ask AI to help me out? I decided to give [DeepSeek](/articles/automated-tls-certificate-renewal-with-deepseek) (and OpenCode) a shot, hoping for a simple script with just a few tweaks. What I got instead was a saga of coding chaos - three failed attempts, a lot of frustrations, and finally, a working script after spending about 4 hours fixing it.
 
 ## How I Asked DeepSeek and OpenCode to Write the Script (The Prompt)
 
@@ -44,8 +44,8 @@ I need a Python CLI tool that audits a list of databases (Oracle, MySQL, Postgre
    b. Find columns of type FLOAT or REAL.
    c. Identify schemas/users that have not been used in the last 30 days (use last_dml column if available).
 3. Output a JSON report with entries: db_name, timestamp, findings (array of objects with type, object_name, details).
-4. The script should accept a single argument --config <path> and optionally --output <path> (default stdout).
-5. Use argparse for CLI, include a --help message.
+4. The script should accept a single argument  - config <path> and optionally  - output <path> (default stdout).
+5. Use argparse for CLI, include a  - help message.
 6. Assume the required DB drivers are installed (cx_Oracle, mysql‑connector‑python, psycopg2).
 7. Handle connection errors gracefully and continue with next DB.
 8. Keep the script under 25 lines of functional code.
@@ -53,7 +53,7 @@ I need a Python CLI tool that audits a list of databases (Oracle, MySQL, Postgre
 Please provide the complete script with inline comments.
 ```
 
-The response came back in about 12.3 seconds, and the file size was 1.8 KB. I saved it as `db_audit.py` and ran `python db_audit.py --help`. The help text displayed nicely, but when I tried to run it against a dummy config, the script crashed with `ModuleNotFoundError: No module named 'cx_Oracle'`. The prompt had said to "assume the required DB drivers are installed," but clearly, that assumption didn't hold up. That was my first failure.
+The response came back in about 12.3 seconds, and the file size was 1.8 KB. I saved it as `db_audit.py` and ran `python db_audit.py  - help`. The help text displayed nicely, but when I tried to run it against a dummy config, the script crashed with `ModuleNotFoundError: No module named 'cx_Oracle'`. The prompt had said to "assume the required DB drivers are installed," but clearly, that assumption didn't hold up. That was my first failure.
 
 ## Where the AI Attempts Broke: Three Failures I Faced
 
@@ -94,7 +94,7 @@ Write a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreS
   2. Find columns of type FLOAT/REAL.
   3. Identify schemas/users not used in last 30 days (use last_dml if available, else skip).
 - Output a JSON report: { "db_name": "...", "timestamp": "...", "findings": [ { "type": "...", "object_name": "...", "details": "..." } ] }.
-- Use argparse with --config and optional --output.
+- Use argparse with  - config and optional  - output.
 - Gracefully handle import errors: try to import the driver, if missing, print "WARNING: <driver> not installed, skipping <db>" and continue.
 - Keep the script under 25 lines of functional code.
 - Include a __main__ block that prints a sample report (just for verification).
@@ -102,7 +102,7 @@ Write a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreS
 Please provide the full script with inline comments.
 ```
 
-DeepSeek returned a 22-line script (file size 1.2 KB). When I first ran it, it printed a warning for Oracle and proceeded with MySQL and PostgreSQL. The JSON output looked correct, but then I noticed the timestamp was a naive string instead of ISO‑8601. My team's downstream parser expected `2024‑09‑12T14:35:00Z`. I edited the script to use `datetime.utcnow().isoformat() + 'Z'`. I also added a `--quiet` flag to suppress warnings if users wanted cleaner output. The final script ran in **2.3 seconds** on my test VM, processing three databases, and produced a clean JSON file of 3.4 KB.
+DeepSeek returned a 22-line script (file size 1.2 KB). When I first ran it, it printed a warning for Oracle and proceeded with MySQL and PostgreSQL. The JSON output looked correct, but then I noticed the timestamp was a naive string instead of ISO‑8601. My team's downstream parser expected `2024‑09‑12T14:35:00Z`. I edited the script to use `datetime.utcnow().isoformat() + 'Z'`. I also added a ` - quiet` flag to suppress warnings if users wanted cleaner output. The final script ran in **2.3 seconds** on my test VM, processing three databases, and produced a clean JSON file of 3.4 KB.
 
 Here's a before-and-after comparison:
 
@@ -147,10 +147,10 @@ The script now runs as needed, handling missing drivers and producing the correc
 
 ## How the Final Script Works: Result and Output
 
-When I ran `./db_audit.py --config config.json` in my lab environment (Ubuntu 22.04, Python 3.10), here's what popped up in **2.3 seconds**:
+When I ran `./db_audit.py  - config config.json` in my lab environment (Ubuntu 22.04, Python 3.10), here's what popped up in **2.3 seconds**:
 
 ```
-$ python db_audit.py --config config.json --output report.json
+$ python db_audit.py  - config config.json  - output report.json
 [INFO] Loaded 3 database configs.
 [INFO] Oracle driver not installed, skipping.
 [INFO] MySQL driver installed, auditing.
@@ -188,7 +188,7 @@ The `report.json` file (size 3.4 KB) contained:
 }
 ```
 
-Oh, and there's a `--quiet` flag to suppress the informational logs, which is super handy for cron jobs. I added it after my team complained about the noise in their CI pipelines. Now, this final CLI tool is part of our weekly automation pipeline, running every Monday at 02:00 UTC and feeding the JSON into our Slack bot for immediate alerts.
+Oh, and there's a ` - quiet` flag to suppress the informational logs, which is super handy for cron jobs. I added it after my team complained about the noise in their CI pipelines. Now, this final CLI tool is part of our weekly automation pipeline, running every Monday at 02:00 UTC and feeding the JSON into our Slack bot for immediate alerts.
 
 ## What I Learned About Prompt Engineering and AI Limitations
 
@@ -198,7 +198,7 @@ Oh, and there's a `--quiet` flag to suppress the informational logs, which is su
 4. **Iterate with smaller pieces.** Breaking down the script into functions reduced the chance of a single hallucinated query breaking everything.  
 5. **Document the AI's cost.** DeepSeek quoted a cost of $0.004 for the first attempt and $0.0051 for the final one. For a non‑developer, that's less than a coffee, and the ROI is immediate since the script saves around 2 hours per week.  
 
-Overall, this experience taught me that AI can be a fantastic "code junior," especially when paired with someone who's mindful of edge cases. The trick is to ask the right questions and iterate--don't expect a perfect hand-off on the first try.
+Overall, this experience taught me that AI can be a fantastic "code junior," especially when paired with someone who's mindful of edge cases. The trick is to ask the right questions and iterate - don't expect a perfect hand-off on the first try.
 
 ## The Exact Prompt You Can Copy‑Paste
 
@@ -211,7 +211,7 @@ Write a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreS
   2. Find columns of type FLOAT/REAL.
   3. Identify schemas/users not used in last 30 days (use last_dml if available, else skip).
 - Output a JSON report: { "db_name": "...", "timestamp": "...", "findings": [ { "type": "...", "object_name": "...", "details": "..." } ] }.
-- Use argparse with --config and optional --output.
+- Use argparse with  - config and optional  - output.
 - Gracefully handle import errors: try to import the driver, if missing, print "WARNING: <driver> not installed, skipping <db>" and continue.
 - Keep the script under 25 lines of functional code.
 - Include a __main__ block that prints a sample report (just for verification).
@@ -224,7 +224,7 @@ Feel free to copy the block above, paste it into DeepSeek (or OpenCode), and you
 ## FAQ: Real Questions About Building Scripts with DeepSeek
 
 **Q: Do I need any Python packages beyond the DB connectors'**  
-A: Only `json` and `argparse` are required; they are part of the standard library. If you add `--quiet` or logging, you'll need `logging` (also standard). The script deliberately avoids extra dependencies.
+A: Only `json` and `argparse` are required; they are part of the standard library. If you add ` - quiet` or logging, you'll need `logging` (also standard). The script deliberately avoids extra dependencies.
 
 **Q: How do I handle the Oracle driver if I don't have Instant Client'**  
 A: The script checks for `cx_Oracle` import and prints a warning, then skips the Oracle DB. For a production environment you'll still need the client libraries; the script's warning helps you know which DBs are being ignored.
@@ -236,12 +236,17 @@ A: Yes-just add another `elif` block for the new DB type, update the size and co
 A: The script uses `json.load`. If it fails, argparse will raise `json.JSONDecodeError` and you'll see a traceback. For a more robust solution you could wrap it in a try/except and log the error, but for a quick audit tool the default behavior is fine.
 
 **Q: How do I schedule this script'**  
-A: Add a cron entry like `*/7 * * * * /usr/bin/python3 /opt/scripts/db_audit.py --config /opt/configs/db_audit.json --output /var/log/db_audit_$(date +\%Y\%m\%d).json`. The script runs in under 3 seconds, so it fits comfortably within a weekly window.
+A: Add a cron entry like `*/7 * * * * /usr/bin/python3 /opt/scripts/db_audit.py  - config /opt/configs/db_audit.json  - output /var/log/db_audit_$(date +\%Y\%m\%d).json`. The script runs in under 3 seconds, so it fits comfortably within a weekly window.
 
 ---
-What task would you automate with this approach? I'd love to hear your thoughts! Share your prompts and the AI's output in the comments--let's build in public together!
+What task would you automate with this approach? I'd love to hear your thoughts! Share your prompts and the AI's output in the comments - let's build in public together!
 
 ## Related Guides
 
 - [Automating TLS Certificate Renewal with DeepSeek: Production Lessons](/blog/automated-tls-certificate-renewal-with-deepseek): The short answer is I automated TLS certificate renewal using a DeepSeek‑generated Python script, bu
 - [I Built a Sysadmin Toolkit with DeepSeek: Prompts, Failures & Code](/blog/i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke): The short answer is that I used DeepSeek to build a suite of Python scripts for log parsing, disk mo
+
+## References & Further Reading
+
+- [Wikipedia: Database](https://en.wikipedia.org/wiki/Database)
+- [DeepSeek](https://deepseek.co/)

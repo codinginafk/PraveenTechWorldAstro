@@ -19,22 +19,22 @@ pillarId: ai-automation
 ---
 ## I Asked [DeepSeek](/articles/automated-tls-certificate-renewal-with-deepseek) to Build My Sysadmin Toolkit
 
-So, I decided to give DeepSeek a shot at creating some Python scripts for tasks like log parsing, disk monitoring, and user management. I thought I could outline the logic and let the AI tackle the syntax. Initially, I was pretty excited--it churned out about 80% of functional code. But, there were a couple of hiccups along the way, including a few imaginary methods and some head-scratching moments with Linux permissions that needed a bit of manual fixing. If you're curious about my other adventures with DeepSeek, check out my [TLS certificate renewal script](/blog/automated-tls-certificate-renewal-with-deepseek) and [log monitoring tool](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong).
+So, I decided to give DeepSeek a shot at creating some Python scripts for tasks like log parsing, disk monitoring, and user management. I thought I could outline the logic and let the AI tackle the syntax. Initially, I was pretty excited - it churned out about 80% of functional code. But, there were a couple of hiccups along the way, including a few imaginary methods and some head-scratching moments with Linux permissions that needed a bit of manual fixing. If you're curious about my other adventures with DeepSeek, check out my [TLS certificate renewal script](/blog/automated-tls-certificate-renewal-with-deepseek) and [log monitoring tool](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong).
 
 ## Why was I spending 5 hours a week on manual log audits?
 As an IT Operations Lead, I find myself balancing high-level strategy with the nitty-gritty of system maintenance. For the past six months, I've been stuck manually parsing `/var/log/syslog` and `/var/log/auth.log` to track down failed SSH attempts and monitor disk space. Honestly, it's tedious, and I felt like I was wasting my time.
 
-I'm not a hardcore developer--sure, I can read Python and run scripts, but crafting a robust [CLI tool](/articles/building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek) from scratch? That's my kryptonite. I've dabbled with other language models before, but I was curious if DeepSeek could manage the "messiness" of system-level automation without me having to micromanage every line of code.
+I'm not a hardcore developer - sure, I can read Python and run scripts, but crafting a robust [CLI tool](/articles/building-a-cli-tool-to-automate-spreadsheet-data-cleaning-with-deepseek) from scratch? That's my kryptonite. I've dabbled with other language models before, but I was curious if DeepSeek could manage the "messiness" of system-level automation without me having to micromanage every line of code.
 
 My goal was pretty straightforward: build a "Sysadmin Toolkit" with three tools:
 1. A Log Parser that flags security anomalies.
 2. A Disk Monitor that alerts me when a partition hits 90%.
 3. A User Management script to audit stale accounts.
 
-I didn't want a tutorial--I wanted a practical tool. So, I thought of DeepSeek as my junior developer. I would provide the architecture and business logic, and the AI would handle the syntax.
+I didn't want a tutorial - I wanted a practical tool. So, I thought of DeepSeek as my junior developer. I would provide the architecture and business logic, and the AI would handle the syntax.
 
 ## How did I prompt DeepSeek to build the toolkit?
-I didn't kick things off with a vague "write me a script" prompt. I've learned from past experiments--like when I tried to automate my [server health checks](/blog/automated-server-health-checks-with-deepseek)--that being specific is crucial. I gave the AI a persona and a detailed set of requirements.
+I didn't kick things off with a vague "write me a script" prompt. I've learned from past experiments - like when I tried to automate my [server health checks](/blog/automated-server-health-checks-with-deepseek) - that being specific is crucial. I gave the AI a persona and a detailed set of requirements.
 
 Using the DeepSeek-Coder model, I crafted a comprehensive prompt that outlined the environment (Ubuntu 22.04), the required libraries (sticking to standard ones where I could), and the exact output format I needed (JSON for logs, plain text for alerts).
 
@@ -56,14 +56,14 @@ Requirements:
 ```
 
 ## Where did the AI hallucinate and break?
-DeepSeek generated the code in a flash--just 12 seconds. The indentation was spot-on, variable names were clear, and the `main.py` wrapper had this nice switch-case logic. I felt like a genius for about five minutes. Then, I actually ran the code.
+DeepSeek generated the code in a flash - just 12 seconds. The indentation was spot-on, variable names were clear, and the `main.py` wrapper had this nice switch-case logic. I felt like a genius for about five minutes. Then, I actually ran the code.
 
 The first hiccup happened with `disk_check.py`. The AI used a method called `psutil.disk_partitions().get_usage()`. When I ran the script, I was met with this error:
 `AttributeError: 'list' object has no attribute 'get_usage'`.
 
 It turned out DeepSeek had invented a method. It treated the list of partitions as one object that could be queried for usage. In reality, I needed to iterate through the list and call `.usage()` on each individual partition object. It looked good on paper, but it relied on a library method that simply didn't exist.
 
-The second issue came from the `user_audit.py` script. It tried reading `/etc/shadow` to check for the last login date. While that made sense logically, the script crashed with a `PermissionError: [Errno 13] Permission denied`. The AI didn't account for the fact that I needed to run the script with `sudo` privileges--it just assumed it had root access.
+The second issue came from the `user_audit.py` script. It tried reading `/etc/shadow` to check for the last login date. While that made sense logically, the script crashed with a `PermissionError: [Errno 13] Permission denied`. The AI didn't account for the fact that I needed to run the script with `sudo` privileges - it just assumed it had root access.
 
 The third problem was with the log parser. It worked, but man, was it slow! On a 400MB log file, it took 42 seconds to execute and gobbled up 1.2GB of RAM by reading the entire file into memory with `.readlines()`. For a sysadmin tool, that's a disaster waiting to happen. If I were to run this on a production server with a 2GB log file, I'd likely trigger an OOM (Out of Memory) killer and crash the server.
 
@@ -171,3 +171,8 @@ The only non-standard library used is `psutil`, which you can install with:
 `pip install psutil`.
 
 What about you? What task would you automate with this approach? I'd love to hear your thoughts in the comments, and who knows, I might just try to tackle it in my next experiment!
+
+## References & Further Reading
+
+- [Wikipedia: System administrator](https://en.wikipedia.org/wiki/System_administrator)
+- [DeepSeek](https://deepseek.co/)
