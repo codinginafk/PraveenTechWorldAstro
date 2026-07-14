@@ -8,13 +8,11 @@ Document how an IT Operations Lead uses AI (DeepSeek + OpenCode) to build automa
 
 | Pillar | Focus | Content Style |
 |--------|-------|--------------|
-| `ai-automation` | Python scripts, CLI tools, data pipelines built with AI | Experiment + code + prompt |
-| `it-operations` | Database auditing, ERP, sysadmin, infrastructure | Operations lead perspective |
-| `build-in-public` | Battle logs, AI failures, lessons learned | Vulnerable, honest narrative |
-| `website-setup` | Google Search Console, GA4, sitemaps (legacy) | Tutorial (existing content) |
-| `windows-fixes` | Windows troubleshooting (legacy) | Tutorial (existing content) |
-| `hosting-infra` | Hosting, DNS, SSL (legacy) | Tutorial (existing content) |
-| `ai-websites` | ChatGPT, AI tools (legacy) | Tutorial (existing content) |
+| `ai-automation` | DevOps scripts, CLI tools, container migrations (Podman/Docker), system auditing using AI | Experiment + code + prompt |
+| `it-operations` | Database auditing, active directory, enterprise infrastructure, security flows (M365/DEBULL) | Operations lead perspective |
+| `tech-repair-diagnostics` | Evergreen PC repair, Android servicing, firmware fixes, using AI for local log & hardware diagnostics | Practical repair guides + AI tools |
+| `website-setup` | GSC indexation, DNS, site diagnostics, sitemaps | Low-DA intercept topics |
+| `build-in-public` | Battle logs, AI failures, local models caching setups, billing optimization | Honest, vulnerable diaries |
 
 ## Monthly Roadmap
 
@@ -62,11 +60,10 @@ Document how an IT Operations Lead uses AI (DeepSeek + OpenCode) to build automa
   - Data stored in Vercel Blob (set BLOB_READ_WRITE_TOKEN)
   - Report generated weekly by ai-crawler-agent.mjs
 
-## Sprint Rules (Month 2 — AI Automation)
+## Sprint Rules (Month 2 — AI Automation & Servicing Diagnostics)
 
-1. Active pillars: ai-automation (primary), it-operations (secondary), build-in-public (tertiary)
-2. Legacy pillars (website-setup, windows-fixes, hosting-infra, ai-websites) — maintain existing content, no active generation
-3. Every new article must include the exact prompt used
-4. Every new article must include a "Where It Broke" or "What I Learned" section
-5. Syndicate each new article to Dev.to (same day)
-6. LinkedIn post within 24 hours of publish
+1. Active pillars: ai-automation (primary), it-operations (secondary), tech-repair-diagnostics (tertiary)
+2. Every new article must run through the `HUMANIZING` state pass to completely strip AI footprints.
+3. Publish new humanized articles directly to the local Astro site weekly (unlimited cadence).
+4. Syndicate to Dev.to strictly once per week as a private draft (published: false) to build high-quality backlinks without triggering spam shadowbans.
+5. Generate LinkedIn and X thread post copies (no links in body copy for LinkedIn, thread format for X).

@@ -12,31 +12,89 @@
 
 import { getDb } from './scoutdb.mjs';
 
+function extractJSON(text) {
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        // Try regex extraction of JSON block
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) {
+            try {
+                return JSON.parse(match[0]);
+            } catch (e2) {
+                // Ignore
+            }
+        }
+        return null;
+    }
+}
+
 async function callLLM(prompt) {
     const dotenv = await import('dotenv');
     dotenv.config();
-    const apiKey = process.env.LLM_API_KEY;
+
+    // Try local OmniRoute proxy first
+    const OMNIROUTE_URL = "http://localhost:20128/v1/chat/completions";
+    try {
+        const omniRes = await fetch(OMNIROUTE_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer omniroute-resilience-key"
+            },
+            body: JSON.stringify({
+                model: "openrouter/free", // Route via free pool
+                stream: false,
+                messages: [{ role: "user", content: prompt }]
+            }),
+            signal: AbortSignal.timeout(15000)
+        });
+
+        if (omniRes.ok) {
+            const data = await omniRes.json();
+            let content = data.choices[0].message.content.trim();
+            if (content.startsWith('```json')) content = content.replace(/^```json\n/, '').replace(/\n```$/, '');
+            if (content.startsWith('```'))     content = content.replace(/^```\n/, '').replace(/\n```$/, '');
+            
+            const parsed = extractJSON(content);
+            if (parsed) return parsed;
+            
+            console.warn(`[Planner] OmniRoute response could not be parsed as JSON. Content: "${content}"`);
+        }
+    } catch (err) {
+        console.warn(`[Planner] Local OmniRoute proxy call failed: ${err.message}. Falling back...`);
+    }
+
+    // Fall back to direct OpenRouter
+    const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY;
     if (!apiKey) { console.warn('[Planner] LLM_API_KEY missing.'); return null; }
 
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            model: 'openai/gpt-4o-mini',
-            messages: [{ role: 'user', content: prompt }]
-        })
-    });
+    try {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'meta-llama/llama-3.3-70b-instruct:free',
+                messages: [{ role: 'user', content: prompt }]
+            }),
+            signal: AbortSignal.timeout(15000)
+        });
 
-    if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-    const data = await res.json();
-    let content = data.choices[0].message.content.trim();
-    if (content.startsWith('```json')) content = content.replace(/^```json\n/, '').replace(/\n```$/, '');
-    if (content.startsWith('```'))     content = content.replace(/^```\n/, '').replace(/\n```$/, '');
-    return JSON.parse(content);
+        if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
+        const data = await res.json();
+        let content = data.choices[0].message.content.trim();
+        if (content.startsWith('```json')) content = content.replace(/^```json\n/, '').replace(/\n```$/, '');
+        if (content.startsWith('```'))     content = content.replace(/^```\n/, '').replace(/\n```$/, '');
+        return extractJSON(content);
+    } catch (err) {
+        console.error("[Planner] Direct OpenRouter fallback failed:", err.message);
+        return null;
+    }
 }
+
 
 function buildPrompt(title, evidenceSummary, sources) {
     return `
@@ -149,5 +207,10 @@ export async function runPlanner(artifactId) {
 }
 
 if (process.argv[1] === import.meta.url || process.argv[1].endsWith('rie_planner.mjs')) {
-    runPlanner().catch(console.error);
+    runPlanner()
+        .then(() => process.exit(0))
+        .catch(err => {
+            console.error(err);
+            process.exit(1);
+        });
 }

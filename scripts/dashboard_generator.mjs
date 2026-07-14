@@ -64,5 +64,10 @@ async function generateDashboard() {
 }
 
 if (process.argv[1] === import.meta.url || process.argv[1].endsWith('dashboard_generator.mjs')) {
-    generateDashboard().catch(console.error);
+    generateDashboard()
+        .then(() => process.exit(0))
+        .catch(err => {
+            console.error(err);
+            process.exit(1);
+        });
 }

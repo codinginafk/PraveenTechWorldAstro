@@ -109,13 +109,10 @@ export async function fetchJSON(url) {
 }
 
 export async function callLLM(systemPrompt, userPrompt, opts = {}) {
-  const apiKey = process.env.LLM_API_KEY;
-  const baseUrl = process.env.LLM_BASE_URL || "https://opencode.ai/zen/v1";
-  const model = process.env.LLM_MODEL || "openrouter/free";
-
-  if (!apiKey) {
-    throw new Error("No LLM_API_KEY in env.");
-  }
+  const omniUrl = process.env.OMNIROUTE_URL || "http://localhost:20128/v1/chat/completions";
+  const omniKey = process.env.OMNIROUTE_KEY || "omniroute-resilience-key";
+  const rawModel = opts.model || process.env.LLM_MODEL || "deepseek-v4-flash-free";
+  const model = rawModel.includes("/") ? rawModel : `oc/${rawModel}`;
 
   const body = {
     model,
@@ -127,11 +124,11 @@ export async function callLLM(systemPrompt, userPrompt, opts = {}) {
     max_tokens: opts.maxTokens ?? 4096,
   };
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
+  const res = await fetch(omniUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${omniKey}`,
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(opts.timeout ?? 240000),
@@ -147,28 +144,26 @@ export async function callLLM(systemPrompt, userPrompt, opts = {}) {
 }
 
 export async function callGemini(systemPrompt, userPrompt, opts = {}) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = opts.model || process.env.GEMINI_MODEL || "gemini-flash-latest";
-
-  if (!apiKey) {
-    throw new Error("No GEMINI_API_KEY in env.");
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const omniUrl = process.env.OMNIROUTE_URL || "http://localhost:20128/v1/chat/completions";
+  const omniKey = process.env.OMNIROUTE_KEY || "omniroute-resilience-key";
+  const model = `gemini/${opts.model || process.env.GEMINI_MODEL || "gemini-2.5-pro"}`;
 
   const body = {
-    contents: [
-      { parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] },
+    model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
     ],
-    generationConfig: {
-      temperature: opts.temperature ?? 0.7,
-      maxOutputTokens: opts.maxTokens ?? 4096,
-    },
+    temperature: opts.temperature ?? 0.7,
+    max_tokens: opts.maxTokens ?? 4096,
   };
 
-  const res = await fetch(url, {
+  const res = await fetch(omniUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${omniKey}`,
+    },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(opts.timeout ?? 240000),
   });
@@ -179,7 +174,7 @@ export async function callGemini(systemPrompt, userPrompt, opts = {}) {
   }
 
   const json = await res.json();
-  return json?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  return json.choices?.[0]?.message?.content || "";
 }
 
 export async function callAI(systemPrompt, userPrompt, opts = {}) {

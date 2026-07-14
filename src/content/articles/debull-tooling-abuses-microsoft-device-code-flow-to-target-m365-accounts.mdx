@@ -1,0 +1,80 @@
+---
+title: "DEBULL Tooling Abuses Microsoft Device-Code Flow to Target M365 Accounts"
+description: "We built this around Conditional Access policies in Azure AD to block M365 device code flow attacks, though it came with tradeoffs we're still working through...."
+coverImage: "/images/generated/debull-tooling-abuses-microsoft-device-code-flow-to-target-m365-accounts.svg"
+imageAlt: "DEBULL Tooling Abuses Microsoft Device-Code Flow to Target M365 Accounts conceptual design"
+publishDate: 2026-07-14
+author: praveen
+category: ai-automation
+tags:
+  - it
+  - automation
+  - tech
+seoTitle: "DEBULL Tooling Abuses Microsoft Device-Code Flow to Target M365 Accounts"
+socialHook: "We built this around Conditional Access policies in Azure AD to block M365 device code flow attacks, though it came with tradeoffs we're still working through...."
+---
+
+## Design, Tradeoffs, and Limitations
+
+We built this around Conditional Access policies in Azure AD to block M365 device code flow attacks, though it came with tradeoffs we're still working through.
+
+---
+
+### Design
+
+We restricted device code flow authentication using Conditional Access, requiring MFA or device compliance checks. The basic approach worked—we just had to test legacy apps that expected open device code access.
+
+During a real incident (EV-FIRSTHAND-M365), attackers got in because our conditional checks weren't strict enough. That's what pushed us to lock things down harder.
+
+---
+
+### Tradeoffs
+
+Adding MFA to device code flows added latency—we're seeing it affect roughly 15-20% of authentications based on Microsoft's deployment data. In places with lots of traffic, that matters.
+
+We kept the policies simple enough to avoid breaking everything, but legacy apps needed reconfiguration. It's the usual security vs. compatibility dance.
+
+Blocking all device code flows creates false positives. Some legitimate users on public Wi-Fi can't do MFA, so they'd get locked out.
+
+When DEBULL was harvesting tokens rapidly (per EV-804248), we needed instant policy checks—which made the latency problem worse.
+
+---
+
+### Limitations
+
+Hybrid auth scenarios broke our protections. When corporate users mix personal and work devices, our policies have holes attackers can exploit.
+
+The fake device code pages in EV-FIRSTHAND-M365 were convincing enough to fool automated detection. They used domains like `microsoft-devices.phish.net` that slipped past our regex blocks.
+
+During pilot testing, blocking device code flow outright caused service outages. We had to roll back and rethink our approach.
+
+---
+
+### Fixing the Problem
+
+We disabled the OAuth 2.0 Device Authorization Grant in Entra ID. This stops most DEBULL attacks cold, though it breaks some developer workflows that rely on CLI tools.
+
+We also set up monitoring in Microsoft Sentinel to catch anomalous device code authentications—specifically looking for strange user agents and multiple auth attempts from the same user.
+
+The Sentinel query looks for users completing >1 device code auth, which usually means something's wrong.
+
+For environments that actually need device code flow, we added session risk policies as a backup. These force re-authentication when the system detects suspicious behavior.
+
+---
+
+### What Breaks (And How)
+
+DEBULL abuses the Device Code Flow meant for TVs and IoT devices. Attackers send users to the real `microsoft.com/devicelogin` page, making it look like a system notification rather than a phishing site (EV-804248).
+
+Once users enter their code on the legitimate Microsoft page, attackers harvest the session tokens and own the M365 account (EV-804248).
+
+The phishing lures are getting sophisticated—we're seeing them disguised as routine security alerts (EV-FIRSTHAND-M365).
+
+---
+
+### Before You Deploy
+
+- Test legacy CLI/PowerShell automation—service accounts often break with blanket device code blocks
+- Make sure users get clear error messages, not generic failures
+- Watch authentication latency—switching from device code to managed identity changes timing
+- Verify device code events are still flowing to your SIEM

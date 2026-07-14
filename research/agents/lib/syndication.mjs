@@ -116,9 +116,10 @@ export async function devtoPost(article, apiKey) {
       published: true,
       body_markdown: markdown,
       tags: formatTags(tags),
-      canonical_url: `${SITE_URL}/blog/${slug}`,
       description: description.slice(0, 200),
-      main_image: coverImage || "",
+      main_image: coverImage
+        ? (coverImage.startsWith("http") ? coverImage : `${SITE_URL}${coverImage}`)
+        : "",
     },
   };
 

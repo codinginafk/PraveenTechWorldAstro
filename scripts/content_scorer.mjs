@@ -46,7 +46,7 @@ CRITERIA:
 1. Original Artifacts (CRITICAL): 0=None, 1=1-2 screenshots, 2=3+ original artifacts (logs, commands, real numbers).
 2. Documented Failure (CRITICAL): 0="This worked", 1=Mentions a minor hurdle, 2=Deeply details what broke.
 3. Claim Traceability (CRITICAL): 0=Bold unsourced claims, 1=Some sources, 2=Every non-obvious claim sourced to official docs/logs.
-4. Fabrication Check (CRITICAL): 0=Invents formulas/stats (AUTOMATIC FAIL), 2=Zero fabrications.
+4. Fabrication Check (CRITICAL): 0=Any terminal command, script, or config path lacks a direct markdown link to official docs or explicit author mapping (AUTOMATIC FAIL), 2=Every technical snippet is verifiable via provided links or explicit author notes.
 5. Answer-First Structure: 0=Buries the lede, 1=Partially buried, 2=First 2-3 sentences of sections give the answer.
 6. Subtopic Coverage: 0=Keyword stuffing, 1=Answers some follow-ups, 2=Anticipates what a competent reader would ask next.
 7. Redundancy: 0=Heavy overlap with common knowledge, 1=Some overlap, 2=Completely unique angle.
@@ -92,7 +92,7 @@ ${content}
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "openai/gpt-4o-mini",
+                model: "tencent/hy3:free",
                 messages: [{ role: "user", content: prompt }]
             })
         });

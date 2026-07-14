@@ -75,7 +75,12 @@ async function fetchTrendsForTopics() {
 }
 
 if (process.argv[1] === import.meta.url || process.argv[1].endsWith('rie_trends.mjs')) {
-    fetchTrendsForTopics().catch(console.error);
+    fetchTrendsForTopics()
+        .then(() => process.exit(0))
+        .catch(err => {
+            console.error(err);
+            process.exit(1);
+        });
 }
 
 export { fetchTrendsForTopics };

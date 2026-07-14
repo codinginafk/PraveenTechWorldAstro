@@ -146,6 +146,20 @@ RULES:
     );
 }
 
+// ─── Skeptic Agent ────────────────────────────────────────────────────────────
+
+async function skepticAgent(sectionText) {
+    console.log(`[Writer/Skeptic] Checking code blocks for hallucinations...`);
+    const res = await callLLM(
+        `You are the Skeptic Agent. Your job is to find hallucinations, fake commands, fake parameters, or deprecated APIs in technical code blocks.
+If the code contains 'apt-get install' for a proprietary tool that doesn't use APT (like deepseek, aws-cli v2, etc), flag it.
+If you find a hallucination, return "FLAG: <reason>".
+If everything is perfectly normal or no code blocks exist, return "SAFE".`,
+        sectionText
+    );
+    return res;
+}
+
 // ─── Outline Planner ─────────────────────────────────────────────────────────
 
 async function outlinePlanner(topic, evidence, editorialAngle) {
@@ -231,11 +245,52 @@ export async function runContentWriter(artifactId) {
         await db.run(`UPDATE artifacts SET outline = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [outline, artifactId]);
 
         // Step 2: Run three isolated writers in parallel (they share evidence but NOT each other's output)
-        const [archSection, implSection, troubleSection] = await Promise.all([
+        let [archSection, implSection, troubleSection] = await Promise.all([
             architectureWriter(artifact.title, evidenceDossier, outline),
             implementationWriter(artifact.title, evidenceDossier, outline, authorExperience),
             troubleshootingWriter(artifact.title, evidenceDossier, outline, authorExperience)
         ]);
+
+        // Step 2.5: The Skeptic Agent verification loop
+        let attempts = 0;
+        let maxAttempts = 2;
+        let skepticFlagged = false;
+
+        do {
+            skepticFlagged = false;
+            
+            // Check Implementation
+            const implCheck = await skepticAgent(implSection);
+            if (implCheck.startsWith('FLAG:')) {
+                console.warn(`[Writer/Skeptic] Implementation flagged: ${implCheck}. Rewriting...`);
+                implSection = await callLLM(
+                    `You are the Implementation Writer. The Skeptic Agent flagged your previous draft.
+FIX THIS CRITICAL ERROR: ${implCheck}
+Do NOT hallucinate commands or packages. If you don't know the exact command, explain it conceptually instead of making up syntax.`,
+                    `Previous Draft:\n${implSection}`
+                );
+                skepticFlagged = true;
+            }
+            
+            // Check Troubleshooting
+            const troubleCheck = await skepticAgent(troubleSection);
+            if (troubleCheck.startsWith('FLAG:')) {
+                console.warn(`[Writer/Skeptic] Troubleshooting flagged: ${troubleCheck}. Rewriting...`);
+                troubleSection = await callLLM(
+                    `You are the Troubleshooting Writer. The Skeptic Agent flagged your previous draft.
+FIX THIS CRITICAL ERROR: ${troubleCheck}
+Do NOT hallucinate commands or packages.`,
+                    `Previous Draft:\n${troubleSection}`
+                );
+                skepticFlagged = true;
+            }
+            
+            attempts++;
+        } while (skepticFlagged && attempts < maxAttempts);
+
+        if (skepticFlagged) {
+            console.warn(`[Writer/Skeptic] Max attempts reached. Procedurally forcing draft to REVIEWING with warnings.`);
+        }
 
         // Step 3: Merge into final draft
         const fullDraft = await mergeDraft(artifact, archSection, implSection, troubleSection, outline);

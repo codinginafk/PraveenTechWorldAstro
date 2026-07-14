@@ -1,0 +1,125 @@
+---
+title: "Cost Caps & Retry Limits for LLM Agent Pipelines"
+description: "The pipeline uses an explicit Finite State Machine, pre-flight cost guards, and hard iteration ceilings to enforce cost management and loop prevention, but cont..."
+coverImage: "/images/generated/cost-caps-retry-limits-for-llm-agent-pipelines.svg"
+imageAlt: "Cost Caps & Retry Limits for LLM Agent Pipelines conceptual design"
+publishDate: 2026-07-10
+author: praveen
+category: ai-automation
+tags:
+  - ai
+seoTitle: "Cost Caps & Retry Limits for LLM Agent Pipelines"
+socialHook: "The pipeline uses an explicit Finite State Machine, pre-flight cost guards, and hard iteration ceilings to enforce cost management and loop prevention, but cont..."
+---
+
+## Design, Tradeoffs, and Limitations
+
+### TL;DR
+The pipeline uses an explicit Finite State Machine, pre-flight cost guards, and hard iteration ceilings to enforce **cost management** and loop prevention, but context truncation can bypass ceilings and demands external tracing.
+
+### Design
+- **FSM-based LLM orchestration**: Explicit **state transitions** (`DISCOVERED → RESEARCHING → VERIFYING → OUTLINE → WRITING → REVIEWING → READY → PUBLISHED → MONITORING → UPDATE_NEEDED → RESEARCHING`) create a predictable **visual framework** that simplifies debugging of agent paths (EV-000004).
+- **Pre-flight cost cap**: A $2.00 USD per-artifact budget is checked before expensive **LLM APIs** calls; on breach, a `CostCapExceeded` error halts execution to contain runaway spend (EV-000006).
+- **Hard execution caps**: `maxReviewCycles=3` and `maxResearchIterations=5` force transition to `NEEDS_HUMAN_REVIEW` when exceeded, bounding the **AI agent loop** (EV-000005).
+- **Stale-content audit**: Dynamic rescheduler uses Google Search Console and DEV.to metrics to reset articles with less than 10 views/7 days back to `UPDATE_NEEDED`, closing the loop via **agent tools** (EV-000008).
+
+### Tradeoffs
+- **Predictability vs. rigidity**: Explicit FSM simplifies troubleshooting but reduces ad-hoc branching; adding new **state transitions** requires code changes rather than emergent behavior (EV-000004).
+- **Cost safety vs. task completion**: Pre-flight **cost management** prevents bill shock but may halt legitimate long-form generation, pushing load to humans (EV-000006).
+- **Loop prevention vs. autonomy**: Hard **execution caps** stop infinite retries yet introduce a human-in-the-loop bottleneck at `NEEDS_HUMAN_REVIEW` (EV-000005).
+- **External metric coupling**: The stale audit adds dependence on third-party **rate limits** and API availability of GSC/DEV.to (EV-000008).
+
+### Limitations
+- **Truncation-induced loop evasion**: Older FSM logs truncated as context filled caused repeated state cycles that never hit iteration ceilings, undetectable by built-in caps (EV-000007).
+- **Requires observability layer**: Detection of the above silent failure needed external tracing; the base design lacks native guard against context-window truncation (EV-000007).
+- **No adaptive thresholds**: Evidence provides fixed caps ($2, cycles=3/5, views less than 10); no data on dynamic tuning. *Experience with threshold calibration under production load is absent from provided evidence; we do not assert optimal values.*
+- **Scope of stale reset**: Only GSC/DEV.to signals trigger reschedule; other platforms not covered (EV-000008).
+
+
+
+## TL;DR Summary
+Initialize a Finite State Machine with hard `execution caps`, pre-flight `cost management` gates, and GSC-based stale resets to keep the `AI agent loop` within bounded `LLM orchestration` paths.
+
+## 1. FSM State Transition Config
+Explicit `state transitions` provide a `visual frameworks` reference for debugging `LLM orchestration` (EV-000004):
+
+```javascript
+// fil(image upload pending)
+const FSM = {
+  states: ['DISCOVERED','RESEARCHING','VERIFYING','OUTLINE','WRITING',
+           'REVIEWING','READY','PUBLISHED','MONITORING','UPDATE_NEEDED'],
+  flow: {
+    DISCOVERED: 'RESEARCHING',
+    RESEARCHING: 'VERIFYING',
+    VERIFYING: 'OUTLINE',
+    OUTLINE: 'WRITING',
+    WRITING: 'REVIEWING',
+    REVIEWING: 'READY',
+    READY: 'PUBLISHED',
+    PUBLISHED: 'MONITORING',
+    MONITORING: 'UPDATE_NEEDED',
+    UPDATE_NEEDED: 'RESEARCHING'
+  }
+};
+```
+
+## 2. Hard Loop Ceiling Config
+Cap self-correction to prevent infinite `AI agent loop` retries (EV-000005):
+
+```javascript
+// fil(image upload pending)
+const limits = {
+  maxReviewCycles: 3,
+  maxResearchIterations: 5,
+  onBreach: 'NEEDS_HUMAN_REVIEW'
+};
+```
+
+## 3. Pre-Flight Cost Cap Setup
+Gate expensive `LLM APIs` calls with per-artifact `cost management` check (EV-000006):
+
+```javascript
+// fil(image upload pending)
+const PER_ARTIFACT_CAP_USD = 2.00;
+
+function guardCost(estimate) {
+  if (estimate > PER_ARTIFACT_CAP_USD) {
+    throw new CostCapExceeded('Halt: cap exceeded');
+  }
+}
+// Pair with downstream LLM APIs rate limits at proxy layer
+```
+
+## 4. Stale Rescheduling Audit Config
+Wire `agent tools` to performance metrics for automatic state reset (EV-000008):
+
+```javascript
+// fil(image upload pending)
+const AUDIT = {
+  source: ['google_search_console', 'dev_to'],
+  minViews: 10,
+  windowDays: 7,
+  resetTo: 'UPDATE_NEEDED'
+};
+```
+
+## 5. Observability Setup Gap
+The silent truncation loop (EV-000007) was detected via Observability traces after FSM logs truncated inside context. Specific trace-export commands, log-integrity alerts, or `rate limits` sampling configs are **not present** in the evidence bundle. Practical setup of trace pipelines for FSM integrity requires experience absent from source data — do not invent.
+
+## What Breaks and How It Was Fixed
+
+**TL;DR:** A silent truncation loop in `LLM orchestration` bypassed `execution caps` and caused infinite `AI agent loop` repetition until caught by observability traces.
+
+### Failure Mode: Silent Truncation Loop
+- **Symptom:** The agent repeated identical `state transitions` (e.g., RESEARCHING → VERIFYING → ...) without triggering iteration ceilings, creating an unbounded `AI agent loop`.
+- **Root Cause:** As context filled, older FSM logs were truncated; the `visual frameworks` mapping explicit transitions (EV-000004) lost historical state, so loop counters tied to `execution caps` (maxReviewCycles=3, maxResearchIterations=5 per EV-000005) failed to increment.
+- **Evidence:** EV-000007 confirms this incident, noting it evaded traditional limits and was detected only via Observability traces.
+
+### Secondary Exposure
+- The evasion of `execution caps` led to uncontrolled repeated calls to `LLM APIs`, undermining `cost management` despite per-artifact pre-flight `$2.00` cap (EV-000006) that halts only single expensive calls.
+- Unbounded retries risked hitting `rate limits` on downstream `agent tools`.
+
+### How It Was Fixed
+- **No fix documented in evidence.** The bundle provides only incident description and detection path (EV-000007).
+- Remediation experience (e.g., external log persistence, context-independent global loop guards) is **absent from provided sources**; we do not invent corrective claims.
+- If real-world deployment expertise is required to validate a patch, it is not present in the referenced material.

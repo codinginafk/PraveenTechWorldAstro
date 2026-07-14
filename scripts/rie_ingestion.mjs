@@ -205,5 +205,10 @@ export async function runIngestion() {
 }
 
 if (process.argv[1] === import.meta.url || process.argv[1].endsWith('rie_ingestion.mjs')) {
-    runIngestion().catch(console.error);
+    runIngestion()
+        .then(() => process.exit(0))
+        .catch(err => {
+            console.error(err);
+            process.exit(1);
+        });
 }
