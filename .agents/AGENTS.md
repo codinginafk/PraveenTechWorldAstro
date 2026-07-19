@@ -33,3 +33,9 @@ Regardless of the `autoApprove` and `suppressPrompts` configurations above, the 
 1. **First-Person Team Perspective:** Always write articles and marketing copy from the first-person perspective of "our team," "my friends and I," or "we" sharing real, firsthand developer-ops experiences, workbench troubleshooting, or test results.
 2. **Helpful Content E-E-A-T:** Avoid dry, textbook style third-person write-ups. Ground technical fixes (like Docker permissions or bad RAM diagnostics) as actual problems we faced on our own dev machines or infrastructure, and how we resolved them together.
 
+## Content Release Safety Guards (STRICT SINGLE-POST LIMIT)
+1. **Never Publish Multiple Articles Simultaneously:** You are strictly prohibited from publishing or releasing more than **one single article file** to the production sitemap or live build folder in any single session. 
+2. **Draft Queue Enforcements:** If multiple topics are requested or ready, only compile **one** as live (`draft: false` or active). All other files must be written to a local `drafts/` directory or explicitly marked as `draft: true` in their frontmatter to keep them out of the build.
+3. **Commit Segregation:** Each published article must be committed and pushed in its own isolated commit on separate days/sessions. Never bundle multiple new articles into a single release or git push.
+
+
