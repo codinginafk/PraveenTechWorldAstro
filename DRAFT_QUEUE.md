@@ -1,6 +1,6 @@
 # Research Intelligence Engine: DRAFT QUEUE
 
-*Generated automatically on: 2026-07-13T09:39:11.676Z*
+*Generated automatically on: 2026-07-19T13:57:42.219Z*
 
 This dashboard pulls directly from the local `ScoutDB`. Topics listed here have passed the 12-point Evidence & Trend evaluation matrix and are ready for editorial drafting.
 
