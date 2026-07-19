@@ -576,6 +576,38 @@ Fix: We capped the context window to 16k tokens in our worker's API payload and 
 Final Thoughts
 Running DeepSeek autonomously is incredibly powerful, but don't be fooled by tutorials treating it like a standard Linux daemon. By wrapping it in a robust  with secure STS rotation and strict logging, we achieved 30 days of high-value cloud orchestration with near-zero manual intervention.
 
+--
+
+Part 3: Monitoring DeepSeek in Production
+
+One of the biggest surprises from our 30-day run: the model itself was reliable. The failures were all in the infrastructure wrapper — token expiry, network blips, and memory exhaustion. Here's the monitoring setup that gave us real visibility:
+
+Prometheus + Grafana for Worker Metrics
+
+We instrumented our Python worker to expose basic Prometheus metrics over port 9090:
+
+
+
+With Grafana dashboards tracking  by status, we could spot failure spikes within minutes rather than discovering them in the morning logs.
+
+Setting Up Health-Check Alerts
+
+We used a simple cron-based health check that pinged the LM Studio server every 5 minutes and sent a Slack alert if it went unreachable:
+
+
+
+This single script caught 3 silent failures during our 30-day run that would otherwise have left the orchestrator running with no backend, hallucinating responses with empty context.
+
+--
+
+Key Lessons from 30 Days of Unsupervised DeepSeek
+
+After the full production run, here are the decisions that made the biggest difference:
+
+1. Pre-flight health checks beat reactive error handling. Every orchestration loop started with a 200ms ping to the local API server. If it failed, the task was queued rather than attempted. This prevented a whole class of silent failures where the worker would send requests to a dead server and get no error back.
+
+2. Context window management is manual work. DeepSeek V3 has a generous context window, but in production you need to enforce limits explicitly. We capped every API call at 16,384 tokens and implemented a sliding window that dropped the oldest conversation
+
 ---
 
 ## I Built an AI Content Auditor to Score My Blog: Average Grade Was 55/100
@@ -4214,13 +4246,11 @@ Q: Will this work for image-heavy PDFs?
 A: Not really text conversion won't capture visual content. You'll need specialized tools or a manual review for those.
 
 Q: Can ChatGPT access paywalled PDFs'  
-A:*Nope, you'll need to have the file downloaded locally first. 
+A: Nope, you'll need to have the file downloaded locally first. 
 
 What do you think? Have you tried summarizing with ChatGPT before? Would love to hear your experiences!
 
-References & Further Reading
-
-OpenAI: Cha
+How to Handle Documents Longer Than 6,000
 
 ---
 
@@ -4527,12 +4557,27 @@ You can easily search through this list to find specific entries. Just type in a
 
 What You'll Likely Find in Your Memory
 
-I'm not 100% sure what you might find, but many users have reported seeing details about their interests, professions, and previous topics of discussion. It's a bit fascinating and, honestly, a little eerie to think about how much the AI knows. I'd love to hear your thoughts on this! What have you discovered in your own memory'
+I'm not 100% sure what you might find, but many users have reported seeing details about their interests, professions, and previous topics of discussion. It's a bit fascinating and, honestly, a little eerie to think about how much the AI knows. I'd love to hear your thoughts on this! What have you discovered in your own memory?
 
-References & Further Reading
+How to Turn Off ChatGPT Memory Entirely
 
-OpenAI Privacy Policy
-Wikipedia: Privacy policy
+If you'd rather not have ChatGPT build a profile at all, here's how to disable the feature completely:
+
+1. Click your profile icon → Settings
+2. Go to Personalization
+3. Toggle Memory to Off
+
+With memory off, ChatGPT will not save any information between conversations. Each session starts completely fresh, as if you've never spoken before.
+
+Temporary option: If you just want a one-off private session without permanently disabling memory, use Temporary Chat mode (available from the sidebar). This is equivalent to incognito mode — nothing from that session gets saved.
+
+--
+What Data OpenAI Actually Keeps (Even After You Delete)
+
+This is the part nobody talks about. Even if you delete your memories and conversations, OpenAI still retains certain data:
+
+Conversation metadata: Timestamps, model version used, and session length may be retained for safety and abuse monitoring purposes
+Training data opt-out: By
 
 ---
 
@@ -5152,17 +5197,20 @@ Next, include your keyword in the meta description. This short paragraph appears
 
 When it comes to the body of your article, your H1 heading (the main title) should contain the keyword. Use H2 subheadings for major sections and H3s for subsections to create a clear hierarchy in your content.
 
-Limitations
+Common SEO Mistakes vs. What Actually Works
 
-Keep in mind that this approach might not work if you're writing about extremely competitive topics dominated by well-established sites. If you're tackling a niche subject, however, you stand a better chance of making your mark.
+Here is where most blog posts fall apart. These are not theoretical — I see these mistakes on sites every single week:
 
-What's Your Take?
-I hope this breakdown helps you in crafting your next blog post! What strategies do you find most effective for SEO? I'd love to hear your thoughts!
+| ❌ Mistake | ✅ What to Do Instead |
+|---|---|
+| Keyword in title but nowhere else | Place keyword naturally in H1, first paragraph, one H2, and meta description |
+| One 2,000-word post covering ten subtopics | Ten focused posts, each targeting one specific question |
+| Writing for Google first | Write for the reader first; structure for Google second |
+| Ignoring featured snippet formatting | Answer questions in 40–60 words directly, then expand below |
+| No internal links | Link to 2–4 related posts per article, using descriptive anchor text |
+| Generic meta description | Write it as an ad: include the keyword, a benefit, and a call to action |
 
-References & Further Reading
-
-Google Search Central: SEO Basics
-Wikipedia: Search engine optimization
+Internal L
 
 ---
 

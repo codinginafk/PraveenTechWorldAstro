@@ -147,3 +147,87 @@ Over 30 days, we monitored the logs closely. Here are the real failures we caugh
 
 ### Final Thoughts
 Running DeepSeek autonomously is incredibly powerful, but don't be fooled by tutorials treating it like a standard Linux daemon. By wrapping it in a robust `deepseek-worker` with secure STS rotation and strict logging, we achieved 30 days of high-value cloud orchestration with near-zero manual intervention.
+
+---
+
+## Part 3: Monitoring DeepSeek in Production
+
+One of the biggest surprises from our 30-day run: the model itself was reliable. The failures were all in the infrastructure wrapper — token expiry, network blips, and memory exhaustion. Here's the monitoring setup that gave us real visibility:
+
+### Prometheus + Grafana for Worker Metrics
+
+We instrumented our Python worker to expose basic Prometheus metrics over port 9090:
+
+```python
+from prometheus_client import Counter, Gauge, start_http_server
+import time
+
+task_counter = Counter('deepseek_tasks_total', 'Total tasks processed', ['status'])
+token_age_gauge = Gauge('sts_token_age_seconds', 'Age of current STS token in seconds')
+
+start_http_server(9090)
+
+def process_task(task):
+    try:
+        # ... task logic ...
+        task_counter.labels(status='success').inc()
+    except Exception as e:
+        task_counter.labels(status='failure').inc()
+        raise
+```
+
+With Grafana dashboards tracking `deepseek_tasks_total` by status, we could spot failure spikes within minutes rather than discovering them in the morning logs.
+
+### Setting Up Health-Check Alerts
+
+We used a simple cron-based health check that pinged the LM Studio server every 5 minutes and sent a Slack alert if it went unreachable:
+
+```bash
+#!/bin/bash
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:1234/v1/models)
+if [ "$STATUS" != "200" ]; then
+  curl -X POST -H 'Content-type: application/json' \
+    --data '{"text":"⚠️ DeepSeek worker unreachable! Check LM Studio."}' \
+    $SLACK_WEBHOOK_URL
+fi
+```
+
+This single script caught 3 silent failures during our 30-day run that would otherwise have left the orchestrator running with no backend, hallucinating responses with empty context.
+
+---
+
+## Key Lessons from 30 Days of Unsupervised DeepSeek
+
+After the full production run, here are the decisions that made the biggest difference:
+
+**1. Pre-flight health checks beat reactive error handling.** Every orchestration loop started with a 200ms ping to the local API server. If it failed, the task was queued rather than attempted. This prevented a whole class of silent failures where the worker would send requests to a dead server and get no error back.
+
+**2. Context window management is manual work.** DeepSeek V3 has a generous context window, but in production you need to enforce limits explicitly. We capped every API call at 16,384 tokens and implemented a sliding window that dropped the oldest conversation turns when the buffer filled. Without this, RAM exhaustion happened predictably on day 4.
+
+**3. Logging is your only debugging surface.** Unlike a traditional service with database state, the LLM worker's entire execution is ephemeral. The structured JSON logs were the only way to reconstruct what happened during a failure. We used this format for every event:
+
+```json
+{
+  "timestamp": "2026-07-07T14:22:31Z",
+  "event": "task_complete",
+  "task_id": "audit-0042",
+  "model": "deepseek-v3",
+  "tokens_used": 4821,
+  "duration_ms": 2340,
+  "cost_estimate_usd": 0.014
+}
+```
+
+**4. The $2 cost cap saved us twice.** On days 9 and 22, runaway tasks hit the pre-flight cost guard and stopped cleanly. Without it, those tasks would have continued generating tokens — and Azure costs — until a human noticed.
+
+**5. LM Studio is stable for production, but needs a watchdog.** We added a simple systemd watchdog that restarted LM Studio automatically if the API port went offline for more than 60 seconds. This made the entire local stack self-healing without requiring a human operator.
+
+---
+
+## Is This Approach Worth It vs. Using Cloud APIs?
+
+The main argument for running DeepSeek locally is **data privacy and cost control**. Cloud API calls to GPT-4 for the same 30-day workload would have cost approximately $180–$240 at standard pricing. Our local setup cost zero in API fees after the initial hardware investment.
+
+The tradeoff is operational complexity. If your team doesn't have someone comfortable building and maintaining the worker daemon, key vault integration, and monitoring stack described above, you're better off using a managed cloud API with a cost cap configured at the account level rather than in-code.
+
+For IT ops teams who already manage Linux infrastructure and want full data sovereignty, the local DeepSeek stack is excellent. For individual developers or small teams, start with the cloud APIs and migrate to local when scale justifies the overhead.
