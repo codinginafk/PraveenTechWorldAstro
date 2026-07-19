@@ -1,0 +1,31 @@
+name: Scheduled Article Publisher
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # Check every 30 minutes
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Scheduled Publisher
+        run: node src/scripts/run-scheduled-publish.mjs
+
+      - name: Commit and Push if Changed
+        run: |
+          git config --global user.name "Github Action Poster"
+          git config --global user.email "hello@praveentechworld.com"
+          git add -A
+          git diff-index --quiet HEAD || (git commit -m "chore: Auto-publish scheduled drafts" && git push origin main)
