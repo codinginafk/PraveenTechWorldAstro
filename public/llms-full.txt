@@ -4,9 +4,193 @@
 > URL: https://www.praveentechworld.com
 > Language: English
 > Last updated: 2026-07-19
-> Total articles: 76
+> Total articles: 79
 
 This file contains the full text of every article on the site. AI systems can extract specific passages for citations or answers.
+
+---
+
+## How to Fix Docker Volume 'Permission Denied' Errors on Windows and Linux
+
+**Pillar:** IT Operations & Infrastructure
+**URL:** https://www.praveentechworld.com/blog/docker-volume-permission-denied-fixes
+**Published:** 2026-07-19
+
+> File write locks and permission errors in mounted containers can stop development in its tracks. Here is how our team solved mount issues.
+
+The Host-to-Container Permission Wall
+
+It happens to every developer: you set up a fresh docker-compose file, mount a local folder to run live code reloads, run , and get met with a screen full of write lockouts:  or .
+
+When our team was migrating our dev setups to a lightweight container engine (as we detailed in our review of why we quit Docker Desktop), this exact issue halted our work for a full afternoon. When you mount a host directory into a container, you are crossing a boundary between two distinct user-access layers. If the user IDs do not align perfectly, the mount collapses.
+
+Here is the exact technical explanation of why this happens and the three production fixes my friends and I used to resolve it across our Windows (WSL2) and Linux environments.
+
+🛠️ Fix 1: Align User ID in Docker-Compose (The Quickest Fix)
+
+The fastest way to prevent ownership conflicts is to force the container to run using your exact host UID and GID. 
+
+Instead of letting the container default to root, declare the target user directly in your  file:
+
+Next, ensure these environment variables are exported in your terminal session before launching the containers:
+
+By passing , any file written by the node container is owned by your host user, eliminating write locks entirely.
+
+--
+🛠️ Fix 2: Enable WSL2 Metadata Mount Flags (For Windows Users)
+
+If you are running Docker or Podman inside Windows Subsystem for Linux (WSL2), you will face a unique filesystem hurdle. By default, WSL2 mounts your Windows drives (like ) using a driver that does not support Linux file ownership edits. 
+
+If you run  inside WSL2 on a Windows folder, the execution bit is ignored, causing  inside your container.
+
+To resolve this, my team configured WSL2 to preserve Linux permissions:
+
+1. Open your WSL2 terminal.
+2. Edit (or create) :
+   
+3. Add the following mount settings:
+   
+4. Save the file, exit, and restart WSL2 from a PowerShell window:
+   
+
+The  flag forces WSL2 to save Linux-style file permissions in NTFS alternate data streams, allowing  and  commands to work on Windows folders.
+
+--
+🛠️ Fix 3: Implement User Namespace Mapping (Rootless Podman/Docker)
+
+If you are running in rootless mode (common when using Podman), you must manage namespace sub-UIDs. 
+
+In rootless containers, the host OS maps your host user to the root user inside the container namespace, and maps other host users to secondary container users.
+
+You can tell the container to map your current host user to the exact UID needed by the container processes using the  flag:
+
+The  flag tells the engine to map your host user ID to the same numeric user ID inside the container namespace. Additionally, appending the  flag to the volume declaration automatically handles SELinux labeling on distributions like Fedora, CentOS, and Red Hat.
+
+--
+Diagnostic Cheat Sheet
+
+Use this workflow the next time a container throws a permission lockout:
+
+By applying these three fixes, our team has completely eliminated file permission bottlenecks. Align your compose users, configure your WSL2 metadata flags, and use namespace mappings to keep your developer workflow moving smoothly.
+
+---
+
+## How to Add a Google Custom Search Bar to Your Website
+
+**Pillar:** Website Setup & SEO
+**URL:** https://www.praveentechworld.com/blog/how-to-add-google-custom-search-to-website
+**Published:** 2026-07-19
+
+> Tired of complex database search indexing? Here is how to embed Google Programmable Search, style it with custom CSS, and integrate it into Astro.
+
+Why Built-in Site Search is a Developer Trap
+
+When my team and I first started building custom blogs and portfolio sites, we spent days coding custom search bars. We set up database indexers, wired up SQL  queries, and attempted to rank relevance. 
+
+But as our articles grew, this custom search approach fell apart. It was slow, consumed database resources, and didn't support basic search requirements like typos, synonyms, or relevance ranking.
+
+Instead of over-engineering a local search backend, my friends and I decided to delegate search indexing to the company that does it best: Google. By embedding Google Programmable Search (formerly Custom Search Engine or CSE), we gained access to Google's ranking algorithms with minimal setup.
+
+Here is a step-by-step developer guide on how to configure Google Programmable Search, embed it securely, and use custom vanilla CSS overrides to style it for modern dark-mode themes.
+
+2. Embedding the Search Box into Astro/HTML
+
+Google provides a default JavaScript snippet that renders the search input box and results automatically. However, the default snippet is synchronous and can drag down your page load speed.
+
+To prevent crawl delay flags (which we want to avoid as detailed in our indexing diagnostic logs), load the script asynchronously. 
+
+Here is the clean Astro component format we implemented:
+
+Key Settings to Know:
+: Tells Google where to show the search results. In our setup, we point this to a dedicated  page so that search results do not clutter our homepage.
+: Set to  so search links open in the same tab, keeping users on our site.
+
+--
+3. Styling Google Search with Vanilla CSS (Dark Mode overrides)
+
+By default, Google renders a search box that looks like it belongs in 2008: white backgrounds, bright blue buttons, and heavy borders. To make it match a premium, dark-mode developer site, you must override Google's default classes.
+
+Since Google's script injects an iframe, we have to target the CSS selectors aggressively. Add this vanilla CSS to your global stylesheet:
+
+By adding these rules to our global stylesheet, the Google Search iframe seamlessly blends into our website's existing design system.
+
+--
+4. Setting Up the Results Page
+
+If you set  in your component, you need to create a  route in your Astro project to render the results.
+
+Create  with the following layout:
+
+When a user types a query in the homepage header, Google redirects them to  and renders the search result listings in the container automatically.
+
+--
+Summary of Benefits
+
+For our team, embedding Google Custom Search solved three major problems:
+
+1.  Zero Maintenance: We don't have to manage database search tables or scale CPU capacity as our post count grows.
+2.  Top-Tier Accuracy: Google automatically handles spelling corrections, synonyms, and ranks results by relevance.
+3.  Speed: By loading the script asynchronously, the page load time remains light.
+
+If you are looking for a reliable, highly accurate site search solution that doesn't drag down your database speed, Google Programmable Search is the cleanest path forward.
+
+---
+
+## Why Our Dev Team Finally Quit Docker Desktop in 2026
+
+**Pillar:** IT Operations & Infrastructure
+**URL:** https://www.praveentechworld.com/blog/why-our-dev-team-quit-docker-desktop
+**Published:** 2026-07-19
+
+> High resource consumption, licensing shifts, and VM memory overhead pushed us to look elsewhere. Here is why we migrated and the alternatives we use.
+
+The Breaking Point for Our Dev Stack
+
+For years, Docker Desktop was the default container runtime for our development team. It was simple, familiar, and just worked. But as our local development environment grew to encompass microservices, local databases, and AI pipelines, Docker Desktop became our primary bottleneck.
+
+My friends and I noticed our work laptops constantly heating up, with fans spinning at full speed even when idle. When we audited our system resources, the culprit was always the same: the hidden virtual machine running Docker Desktop was consuming 8GB to 12GB of RAM and keeping our CPU cores locked at 30% load. 
+
+When you add the licensing changes that require paid subscriptions for large teams, we reached a breaking point. We decided to dismantle Docker Desktop entirely and build a lightweight, open-source container stack. Here is the first-person log of our journey, the performance comparisons, and the hurdles we had to solve.
+
+2. Navigating the Licensing Shift
+
+It is worth looking at the commercial realities. According to the updated Docker Desktop licensing rules, any organization with more than 250 employees or over $10 million in annual revenue is legally required to purchase paid subscriptions. 
+
+While the engine itself remains open-source, the desktop wrapper is a commercial product. For our team, paying for licensing on machines that were already suffering from performance bottlenecks made no sense. We wanted to move back to open standards.
+
+--
+3. Designing Our Alternative Stack: Podman + WSL2
+
+After looking at alternatives like Rancher Desktop and Minikube, we settled on Podman running directly inside a raw WSL2 Ubuntu instance. 
+
+Podman is a daemonless container engine. Unlike Docker, which relies on a background root service running constantly, Podman processes run as child processes of the user who started them. This design is inherently more secure and eliminates idle CPU drain.
+
+Step 1: Install the WSL2 Ubuntu Environment
+If you haven't already, open PowerShell and install WSL:
+
+Step 2: Install Podman Inside Ubuntu
+Log into your Ubuntu instance and run:
+
+Step 3: Wire Up Docker Compose Compatibility
+Most of our projects rely on  files. To keep using them, we pointed the environment to Podman's local socket:
+
+By adding this to our , our standard  commands continued working with zero modifications.
+
+--
+4. The Hurdles We Encountered: Volume Mount Mismatches
+
+Our migration was not without roadblocks. The biggest issue my friends and I ran into was file permission conflicts on shared volumes. 
+
+Because Podman runs in rootless mode by default, the user ID inside the container does not match the host user ID. When we mounted local directories to share source code, our containers would crash immediately with  errors. 
+
+We had to build a specific diagnostic workflow to resolve these filesystem lockouts. If your team is hitting the same roadblock, check out our companion guide on how to fix Docker volume permission denied errors where we detail the exact user namespace mapping () and metadata flags we used to solve it.
+
+--
+The Verdict: Was the Migration Worth It?
+
+After running this setup for several weeks, the answer is a resounding yes. Our system fans are quiet, our laptops stay responsive, and we reclaimed over 30GB of SSD space per machine. 
+
+Migrating away from Docker Desktop does require some initial command-line setup, but the benefits in performance and licensing peace-of-mind are massive. If your team is tired of resource bloat, we highly recommend making the jump to a raw WSL2 + Podman workflow.
 
 ---
 
