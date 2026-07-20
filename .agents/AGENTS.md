@@ -38,4 +38,8 @@ Regardless of the `autoApprove` and `suppressPrompts` configurations above, the 
 2. **Draft Queue Enforcements:** If multiple topics are requested or ready, only compile **one** as live (`draft: false` or active). All other files must be written to a local `drafts/` directory or explicitly marked as `draft: true` in their frontmatter to keep them out of the build.
 3. **Commit Segregation:** Each published article must be committed and pushed in its own isolated commit on separate days/sessions. Never bundle multiple new articles into a single release or git push.
 
+## User-Triggered Orchestration Rules
+1. **Orchestration Prompting:** Whenever the user asks to generate or work on an article or social posts, you must explicitly ask if they want to run the orchestration pipeline for this job.
+2. **Modified/Targeted Orchestration:** If orchestration is selected, execute the pipeline components (Research brief -> SEO scrape -> Boss approval scoring -> MDX generation -> Quality gates -> Cover image creation -> Social post files) targeted specifically at the user's requested topic, rather than running the automated/randomized trend loop.
+
 
