@@ -42,9 +42,4 @@ Regardless of the `autoApprove` and `suppressPrompts` configurations above, the 
 1. **Orchestration Prompting:** Whenever the user asks to generate or work on an article or social posts, you must explicitly ask if they want to run the orchestration pipeline for this job.
 2. **Modified/Targeted Orchestration:** If orchestration is selected, execute the pipeline components (Research brief -> SEO scrape -> Boss approval scoring -> MDX generation -> Quality gates -> Cover image creation -> Social post files) targeted specifically at the user's requested topic, rather than running the automated/randomized trend loop.
 
-## Content Visual & Cover Image Rules
-1. **High-Resolution Graphic Covers:** Every new article must feature a high-resolution, custom-drawn graphic illustration (prefer JPG format) representing developer-centric or infrastructure metaphors. 
-2. **No Text Overlay Covers:** Do not generate text SVGs containing title text for covers. They clash with the card UI text and look basic. Instead, call the `generate_image` tool to render a textless visual concept, save it in `public/images/generated/`, and set it in the MDX frontmatter `coverImage`.
-
-
 
