@@ -42,4 +42,11 @@ Regardless of the `autoApprove` and `suppressPrompts` configurations above, the 
 1. **Orchestration Prompting:** Whenever the user asks to generate or work on an article or social posts, you must explicitly ask if they want to run the orchestration pipeline for this job.
 2. **Modified/Targeted Orchestration:** If orchestration is selected, execute the pipeline components (Research brief -> SEO scrape -> Boss approval scoring -> MDX generation -> Quality gates -> Cover image creation -> Social post files) targeted specifically at the user's requested topic, rather than running the automated/randomized trend loop.
 
+## Content Visual & Cover Image Rules
+1. **PraveenTechWorld Brand Metaphor:** Every cover image must look like a flat, clean technical diagram, schematic flow, or software architecture model resting on a warm, minimalist wooden desk (representing "Praveen's Workbench").
+2. **Subtle Branding Details:** The scene must naturally contain a cozy physical brand element—such as a coffee mug, sticky note, or laptop decal featuring the "PTW" logo mark.
+3. **Muted Technical Color Palettes:** Banish flashy, neon-glowing cyber-synth colors. Use soft, modern tech palettes (pastels, slate grey, sage green, cream, soft blues).
+4. **No Text Overlay:** Banish text titles in cover graphics. Keep it visual and let the Astro HTML layout handle card text overlays.
+
+
 
