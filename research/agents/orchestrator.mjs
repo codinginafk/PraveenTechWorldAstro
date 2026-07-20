@@ -32,7 +32,7 @@ const SPRINTS = [
     secondaryCluster: "windows-fixes",
     targets: { "website-setup": 35, "windows-fixes": 10 },
     mix: { "website-setup": 0.70, "windows-fixes": 0.20, "hosting-infra": 0.05, "ai-websites": 0.05 },
-    dailyTarget: 3,
+    dailyTarget: 1,
     days: 30,
   },
   {
@@ -41,7 +41,7 @@ const SPRINTS = [
     secondaryCluster: "it-operations",
     targets: { "ai-automation": 8, "it-operations": 4, "build-in-public": 3 },
     mix: { "ai-automation": 0.50, "it-operations": 0.25, "build-in-public": 0.20, "website-setup": 0.05 },
-    dailyTarget: 2,
+    dailyTarget: 1,
     days: 30,
     startAfter: "month1-website-setup",
   },
