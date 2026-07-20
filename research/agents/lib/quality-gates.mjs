@@ -28,6 +28,10 @@ const RULES = {
   C12: { id: "C12", gate: "Content Quality", name: "Sentence variety", desc: "No more than 3 consecutive sentences with same structure", threshold: {} },
   C13: { id: "C13", gate: "Content Quality", name: "Paragraph length", desc: "No paragraph exceeds 8 sentences", threshold: { max: 8 } },
   C14: { id: "C14", gate: "Content Quality", name: "Active voice ratio", desc: "At least 80% active voice", threshold: { min: 80 } },
+  C15: { id: "C15", gate: "Content Quality", name: "Code block file paths", desc: "All code blocks (js, node, python) must have explicit file path comment on line 1", threshold: {} },
+  C16: { id: "C16", gate: "Content Quality", name: "H2 bold direct answers", desc: "At least 50% of H2 headings must be followed by bold summaries", threshold: {} },
+  C17: { id: "C17", gate: "Content Quality", name: "First-person E-E-A-T narrative", desc: "Intro must contain first-person pronouns ('we', 'our team', 'my workbench')", threshold: {} },
+  C18: { id: "C18", gate: "Content Quality", name: "No generic AI fillers", desc: "No phrases like 'in today's digital age', 'rapidly evolving', 'delve into'", threshold: {} },
 
   // Technical SEO Gates (T1-T12)
   T1: { id: "T1", gate: "Technical SEO", name: "seoTitle exists and length", desc: "Required, 40-60 chars (target with room for site suffix)", threshold: { min: 40, max: 60 } },
@@ -432,6 +436,63 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   // ---- C14: Active voice ----
   if (activeVoice < 80) {
     failures.push({ gate: "C14", rule: "Active voice ratio", message: `Active voice is ${activeVoice}% — minimum 80%` });
+  }
+
+  // ---- C15: Code block file paths ----
+  if (bodyText.includes("```")) {
+    const codeBlockRegex = /```(\w+)\n([\s\S]*?)```/g;
+    let match;
+    let missingPaths = 0;
+    while ((match = codeBlockRegex.exec(bodyText)) !== null) {
+      const lang = match[1].toLowerCase();
+      const code = match[2].trim();
+      if (["bash", "sh", "shell", "powershell", "cmd", "json", "xml"].includes(lang)) continue;
+      const firstLine = code.split("\n")[0] || "";
+      const hasPath = firstLine.includes("/") || firstLine.includes("\\") || firstLine.includes(".");
+      const hasComment = firstLine.startsWith("//") || firstLine.startsWith("#") || firstLine.startsWith("/*");
+      if (!hasPath || !hasComment) {
+        missingPaths++;
+      }
+    }
+    if (missingPaths > 0) {
+      failures.push({ gate: "C15", rule: "Code block file paths", message: `${missingPaths} code block(s) missing explicit file path comments on line 1` });
+    }
+  }
+
+  // ---- C16: H2 bold direct answers ----
+  let h2Count = 0;
+  let h2sWithBoldAnswers = 0;
+  let currentH2Line = -1;
+  const lines = bodyText.split("\n");
+  lines.forEach((line, index) => {
+    if (line.startsWith("## ")) {
+      h2Count++;
+      currentH2Line = index;
+    } else if (currentH2Line !== -1 && index <= currentH2Line + 3 && line.trim()) {
+      const isBold = line.includes("**") || line.startsWith("> **");
+      if (isBold) {
+        h2sWithBoldAnswers++;
+      }
+      currentH2Line = -1;
+    }
+  });
+  if (h2Count > 0 && h2sWithBoldAnswers < h2Count * 0.5) {
+    failures.push({ gate: "C16", rule: "H2 bold direct answers", message: `Only ${h2sWithBoldAnswers}/${h2Count} H2s are followed by bold direct answers (minimum 50%)` });
+  }
+
+  // ---- C17: First-person E-E-A-T narrative ----
+  const paragraphs = bodyText.split(/\n\n+/).filter(p => p.trim() && !p.startsWith("#") && !p.startsWith("---"));
+  const introBlock = paragraphs.slice(0, 3).join(" ");
+  const firstPersonRegex = /\b(we|our|my|i|my friends and i|our team|us|ours)\b/i;
+  if (!firstPersonRegex.test(introBlock)) {
+    failures.push({ gate: "C17", rule: "First-person E-E-A-T narrative", message: "Intro fails E-E-A-T check — does not establish first-person team experience narrative ('we', 'my workbench', 'our team')" });
+  }
+
+  // ---- C18: No generic AI fillers ----
+  const bannedPhrases = ["in today's digital age", "rapidly evolving", "delve into", "testament to", "look no further", "game-changer", "revolutionary", "it is important to note"];
+  const foundPhrases = bannedPhrases.filter(phrase => bodyText.toLowerCase().includes(phrase));
+  if (foundPhrases.length > 0) {
+    failures.push({ gate: "C18", rule: "No generic AI fillers", message: `Banned generic AI filler phrases found: ${foundPhrases.join(", ")}` });
   }
 
   // ---- T1: seoTitle ----
