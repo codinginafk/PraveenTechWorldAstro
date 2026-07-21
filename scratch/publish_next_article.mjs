@@ -1,0 +1,120 @@
+import fs from "fs";
+import path from "path";
+import { execSync } from "child_process";
+
+const ROOT_DIR = "C:/Users/bunny/Downloads/00Resume/Building_Tech_Website";
+const DRAFT_FILE = path.join(ROOT_DIR, "research/vault/Drafts/best-free-ai-avatar-generators-in-2026.md");
+const TARGET_ARTICLE_FILE = path.join(ROOT_DIR, "src/content/articles/best-free-ai-avatar-generators-in-2026.mdx");
+const TARGET_SVG_FILE = path.join(ROOT_DIR, "public/images/generated/best-free-ai-avatar-generators-in-2026.svg");
+
+// Clean blueprint style SVG content for AI Avatar generators article cover
+const svgContent = `<svg width="1200" height="600" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Workbench Background (Soft Linen/Cream Wood Tone) -->
+  <rect width="1200" height="600" fill="#f4ebe1" />
+  
+  <!-- Desk wood lines -->
+  <line x1="0" y1="200" x2="1200" y2="200" stroke="#ebdcb9" stroke-width="1" stroke-opacity="0.4" />
+  <line x1="0" y1="400" x2="1200" y2="400" stroke="#ebdcb9" stroke-width="1" stroke-opacity="0.4" />
+
+  <!-- Flat Technical Blueprint Sheet -->
+  <rect x="150" y="60" width="900" height="460" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="2" stroke-opacity="0.1" />
+  
+  <!-- Blueprint Gridlines -->
+  <g stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.05">
+    <line x1="200" y1="60" x2="200" y2="520" /><line x1="300" y1="60" x2="300" y2="520" />
+    <line x1="400" y1="60" x2="400" y2="520" /><line x1="500" y1="60" x2="500" y2="520" />
+    <line x1="600" y1="60" x2="600" y2="520" /><line x1="700" y1="60" x2="700" y2="520" />
+    <line x1="800" y1="60" x2="800" y2="520" /><line x1="900" y1="60" x2="900" y2="520" />
+    <line x1="150" y1="100" x2="1050" y2="100" /><line x1="150" y1="200" x2="1050" y2="200" />
+    <line x1="150" y1="300" x2="1050" y2="300" /><line x1="150" y1="400" x2="1050" y2="400" />
+  </g>
+
+  <!-- Flowchart Details -->
+  <!-- Audio & Portrait Input Nodes -->
+  <rect x="220" y="160" width="180" height="70" rx="4" fill="#334155" stroke="#38bdf8" stroke-width="1.5" />
+  <text x="310" y="195" font-family="monospace" font-size="13" fill="#38bdf8" text-anchor="middle">AUDIO SOURCE (.WAV)</text>
+  <text x="310" y="215" font-family="sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Voice Cadence Track</text>
+
+  <rect x="220" y="340" width="180" height="70" rx="4" fill="#334155" stroke="#86efac" stroke-width="1.5" />
+  <text x="310" y="375" font-family="monospace" font-size="13" fill="#86efac" text-anchor="middle">PORTRAIT IMAGE</text>
+  <text x="310" y="395" font-family="sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Static Character Base</text>
+
+  <!-- Connections -->
+  <path d="M 400 195 H 480 V 260 H 540" fill="none" stroke="#38bdf8" stroke-width="2" />
+  <path d="M 400 375 H 480 V 310 H 540" fill="none" stroke="#86efac" stroke-width="2" />
+
+  <!-- Avatar Sync Engine Center -->
+  <rect x="540" y="230" width="180" height="110" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="2" />
+  <text x="630" y="270" font-family="monospace" font-size="14" fill="#cbd5e1" text-anchor="middle" font-weight="bold">LIP-SYNC ENGINE</text>
+  <text x="630" y="290" font-family="sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Hedra / LivePortrait</text>
+  <text x="630" y="310" font-family="sans-serif" font-size="10" fill="#f43f5e" text-anchor="middle">Facial Mesh Alignment</text>
+
+  <!-- Connection to Output -->
+  <path d="M 720 285 H 800" fill="none" stroke="#86efac" stroke-width="2" />
+
+  <!-- Avatar Output Asset -->
+  <rect x="800" y="230" width="200" height="110" rx="4" fill="#334155" stroke="#f43f5e" stroke-width="2" />
+  <text x="900" y="275" font-family="monospace" font-size="13" fill="#f43f5e" text-anchor="middle">AI AVATAR VIDEO</text>
+  <text x="900" y="295" font-family="sans-serif" font-size="11" fill="#cbd5e1" text-anchor="middle">Facial Motion MP4</text>
+
+  <!-- Subtle Blueprint Labels -->
+  <text x="180" y="100" font-family="monospace" font-size="12" fill="#475569">AUDIO-DRIVEN FACIAL AVATAR PIPELINE</text>
+  <text x="880" y="490" font-family="monospace" font-size="11" fill="#475569">LOCAL / CLOUD INFRA // MODEL 4</text>
+
+  <!-- Cozy Workbench Coffee Mug (Top-Down View, Bottom-Right) -->
+  <g transform="translate(1080, 480)">
+    <circle cx="2" cy="4" r="54" fill="#1e1b18" fill-opacity="0.15" />
+    <circle cx="0" cy="0" r="52" fill="#fffdfa" stroke="#e3dcd3" stroke-width="2" />
+    <path d="M 46 -15 C 65 -15 65 15 46 15" fill="none" stroke="#fffdfa" stroke-width="14" stroke-linecap="round" />
+    <circle cx="0" cy="0" r="42" fill="#3b2314" />
+    <circle cx="0" cy="0" r="39" fill="none" stroke="#523624" stroke-width="2" />
+    <path d="M -15 -25 C -5 -30 15 -20 20 -15" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="3" stroke-linecap="round" />
+  </g>
+
+  <!-- Sticky Note with PTW Branding (Top-Right of Blueprint) -->
+  <g transform="translate(1020, 100) rotate(5)">
+    <rect x="2" y="2" width="110" height="110" fill="#1e1b18" fill-opacity="0.08" />
+    <rect width="110" height="110" fill="#fef9c3" stroke="#fef08a" stroke-width="1" />
+    <rect x="20" y="30" width="70" height="50" rx="3" fill="none" stroke="#854d0e" stroke-width="2" stroke-dasharray="2,2" />
+    <text x="55" y="60" font-family="monospace" font-size="18" font-weight="bold" fill="#854d0e" text-anchor="middle">PTW</text>
+    <line x1="25" y1="70" x2="85" y2="70" stroke="#854d0e" stroke-width="1.5" />
+  </g>
+</svg>`;
+
+async function publishArticle() {
+  console.log("Checking if draft file exists...");
+  if (!fs.existsSync(DRAFT_FILE)) {
+    throw new Error(`Draft file not found: ${DRAFT_FILE}`);
+  }
+
+  console.log(`Copying draft to active articles: ${TARGET_ARTICLE_FILE}`);
+  const mdxContent = fs.readFileSync(DRAFT_FILE, "utf-8");
+  fs.writeFileSync(TARGET_ARTICLE_FILE, mdxContent, "utf-8");
+
+  console.log(`Writing schematic SVG cover illustration: ${TARGET_SVG_FILE}`);
+  const targetDir = path.dirname(TARGET_SVG_FILE);
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+  fs.writeFileSync(TARGET_SVG_FILE, svgContent, "utf-8");
+
+  console.log("Running SEO compliance checklist...");
+  execSync("node src/scripts/seo-lint-fixer.mjs", { cwd: ROOT_DIR, stdio: "inherit" });
+
+  console.log("Building site production bundle...");
+  execSync("npm run build", { cwd: ROOT_DIR, stdio: "inherit" });
+
+  console.log("Staging and committing new files in git...");
+  execSync("git add src/content/articles/best-free-ai-avatar-generators-in-2026.mdx public/images/generated/best-free-ai-avatar-generators-in-2026.svg", { cwd: ROOT_DIR, stdio: "inherit" });
+  execSync('git commit -m "feat(content): publish Best Free AI Avatar Generators in 2026 article"', { cwd: ROOT_DIR, stdio: "inherit" });
+
+  console.log("Running auto-syndication script to post on DEV.to, LinkedIn, and Twitter...");
+  execSync("node research/agents/syndication-agent.mjs", { cwd: ROOT_DIR, stdio: "inherit" });
+
+  console.log("All tasks completed successfully! Spoke article is live and syndicated.");
+}
+
+publishArticle().catch(err => {
+  console.error("Publication failed:", err);
+  process.exit(1);
+});
