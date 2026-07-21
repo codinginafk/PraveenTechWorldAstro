@@ -105,10 +105,20 @@ export const DEVTO_BASE = "https://dev.to/api";
 
 export async function devtoPost(article, apiKey) {
   const { title, description, tags, coverImage, slug, body } = article;
-  const markdown = body
+  let markdown = body
     .replace(/^---[\s\S]*?---\n*/m, "")
     .replace(/^## /gm, "## ")
     .trim();
+
+  // Rewrite relative image paths to absolute URLs on praveentechworld.com
+  markdown = markdown.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+    if (src.startsWith("/")) {
+      return `![${alt}](${SITE_URL}${src})`;
+    }
+    return match;
+  });
+
+  const canonicalUrl = `${SITE_URL}/blog/${slug}`;
 
   const payload = {
     article: {
@@ -117,6 +127,7 @@ export async function devtoPost(article, apiKey) {
       body_markdown: markdown,
       tags: formatTags(tags),
       description: description.slice(0, 200),
+      canonical_url: canonicalUrl,
       main_image: coverImage
         ? (coverImage.startsWith("http") ? coverImage : `${SITE_URL}${coverImage}`)
         : "",
