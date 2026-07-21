@@ -3,11 +3,11 @@ import path from "path";
 import { execSync } from "child_process";
 
 const ROOT_DIR = "C:/Users/bunny/Downloads/00Resume/Building_Tech_Website";
-const DRAFT_FILE = path.join(ROOT_DIR, "research/vault/Drafts/best-free-ai-avatar-generators-in-2026.md");
-const TARGET_ARTICLE_FILE = path.join(ROOT_DIR, "src/content/articles/best-free-ai-avatar-generators-in-2026.mdx");
-const TARGET_SVG_FILE = path.join(ROOT_DIR, "public/images/generated/best-free-ai-avatar-generators-in-2026.svg");
+const DRAFT_FILE = path.join(ROOT_DIR, "research/vault/Drafts/best-free-ai-logo-generators-in-2026.md");
+const TARGET_ARTICLE_FILE = path.join(ROOT_DIR, "src/content/articles/best-free-ai-logo-generators-in-2026.mdx");
+const TARGET_SVG_FILE = path.join(ROOT_DIR, "public/images/generated/best-free-ai-logo-generators-in-2026.svg");
 
-// Clean blueprint style SVG content for AI Avatar generators article cover
+// Clean blueprint style SVG content for AI Logo generators article cover
 const svgContent = `<svg width="1200" height="600" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
   <!-- Workbench Background (Soft Linen/Cream Wood Tone) -->
   <rect width="1200" height="600" fill="#f4ebe1" />
@@ -30,36 +30,36 @@ const svgContent = `<svg width="1200" height="600" viewBox="0 0 1200 600" xmlns=
   </g>
 
   <!-- Flowchart Details -->
-  <!-- Audio & Portrait Input Nodes -->
-  <rect x="220" y="160" width="180" height="70" rx="4" fill="#334155" stroke="#38bdf8" stroke-width="1.5" />
-  <text x="310" y="195" font-family="monospace" font-size="13" fill="#38bdf8" text-anchor="middle">AUDIO SOURCE (.WAV)</text>
-  <text x="310" y="215" font-family="sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Voice Cadence Track</text>
+  <!-- Raster PNG Block -->
+  <rect x="220" y="160" width="180" height="70" rx="4" fill="#334155" stroke="#f43f5e" stroke-width="1.5" />
+  <text x="310" y="195" font-family="monospace" font-size="13" fill="#f43f5e" text-anchor="middle">RASTER PNG / JPG</text>
+  <text x="310" y="215" font-family="sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Fixed Pixel Output</text>
 
+  <!-- Vector SVG Block -->
   <rect x="220" y="340" width="180" height="70" rx="4" fill="#334155" stroke="#86efac" stroke-width="1.5" />
-  <text x="310" y="375" font-family="monospace" font-size="13" fill="#86efac" text-anchor="middle">PORTRAIT IMAGE</text>
-  <text x="310" y="395" font-family="sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Static Character Base</text>
+  <text x="310" y="375" font-family="monospace" font-size="13" fill="#86efac" text-anchor="middle">RECRAFT SVG VECTOR</text>
+  <text x="310" y="395" font-family="sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Bézier Anchor Paths</text>
 
   <!-- Connections -->
-  <path d="M 400 195 H 480 V 260 H 540" fill="none" stroke="#38bdf8" stroke-width="2" />
+  <path d="M 400 195 H 480 V 260 H 540" fill="none" stroke="#cbd5e1" stroke-opacity="0.3" stroke-width="1.5" />
   <path d="M 400 375 H 480 V 310 H 540" fill="none" stroke="#86efac" stroke-width="2" />
 
-  <!-- Avatar Sync Engine Center -->
-  <rect x="540" y="230" width="180" height="110" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="2" />
-  <text x="630" y="270" font-family="monospace" font-size="14" fill="#cbd5e1" text-anchor="middle" font-weight="bold">LIP-SYNC ENGINE</text>
-  <text x="630" y="290" font-family="sans-serif" font-size="11" fill="#94a3b8" text-anchor="middle">Hedra / LivePortrait</text>
-  <text x="630" y="310" font-family="sans-serif" font-size="10" fill="#f43f5e" text-anchor="middle">Facial Mesh Alignment</text>
+  <!-- Vector Engine Center -->
+  <circle cx="630" cy="285" r="50" fill="#1e293b" stroke="#cbd5e1" stroke-width="2" />
+  <text x="630" y="280" font-family="monospace" font-size="14" fill="#cbd5e1" text-anchor="middle" font-weight="bold">SVG</text>
+  <text x="630" y="298" font-family="sans-serif" font-size="10" fill="#86efac" text-anchor="middle">OPTIMIZER</text>
 
   <!-- Connection to Output -->
-  <path d="M 720 285 H 800" fill="none" stroke="#86efac" stroke-width="2" />
+  <path d="M 680 285 H 780" fill="none" stroke="#86efac" stroke-width="2" />
 
-  <!-- Avatar Output Asset -->
-  <rect x="800" y="230" width="200" height="110" rx="4" fill="#334155" stroke="#f43f5e" stroke-width="2" />
-  <text x="900" y="275" font-family="monospace" font-size="13" fill="#f43f5e" text-anchor="middle">AI AVATAR VIDEO</text>
-  <text x="900" y="295" font-family="sans-serif" font-size="11" fill="#cbd5e1" text-anchor="middle">Facial Motion MP4</text>
+  <!-- Logo Asset Output -->
+  <rect x="780" y="230" width="220" height="110" rx="4" fill="#334155" stroke="#38bdf8" stroke-width="2" />
+  <text x="890" y="275" font-family="monospace" font-size="13" fill="#38bdf8" text-anchor="middle">SCALABLE LOGO (SVG)</text>
+  <text x="890" y="295" font-family="sans-serif" font-size="11" fill="#cbd5e1" text-anchor="middle">&lt; 5KB Clean Vector Asset</text>
 
   <!-- Subtle Blueprint Labels -->
-  <text x="180" y="100" font-family="monospace" font-size="12" fill="#475569">AUDIO-DRIVEN FACIAL AVATAR PIPELINE</text>
-  <text x="880" y="490" font-family="monospace" font-size="11" fill="#475569">LOCAL / CLOUD INFRA // MODEL 4</text>
+  <text x="180" y="100" font-family="monospace" font-size="12" fill="#475569">VECTOR BRANDING & LOGO MODEL SCHEMATIC</text>
+  <text x="880" y="490" font-family="monospace" font-size="11" fill="#475569">LOCAL / CLOUD INFRA // MODEL 5</text>
 
   <!-- Cozy Workbench Coffee Mug (Top-Down View, Bottom-Right) -->
   <g transform="translate(1080, 480)">
@@ -105,8 +105,8 @@ async function publishArticle() {
   execSync("npm run build", { cwd: ROOT_DIR, stdio: "inherit" });
 
   console.log("Staging and committing new files in git...");
-  execSync("git add src/content/articles/best-free-ai-avatar-generators-in-2026.mdx public/images/generated/best-free-ai-avatar-generators-in-2026.svg", { cwd: ROOT_DIR, stdio: "inherit" });
-  execSync('git commit -m "feat(content): publish Best Free AI Avatar Generators in 2026 article"', { cwd: ROOT_DIR, stdio: "inherit" });
+  execSync("git add src/content/articles/best-free-ai-logo-generators-in-2026.mdx public/images/generated/best-free-ai-logo-generators-in-2026.svg", { cwd: ROOT_DIR, stdio: "inherit" });
+  execSync('git commit -m "feat(content): publish Best Free AI Logo Generators in 2026 article"', { cwd: ROOT_DIR, stdio: "inherit" });
 
   console.log("Running auto-syndication script to post on DEV.to, LinkedIn, and Twitter...");
   execSync("node research/agents/syndication-agent.mjs", { cwd: ROOT_DIR, stdio: "inherit" });
