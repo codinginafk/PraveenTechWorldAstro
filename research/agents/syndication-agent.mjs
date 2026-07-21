@@ -122,20 +122,22 @@ export async function runSyndication() {
     }
   }
 
-  const bloggerToken = process.env.BLOGGER_ACCESS_TOKEN;
-  const bloggerBlogId = process.env.BLOGGER_BLOG_ID;
-  if (bloggerToken && bloggerBlogId) {
+  // Post to Blogger via OAuth JSON file (refresh_token flow in syndicate-blogger.mjs)
+  const bloggerOAuthFile = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")), "syndication/blogger-oauth.json");
+  if (fs.existsSync(bloggerOAuthFile)) {
     try {
-      const post = await bloggerPost(article, bloggerToken, bloggerBlogId);
-      if (post) {
-        log(`  Blogger: "${article.title}"`);
-        results.push({ platform: "blogger", file, ok: true });
-        await new Promise(r => setTimeout(r, 2000));
+      const result = await bloggerPost(article, "oauth-file", "oauth-file");
+      if (result) {
+        log(`  Blogger: "${article.title}" → ${result.postUrl}`);
+        results.push({ platform: "blogger", file, ok: true, url: result.postUrl });
+        await new Promise(r => setTimeout(r, 3000));
       }
     } catch (err) {
       log(`  Blogger FAILED: ${file} — ${err.message}`);
       results.push({ platform: "blogger", file, ok: false, error: err.message });
     }
+  } else {
+    log("  [Blogger] blogger-oauth.json not found — skipping");
   }
 
   const anySuccess = results.some(r => r.ok);

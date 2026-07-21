@@ -286,12 +286,32 @@ export async function linkedinPost(article, accessToken) {
 //
 // Note: Blogger API is free with daily quota (usually 1000 requests/day).
 
-export async function bloggerPost(article, accessToken, blogId) {
-  if (!accessToken || !blogId) {
-    log("[Blogger] No BLOGGER_ACCESS_TOKEN or BLOGGER_BLOG_ID in .env — skipping");
+export async function bloggerPost(article, _accessToken, _blogId) {
+  // Delegate to the full working implementation in syndicate-blogger.mjs
+  // which reads OAuth from blogger-oauth.json (refresh_token flow)
+  try {
+    const { generateBloggerPostForArticle, publishToBlogger } = await import("./syndicate-blogger.mjs");
+    const articlesDir = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")), "../../../src/content/articles");
+    const filePath = path.join(articlesDir, `${article.slug}.mdx`);
+    if (!fs.existsSync(filePath)) {
+      log(`[Blogger] Article file not found: ${filePath}`);
+      return null;
+    }
+    const post = generateBloggerPostForArticle(filePath);
+    if (!post) {
+      log(`[Blogger] Could not generate post for: ${article.slug}`);
+      return null;
+    }
+    const result = await publishToBlogger(post);
+    if (result) {
+      log(`[Blogger] Published: ${result.postUrl}`);
+      return result;
+    }
+    log("[Blogger] publishToBlogger returned null (rate limit or error)");
+    return null;
+  } catch (err) {
+    log(`[Blogger] Post failed: ${err.message}`);
     return null;
   }
-  log("[Blogger] API requires OAuth 2.0 setup — see comments in syndication.mjs for instructions");
-  log(`[Blogger] Would post: "${article.title}"`);
-  return null;
 }
+

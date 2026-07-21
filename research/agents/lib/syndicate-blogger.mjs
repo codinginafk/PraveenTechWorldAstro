@@ -56,50 +56,164 @@ async function refreshAccessToken(oauth) {
 }
 
 function mdToHtml(md) {
-  let html = md
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\[([^\]]+)\]\((\/[^)]+)\)/g, `<a href="${SITE_URL}$2">$1</a>`)
-    .replace(/\[([^\]]+)\]\(((?:https?:\/\/)[^)]+)\)/g, '<a href="$2">$1</a>');
-  const blocks = html.split("\n\n");
+  const lines = md.split("\n");
   const out = [];
-  for (const block of blocks) {
-    const t = block.trim();
-    if (!t) { out.push(""); continue; }
-    if (/^<h[1-3]/.test(t)) { out.push(t); continue; }
-    if (/^<hr\s*\/?>/.test(t)) { out.push(t); continue; }
-    if (/^<(?:ul|ol|li|table|pre|blockquote)/.test(t)) { out.push(t); continue; }
-    if (/^<li>/m.test(t)) { out.push(t); continue; }
-    const lines = t.split("\n");
-    let inList = false;
-    const processed = [];
-    for (const line of lines) {
-      const trimmed = line.trim();
-      const hMatch = trimmed.match(/^(#{1,3})\s+(.+)$/);
-      if (hMatch) {
-        if (inList) { processed.push("</ul>"); inList = false; }
-        const level = hMatch[1].length;
-        processed.push(`<h${level}>${hMatch[2]}</h${level}>`);
-      } else if (trimmed.startsWith("- ")) {
-        if (!inList) { processed.push("<ul>"); inList = true; }
-        processed.push(`<li>${trimmed.slice(2)}</li>`);
-      } else if (trimmed === "---") {
-        if (inList) { processed.push("</ul>"); inList = false; }
-        processed.push("<hr>");
-      } else {
-        if (inList) { processed.push("</ul>"); inList = false; }
-        if (trimmed) processed.push(`<p>${trimmed}</p>`);
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // ── Fenced code blocks (``` or ~~~) ──────────────────────────────────
+    const fenceMatch = line.match(/^(`{3,}|~{3,})([\w-]*)/);
+    if (fenceMatch) {
+      const fence = fenceMatch[1];
+      const lang = fenceMatch[2] ? ` class="language-${fenceMatch[2]}"` : "";
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith(fence)) {
+        codeLines.push(
+          lines[i]
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+        );
+        i++;
       }
+      out.push(`<pre><code${lang}>${codeLines.join("\n")}</code></pre>`);
+      i++; // skip closing fence
+      continue;
     }
-    if (inList) processed.push("</ul>");
-    out.push(processed.join("\n"));
+
+    // ── Tables ────────────────────────────────────────────────────────────
+    if (line.startsWith("|") && i + 1 < lines.length && lines[i + 1].match(/^\|[-| :]+\|/)) {
+      const tableLines = [];
+      tableLines.push(line);
+      i++;
+      const sepLine = lines[i]; // separator row — skip from output
+      i++;
+      while (i < lines.length && lines[i].startsWith("|")) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const headerCells = tableLines[0].split("|").filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+      const rows = tableLines.slice(1).map(row =>
+        row.split("|").filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
+      );
+      let tableHtml = `<table style="width:100%;border-collapse:collapse;margin:16px 0">\n<thead><tr>`;
+      for (const cell of headerCells) {
+        tableHtml += `<th style="border:1px solid #ddd;padding:8px;background:#f5f5f5;text-align:left">${inlineFormat(cell.trim())}</th>`;
+      }
+      tableHtml += `</tr></thead>\n<tbody>`;
+      for (const row of rows) {
+        tableHtml += `<tr>`;
+        for (const cell of row) {
+          tableHtml += `<td style="border:1px solid #ddd;padding:8px">${inlineFormat(cell.trim())}</td>`;
+        }
+        tableHtml += `</tr>`;
+      }
+      tableHtml += `</tbody></table>`;
+      out.push(tableHtml);
+      continue;
+    }
+
+    // ── Blockquotes ───────────────────────────────────────────────────────
+    if (line.startsWith("> ")) {
+      const bqLines = [];
+      while (i < lines.length && lines[i].startsWith("> ")) {
+        bqLines.push(inlineFormat(lines[i].slice(2).trim()));
+        i++;
+      }
+      out.push(`<blockquote style="border-left:4px solid #ccc;margin:12px 0;padding:8px 16px;color:#555">${bqLines.join("<br>")}</blockquote>`);
+      continue;
+    }
+
+    // ── Headings ──────────────────────────────────────────────────────────
+    const hMatch = line.match(/^(#{1,4})\s+(.+)$/);
+    if (hMatch) {
+      const level = hMatch[1].length;
+      out.push(`<h${level}>${inlineFormat(hMatch[2])}</h${level}>`);
+      i++;
+      continue;
+    }
+
+    // ── Horizontal rule ───────────────────────────────────────────────────
+    if (line.match(/^(-{3,}|\*{3,}|_{3,})$/)) {
+      out.push("<hr>");
+      i++;
+      continue;
+    }
+
+    // ── Ordered list ──────────────────────────────────────────────────────
+    if (line.match(/^\d+\.\s/)) {
+      const olItems = [];
+      while (i < lines.length && lines[i].match(/^\d+\.\s/)) {
+        olItems.push(`<li>${inlineFormat(lines[i].replace(/^\d+\.\s/, "").trim())}</li>`);
+        i++;
+      }
+      out.push(`<ol>${olItems.join("")}</ol>`);
+      continue;
+    }
+
+    // ── Unordered list ────────────────────────────────────────────────────
+    if (line.match(/^[-*+]\s/)) {
+      const ulItems = [];
+      while (i < lines.length && lines[i].match(/^[-*+]\s/)) {
+        ulItems.push(`<li>${inlineFormat(lines[i].replace(/^[-*+]\s/, "").trim())}</li>`);
+        i++;
+      }
+      out.push(`<ul>${ulItems.join("")}</ul>`);
+      continue;
+    }
+
+    // ── Images ────────────────────────────────────────────────────────────
+    const imgMatch = line.trim().match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) {
+      const alt = imgMatch[1];
+      const src = imgMatch[2].startsWith("/") ? `${SITE_URL}${imgMatch[2]}` : imgMatch[2];
+      out.push(`<figure style="margin:16px 0;text-align:center"><img src="${src}" alt="${alt}" style="max-width:100%;height:auto;border-radius:4px"><figcaption style="font-size:0.85em;color:#666;margin-top:4px">${alt}</figcaption></figure>`);
+      i++;
+      continue;
+    }
+
+    // ── Empty line → paragraph break ──────────────────────────────────────
+    if (line.trim() === "") {
+      i++;
+      continue;
+    }
+
+    // ── Regular paragraph ─────────────────────────────────────────────────
+    const paraLines = [];
+    while (i < lines.length && lines[i].trim() !== "" &&
+      !lines[i].match(/^#{1,4}\s/) &&
+      !lines[i].match(/^(`{3,}|~{3,})/) &&
+      !lines[i].match(/^[-*+]\s/) &&
+      !lines[i].match(/^\d+\.\s/) &&
+      !lines[i].startsWith("|") &&
+      !lines[i].startsWith("> ") &&
+      !lines[i].match(/^(-{3,}|\*{3,}|_{3,})$/)) {
+      paraLines.push(lines[i]);
+      i++;
+    }
+    if (paraLines.length > 0) {
+      out.push(`<p>${inlineFormat(paraLines.join(" "))}</p>`);
+    }
   }
+
   return out.join("\n");
 }
+
+// ── Inline formatting helper ──────────────────────────────────────────────
+function inlineFormat(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/_(.+?)_/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, '<code style="background:#f0f0f0;padding:2px 5px;border-radius:3px;font-family:monospace">$1</code>')
+    .replace(/\[([^\]]+)\]\((\/[^)]+)\)/g, `<a href="${SITE_URL}$2">$1</a>`)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/&(?!amp;|lt;|gt;|quot;)/g, "&amp;");
+}
+
 
 function formatBloggerPost(article) {
   const body = article.body || "";
