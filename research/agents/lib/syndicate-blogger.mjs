@@ -2,7 +2,47 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { log } from "./shared.mjs";
-import { parseArticle } from "./syndication.mjs";
+
+// Inline parseArticle to avoid circular ESM import with syndication.mjs
+function parseArticle(filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8").replace(/^\ufeff/, "").replace(/\r\n/g, "\n");
+  const fmMatch = raw.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!fmMatch) return null;
+  const body = fmMatch[2].trim();
+  const fmRaw = fmMatch[1];
+  const fm = {};
+  const lines = fmRaw.split("\n");
+  let currentKey = null;
+  for (const line of lines) {
+    const kv = line.match(/^(\w+):\s*(.*)/);
+    if (kv) {
+      const val = kv[2].trim();
+      let parsedVal = val.replace(/^"(.*)"$/, "$1");
+      if (parsedVal.startsWith("[") && parsedVal.endsWith("]")) {
+        parsedVal = parsedVal.slice(1, -1).split(",").map(v => v.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
+      }
+      fm[kv[1]] = parsedVal;
+      currentKey = kv[1];
+    } else if (currentKey === "tags" && line.trim().startsWith("- ")) {
+      const tag = line.trim().slice(2).replace(/^"(.*)"$/, "$1").trim();
+      if (!fm.tags) fm.tags = [];
+      if (Array.isArray(fm.tags)) fm.tags.push(tag);
+    }
+  }
+  if (!Array.isArray(fm.tags)) fm.tags = [];
+  const slug = path.basename(filePath, ".mdx");
+  return {
+    title: fm.title || "Untitled",
+    description: (fm.description || "").slice(0, 200),
+    coverImage: fm.coverImage || "",
+    publishDate: fm.publishDate || "",
+    category: fm.category || "",
+    tags: fm.tags,
+    slug,
+    body,
+    file: path.basename(filePath),
+  };
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -183,6 +223,7 @@ function mdToHtml(md) {
 
     // ── Regular paragraph ─────────────────────────────────────────────────
     const paraLines = [];
+    const startI = i; // track entry index to detect stuck state
     while (i < lines.length && lines[i].trim() !== "" &&
       !lines[i].match(/^#{1,4}\s/) &&
       !lines[i].match(/^(`{3,}|~{3,})/) &&
@@ -196,6 +237,10 @@ function mdToHtml(md) {
     }
     if (paraLines.length > 0) {
       out.push(`<p>${inlineFormat(paraLines.join(" "))}</p>`);
+    } else if (i === startI) {
+      // Safety: no condition matched and i didn't advance — force advance to prevent infinite loop
+      out.push(`<p>${inlineFormat(lines[i])}</p>`);
+      i++;
     }
   }
 
@@ -203,15 +248,25 @@ function mdToHtml(md) {
 }
 
 // ── Inline formatting helper ──────────────────────────────────────────────
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function inlineFormat(text) {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/_(.+?)_/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, '<code style="background:#f0f0f0;padding:2px 5px;border-radius:3px;font-family:monospace">$1</code>')
-    .replace(/\[([^\]]+)\]\((\/[^)]+)\)/g, `<a href="${SITE_URL}$2">$1</a>`)
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2">$1</a>')
-    .replace(/&(?!amp;|lt;|gt;|quot;)/g, "&amp;");
+  // Step 1: escape HTML entities first (safe, no backtracking)
+  let s = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Step 2: inline code (must come before bold/italic to protect backtick content)
+  s = s.replace(/`([^`\n]+)`/g, '<code style="background:#f0f0f0;padding:2px 5px;border-radius:3px;font-family:monospace">$1</code>');
+  // Step 3: bold (non-greedy, bounded by word chars around **)
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+  // Step 4: italic (single * not followed by another *)
+  s = s.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+  // Step 5: italic with underscore (bounded, won't backtrack on long strings)
+  s = s.replace(/_([^_\n]+)_/g, "<em>$1</em>");
+  // Step 6: links — relative then absolute (order matters)
+  s = s.replace(/\[([^\]\n]+)\]\(\/([^)\n]+)\)/g, `<a href="${SITE_URL}/$2">$1</a>`);
+  s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\n]+)\)/g, '<a href="$2">$1</a>');
+  return s;
 }
 
 
@@ -384,29 +439,36 @@ async function runPublishLatest() {
   await runPublish(slug);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const command = process.argv[2] || "preview";
-  const slug = process.argv[3];
-  if (command === "preview" && slug) {
-    runPreview(slug);
-  } else if (command === "publish" && slug) {
-    runPublish(slug);
-  } else if (command === "publish-latest") {
-    runPublishLatest();
-  } else if (command === "preview") {
-    const articlesDir = path.resolve(__dirname, "../../../src/content/articles");
-    if (fs.existsSync(articlesDir)) {
-      const files = fs.readdirSync(articlesDir).filter(f => f.endsWith(".mdx")).sort().reverse();
-      if (files.length > 0) {
-        const slug = path.basename(files[0], ".mdx");
-        runPreview(slug);
+
+// CLI entry point — only runs when executed directly, not when imported
+const __selfPath = fileURLToPath(import.meta.url).toLowerCase().replace(/\\/g, "/");
+const __callerPath = (process.argv[1] || "").toLowerCase().replace(/\\/g, "/");
+if (__selfPath === __callerPath) {
+  (async () => {
+    const command = process.argv[2] || "preview";
+    const slug = process.argv[3];
+    if (command === "preview" && slug) {
+      runPreview(slug);
+    } else if (command === "publish" && slug) {
+      await runPublish(slug);
+    } else if (command === "publish-latest") {
+      await runPublishLatest();
+    } else if (command === "preview") {
+      const articlesDir = path.resolve(__dirname, "../../../src/content/articles");
+      if (fs.existsSync(articlesDir)) {
+        const files = fs.readdirSync(articlesDir).filter(f => f.endsWith(".mdx")).sort().reverse();
+        if (files.length > 0) {
+          const latestSlug = path.basename(files[0], ".mdx");
+          runPreview(latestSlug);
+        }
       }
+    } else {
+      console.log("\n  Usage:");
+      console.log("    node syndicate-blogger.mjs preview [slug]    # Preview post");
+      console.log("    node syndicate-blogger.mjs publish <slug>    # Publish to Blogger");
+      console.log("    node syndicate-blogger.mjs publish-latest    # Publish latest unsyndicated");
+      console.log("");
     }
-  } else {
-    console.log("\n  Usage:");
-    console.log("    node syndicate-blogger.mjs preview [slug]    # Preview post");
-    console.log("    node syndicate-blogger.mjs publish <slug>    # Publish to Blogger");
-    console.log("    node syndicate-blogger.mjs publish-latest    # Publish latest unsyndicated");
-    console.log("");
-  }
+  })();
 }
+

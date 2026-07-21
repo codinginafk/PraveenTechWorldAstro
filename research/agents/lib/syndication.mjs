@@ -286,32 +286,9 @@ export async function linkedinPost(article, accessToken) {
 //
 // Note: Blogger API is free with daily quota (usually 1000 requests/day).
 
-export async function bloggerPost(article, _accessToken, _blogId) {
-  // Delegate to the full working implementation in syndicate-blogger.mjs
-  // which reads OAuth from blogger-oauth.json (refresh_token flow)
-  try {
-    const { generateBloggerPostForArticle, publishToBlogger } = await import("./syndicate-blogger.mjs");
-    const articlesDir = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")), "../../../src/content/articles");
-    const filePath = path.join(articlesDir, `${article.slug}.mdx`);
-    if (!fs.existsSync(filePath)) {
-      log(`[Blogger] Article file not found: ${filePath}`);
-      return null;
-    }
-    const post = generateBloggerPostForArticle(filePath);
-    if (!post) {
-      log(`[Blogger] Could not generate post for: ${article.slug}`);
-      return null;
-    }
-    const result = await publishToBlogger(post);
-    if (result) {
-      log(`[Blogger] Published: ${result.postUrl}`);
-      return result;
-    }
-    log("[Blogger] publishToBlogger returned null (rate limit or error)");
-    return null;
-  } catch (err) {
-    log(`[Blogger] Post failed: ${err.message}`);
-    return null;
-  }
+// NOTE: bloggerPost() is intentionally a no-op stub here.
+// syndication-agent.mjs calls syndicate-blogger.mjs directly to avoid
+// a circular ESM import (syndicate-blogger.mjs imports syndication.mjs).
+export async function bloggerPost(_article, _accessToken, _blogId) {
+  return null;
 }
-

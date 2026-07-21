@@ -3,7 +3,8 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { log, ensureDir } from "./lib/shared.mjs";
 import { appendToReport } from "./lib/report.mjs";
-import { devtoPost, hashnodePost, linkedinPost, bloggerPost, parseArticle, getNewArticles } from "./lib/syndication.mjs";
+import { devtoPost, hashnodePost, linkedinPost, parseArticle, getNewArticles } from "./lib/syndication.mjs";
+import { generateBloggerPostForArticle, publishToBlogger } from "./lib/syndicate-blogger.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AGENTS_DIR = path.resolve(__dirname);
@@ -122,15 +123,22 @@ export async function runSyndication() {
     }
   }
 
-  // Post to Blogger via OAuth JSON file (refresh_token flow in syndicate-blogger.mjs)
-  const bloggerOAuthFile = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")), "syndication/blogger-oauth.json");
+  // Post to Blogger via syndicate-blogger.mjs (OAuth JSON refresh_token flow)
+  // Imported directly here to avoid circular ESM dependency with syndication.mjs
+  const bloggerOAuthFile = path.join(__dirname, "syndication/blogger-oauth.json");
   if (fs.existsSync(bloggerOAuthFile)) {
     try {
-      const result = await bloggerPost(article, "oauth-file", "oauth-file");
-      if (result) {
-        log(`  Blogger: "${article.title}" → ${result.postUrl}`);
-        results.push({ platform: "blogger", file, ok: true, url: result.postUrl });
-        await new Promise(r => setTimeout(r, 3000));
+      const filePath = path.join(ARTICLES_DIR, file);
+      const bloggerPost = generateBloggerPostForArticle(filePath);
+      if (bloggerPost) {
+        const result = await publishToBlogger(bloggerPost);
+        if (result) {
+          log(`  Blogger: "${article.title}" → ${result.postUrl}`);
+          results.push({ platform: "blogger", file, ok: true, url: result.postUrl });
+          await new Promise(r => setTimeout(r, 3000));
+        } else {
+          log(`  Blogger: rate limited or failed silently for "${article.title}"`);
+        }
       }
     } catch (err) {
       log(`  Blogger FAILED: ${file} — ${err.message}`);
