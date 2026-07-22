@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const TRACKER_FILE = path.resolve(import.meta.dirname, "outreach-tracker.md");
+export const TRACKER_FILE = path.resolve(import.meta.dirname, "outreach-tracker.md");
 
 function exists() {
   return fs.existsSync(TRACKER_FILE);
@@ -41,8 +41,8 @@ export function getRecent(count = 10) {
 
 export function getStatus() {
   const content = read();
-  const sent = (content.match(/Status:\s*SENT/g) || []).length;
-  const accepted = (content.match(/Result:\s*ACCEPTED/g) || []).length;
-  const rejected = (content.match(/Result:\s*REJECTED/g) || []).length;
+  const sent = (content.match(/\*\*Status:\*\*\s*SENT/g) || content.match(/- Status: SENT/g) || []).length;
+  const accepted = (content.match(/ACCEPTED/g) || []).length;
+  const rejected = (content.match(/REJECTED/g) || []).length;
   return { sent, accepted, rejected };
 }
