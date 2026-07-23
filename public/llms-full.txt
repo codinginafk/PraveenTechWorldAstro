@@ -764,83 +764,6 @@ Copy the entire dump into the  section, adjust the placeholders, and send it to 
 
 ---
 
-## PC Keeps Crashing? How to Tell if It’s a RAM Issue or a Bad Driver
-
-**Pillar:** AI Automation Scripts
-**URL:** https://www.praveentechworld.com/blog/pc-keeps-crashing-how-to-tell-if-it-s-a-ram-issue-or-a-bad-driver
-**Published:** 2026-07-14
-
-> I’ve lost count of how many times a client has sworn their RAM was dead, only for me to find a nvlddmkm.sys timeout or a buggy audio driver causing DRIVERIRQLNO...
-
-I’ve lost count of how many times a client has sworn their RAM was dead, only for me to find a  timeout or a buggy audio driver causing . The symptoms look identical on the surface: sudden reboots, freezes, the occasional Blue Screen of Death (BSOD). But the fix? Worlds apart. One costs $0 and a driver update; the other costs a DIMM swap and an RMA.
-
-Here is the exact workflow I use on the bench to separate silicon failure from code rot.
-
-The Cheat Sheet: RAM vs. Driver Symptoms
-
-Don't guess. Compare what you're seeing against this table. If you check three or more boxes in the "Likely RAM" column, stop updating drivers and start testing hardware.
-
-| Symptom / Behavior | Likely Bad RAM / Hardware | Likely Bad Driver / Software |
-| :--| :--| :--|
-| BSOD Error Codes |  (0x1A),  (0x50), random varying codes |  (0x3B),  (0xD1),  (0x1E) |
-| Crash Timing | Random. Idle, light browsing, heavy load—no pattern. Often worse when warm. | Deterministic. Happens *onlywhen printing, gaming, waking from sleep, or plugging in USB. |
-| Application Behavior | Silent data corruption (files won't open, zip CRC errors), Chrome "Aw Snap" pages constantly. | Specific app crashes (Explorer.exe restarts, game crashes to desktop, video driver resets). |
-| Boot Behavior | POST codes beeping, long memory training times, fails to boot with XMP/EXPO on. | Boots fine into Safe Mode. Crashes only after specific driver loads (usually GPU/Audio/Network). |
-| Event Viewer (System Log) |  events (Corrected/Uncorrected Hardware Errors),  events. |  (Bugcheck) pointing to a specific  file (e.g., , ). |
-| MemTest86 Result | Errors appear immediately or within first 2 passes. Row hammer errors. | Zero errors after 4+ passes (standard). |
-| Response to Reseat | Fixes it temporarily (oxidation), or changes error pattern. | No effect. |
-
-
-
-Phase 2: Software Triage (Windows Built-ins)
-
-1. Windows Memory Diagnostic (Quick Sanity Check)
-Hit , type , choose "Restart now and check for problems."
-  Use case: Catches catastrophic failures (stuck bits, dead rows) in 5 minutes.
-  Limitation: It runs in a limited environment, doesn't test all addressing modes, and misses subtle timing errors. A "Pass" here means nothing. A "Fail" means stop—hardware is dead.
-
-2. Driver Verifier (The "Stress Test" for Code)
-This is the nuclear option for driver hunting. It forces drivers to crash *immediatelywhen they do something illegal, rather than corrupting memory silently for hours.
-
-
-  Reboot.
-  If you boot loop: Boot into Safe Mode ( -Troubleshoot -> Advanced -> Startup Settings -> 4) and run .
-  If you get a BSOD: Check the bugcheck. It will name the  file. That is your culprit. Update or uninstall that specific driver.
-
---
-
-Phase 3: The Gold Standard — MemTest86 (Free Edition)
-
-If Windows Memory Diagnostic passes but you still crash, you must run MemTest86 from a USB stick. It runs outside the OS, testing every addressing mode, cache state, and hammer pattern.
-
-1.  Download the Free Edition USB image from PassMark.
-2.  Flash to USB (Rufus / BalenaEtcher).
-3.  Boot from USB. Select Config -Test Selection -> Passes: 4.
-4.  Hit  to start. Walk away. Grab coffee. This takes 2–6 hours depending on capacity.
-
-Interpreting Results:
-  Zero Errors (4 Passes): Your RAM is physically sound. Stop swapping sticks. Look at drivers, thermals, or PSU.
-  Errors on Pass 1, Test 0-4 (Address/Walking bits): Hard failure. RMA the stick.
-  Errors only on Test 13 (Row Hammer) or Test 9 (Bit Fade): Marginal stability. Try loosening timings (tRFC, tREFI) or dropping voltage/clock speed.
-  Errors move slots when you move the stick: Bad Stick.
-  Errors stay on same slot regardless of stick: Bad Motherboard Slot / CPU IMC.
-
---
-
-Phase 4: The AI Diagnostic Assistant (Copy-Paste This)
-
-Don't stare at Event Viewer guessing. Dump the raw data into an LLM (ChatGPT, Claude, DeepSeek, local Llama) with this specific prompt. It parses  analysis and  XML better than most humans because it has the entire Windows kernel symbol database in its weights.
-
-Step 1: Grab the Data
-Option A: Minidump (Best)
-1.   -> Advanced -> Startup and Recovery -> Settings.
-2.  Ensure "Write debugging information" is Small memory dump (256 KB) or Automatic memory dump.
-3.  Dumps live in .dmpWin + XSystemCrashes.evtx.zip.evtxwinver.sysntoskrnl.exeBUGCHECK_STR: 0x1AArg1: 0x417900x41790PAGE_TABLE_CORRUPTIONArg1: 0x41201PFN_LIST_CORRUPT!analyze -v.sysWHEA_UNCORRECTABLE_ERRORCLOCK_WATCHDOG_TIMEOUT` (0x101) -CPU / Cache / Voltage. Not RAM. Check thermals, voltage, degradation.
-
-Stop guessing. Run the USB stick. Read the dump. Fix the right thing.
-
----
-
 ## Docker Desktop licensing changes
 
 **Pillar:** AI Automation Scripts
@@ -6237,6 +6160,86 @@ Fix: Ensure your project files reside inside the Linux filesystem () rather than
 9. Workbench Takeaways
 
 When we first tes
+
+---
+
+## PC Keeps Crashing? How to Tell if It’s a RAM Issue or a Bad Driver
+
+**Pillar:** hardware-troubleshooting
+**URL:** https://www.praveentechworld.com/blog/pc-keeps-crashing-how-to-tell-if-it-s-a-ram-issue-or-a-bad-driver
+**Published:** "2026-07-14"
+
+> Is your PC crashing randomly? Learn how to diagnose nvlddmkm.sys Event ID 13/14, BSOD 0x101/0x124, RAM errors, and driver corruptions like a sysadmin.
+
+I’ve lost count of how many times a client has sworn their RAM was dead, only for me to find an NVIDIA  driver timeout or a buggy audio driver causing . 
+
+The symptoms look identical on the surface: sudden reboots, freezes, or the Blue Screen of Death (BSOD). But the fix? Worlds apart. One costs $0 and a driver update; the other requires a DIMM swap and an RMA.
+
+Here is the exact workflow my team and I use on the workbench to separate silicon failure from code rot.
+
+2. Phase 1: Zero-Cost Physical Checks
+
+Before running software tools, pull the PSU power cord and hold the power button for 15 seconds to drain residual charge:
+
+1. Reseat the DIMMs: Pull them out. Clean gold contacts gently with a pencil eraser and 99% Isopropyl Alcohol (IPA). Reseat firmly into primary slots (A2/B2) until retention clips click.
+2. Test Single Sticks: If you have dual-channel RAM (2x16GB), test one stick at a time in slot A2. This isolates a bad stick vs. a bad slot vs. the Integrated Memory Controller (IMC).
+3. Disable XMP / EXPO: Reset BIOS to *Optimized Defaultsrunning JEDEC base speeds (4800/5600 MT/s). If crashes stop, your CPU memory controller or RAM kit cannot sustain rated overclock profiles.
+
+--
+3. Phase 2: Software Triage & Driver Verifier
+
+Windows Memory Diagnostic vs. MemTest86
+Run  for a quick 5-minute sanity check. *Note:A "Pass" here does not guarantee RAM stability. If Windows Memory Diagnostic passes, run MemTest86 (Free Edition) from a bootable USB for 4 complete passes.
+
+Driver Verifier (Stress Test for Drivers)
+To force buggy drivers to reveal themselves, open Administrator Command Prompt:
+
+Reboot your PC. If a driver is corrupt, Windows will immediately BSOD on boot and display the exact faulting  file name. (If you enter a boot loop, boot into Safe Mode and run ).
+
+--
+4. Fixing nvlddmkm.sys Crashes: Event ID 13 vs. 14 Explained
+
+One of the most common crash signatures in Event Viewer is the NVIDIA display driver crash (). Windows uses Timeout Detection and Recovery (TDR) to reset the GPU driver if it stops responding within 2 seconds.
+
+Event ID 13 vs. Event ID 14 Breakdown
+Event ID 13 (): General TDR driver timeout. The GPU engine hung in a rendering loop and Windows successfully restarted the driver. This is usually software or driver corruption.
+Event ID 14 (): Severe Clock Watchdog GPU timeout or PCIe bus reset. The GPU hardware stopped communicating with the PCIe bus entirely. This points to unstable GPU overclocks/undervolts, PCIe riser cable degradation, or power supply rail droop.
+
+Troubleshooting Sequence for nvlddmkm.sys:
+1. DDU Clean Reinstall: Download Display Driver Uninstaller (DDU). Boot into Windows Safe Mode (disconnect internet), wipe all NVIDIA driver stores, and install the latest WHQL driver release.
+2. PCIe Power Cabling: Ensure your GPU uses separate 8-pin PCIe cables directly from the PSU rather than daisy-chained pigtails.
+3. Remove Overclocks & Undervolts: Reset MSI Afterburner profiles back to stock voltage curves.
+
+--
+5. What CLOCK_WATCHDOG_TIMEOUT (0x101) and WHEA_UNCORRECTABLE_ERROR (0x124) Actually Mean
+
+If your Minidump reports  or , stop testing RAM. These BSOD codes represent CPU and motherboard silicon instability:
+
+A. CLOCK_WATCHDOG_TIMEOUT ()
+What it means: An expected clock interrupt on a secondary logical processor core was not received within the allocated window. In short: a CPU core deadlocked.
+Root Causes: Insufficient CPU core voltage (VCORE), unstable CPU overclocks, thermal throttling under heavy load, or outdated CPU microcode.
+
+B. WHEA_UNCORRECTABLE_ERROR ()
+What it means: Windows Hardware Error Architecture (WHEA) caught a physical hardware bus error (L2/L3 cache parity error, QPI/UPI bus interconnect fault).
+Fix Checklist for 0x101 & 0x124:
+  1. Check CPU cooler mounting torque and reapply thermal paste.
+  2. Reset BIOS CPU voltage and load-line calibration (LLC) back to auto.
+  3. Flash your motherboard BIOS to the latest version to apply AGESA (AMD) or Microcode 0x12B (Intel) stability patches.
+
+--
+6. Key Diagnostic Terms & Tools Explained
+
+When analyzing system crashes, you will frequently encounter these terms:
+
+: Windows NT Operating System Kernel. It appears as the faulting module in over 90% of Minidumps because crash trap routines execute inside the kernel space. It is rarely the actual cause—look past  to find the underlying driver or memory fault.
+Thaiphoon Burner: A specialized utility that reads the low-level SPD EEPROM chip on memory modules, revealing the exact DRAM manufacturer (Samsung B-die, SK Hynix A-die, Micron) and die revision.
+IMC (Integrated Memory Controller): The memory controller silicon embedded inside modern CPUs (Ryzen / Intel Core). If RAM passes individually but fails dual-channel XMP, the CPU IMC is failing to sustain rated voltage.
+
+--
+7. Summary: The Decision Matrix
+
+1. Crashes are random, MemTest86 fails ──► Hardware Issue (RAM / Slot / IMC).
+2. Crashes happen only in specific games,  Event ID 13 ──► GPU Driver Issue. Run
 
 ---
 
