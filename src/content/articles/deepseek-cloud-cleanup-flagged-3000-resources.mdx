@@ -180,24 +180,6 @@ The dry-run flag was invaluable. Seriously, if I had run the first version witho
 The ongoing lesson I take from my DeepSeek experiments is that while AI can churn out infrastructure code quickly, it doesn't grasp the intricacies of your specific environment. Each organization has its quirks - custom tagging, varying backup policies, and teams that might not always follow the guidelines. The AI can't know these unless you spoon-feed it every little detail, and even then, it might still get things wrong.
 
 I'd love to hear your thoughts on this. Have you had similar experiences with AI-generated code? Let's chat about it!
-
-## FAQ
-
-**Q: Could the AI-generated cleanup script have deleted real resources'**  
-A: Yes. If I had run the first version without reviewing it, the script would have deleted 12 active EC2 instances that happened to be missing the 'Project' tag. The AI assumed any untagged resource was orphaned, which is wrong: some of our teams do not use tagging consistently.
-
-**Q: How do you verify a resource is actually orphaned'**  
-A: I check three things: no network traffic in the last 30 days (CloudWatch), no recent console logins for the owner (CloudTrail), and no references in other resources (tag-based dependency scan). Only resources that fail all three checks go into the deletion queue.
-
-**Q: Do you still use AI to generate cleanup scripts'**  
-A: Yes, but only with the preview mode I built. The script generates a report first, I review it, then I approve the deletion batch. No AI-generated cleanup script runs without human sign-off.
-
-**Q: How much did this actually save'**  
-A: About $400/month in orphaned resources. Three stopped EC2 instances still attached to EBS volumes, two old load balancers pointing to nothing, and a handful of EBS snapshots from decommissioned accounts.
-
-**Q: What is the main lesson from this'**  
-A: AI is great at generating infrastructure scripts fast. It is terrible at understanding your specific tagging conventions, team workflows, and what 'abandoned' actually means in your environment. Always add a dry-run mode. Always review the match list.
-
 ## Related Guides
 
 - [DeepSeek API Cost Tracker Saved Me $2K/Month](/blog/deepseek-api-cost-tracker-scripts): Same pattern of AI hallucination and manual fix, applied to [API cost](/articles/deepseek-api-cost-tracker-scripts) monitoring.
