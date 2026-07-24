@@ -28,7 +28,7 @@ Because the TPM chip detected a signature mismatch in Platform Configuration Reg
 If entering your key gets you into Windows but the PC asks for the key again on every single reboot, TPM failed to seal the new boot signature. Run this in Admin Command Prompt:
 ```cmd
 manage-bde -protectors -disable C: -RebootCount 1
-manage-bde -protectors -delete C: -type TPMAndPIN
+manage-bde -protectors -delete C: -type TPM
 manage-bde -protectors -add C: -TPM
 ```
 Reboot. Windows will now store the updated kernel hashes as the new trusted baseline.
@@ -81,3 +81,54 @@ canonical_url: https://www.praveentechworld.com/blog/bitlocker-recovery-screen-l
 ### Medium Formatting Notes:
 1. Import directly via Medium's "Import a Story" tool using URL: `https://www.praveentechworld.com/blog/bitlocker-recovery-screen-loop-after-windows-update`.
 2. Verify canonical link is automatically set under Story Settings -> Advanced Settings -> Canonical URL.
+
+---
+
+## 4. X / Twitter Thread Package (`research/agents/buffer-posts/`)
+
+### Tweet Text (280 characters max for Main Tweet):
+> Windows 11 PCs booting straight into a blue BitLocker recovery prompt after Tuesday's security update?
+> 
+> Don't panic or re-image. It's a TPM 2.0 PCR 7/11 hash mismatch between bootmgr & UEFI certs.
+> 
+> Here is how we fixed it across our fleet with manage-bde CLI:
+> 
+> 👇 (Thread below)
+
+### Reply 1 (CLI Commands):
+> If you can boot into Windows once using your 48-digit key, open CMD as Admin and execute:
+> 
+> manage-bde -protectors -disable C: -RebootCount 1
+> manage-bde -protectors -delete C: -type TPM
+> manage-bde -protectors -add C: -TPM
+> 
+> This unbinds and re-seals TPM to the new kernel hashes.
+
+### Reply 2 (Link Attachment):
+> Full step-by-step sysadmin workbench guide + BIOS TPM clear steps:
+> https://www.praveentechworld.com/blog/bitlocker-recovery-screen-loop-after-windows-update #sysadmin #Windows11 #BitLocker #ITOps
+
+---
+
+## 5. LinkedIn Post Package (`research/agents/linkedin-posts/`)
+
+### Post Content:
+```text
+Windows 11 machines booting straight into a blue BitLocker recovery loop after Tuesday's update?
+
+Our IT team ran into this exact issue across four enterprise laptops after overnight patching. 
+
+Here is what actually happened under the hood:
+When Windows updates alter kernel bootloader binaries (bootmgr) or update Secure Boot certificates (db/dbx), the TPM 2.0 chip detects a hash mismatch in its Platform Configuration Registers (PCR 0, 7, and 11). To protect your data, BitLocker assumes the boot environment has been tampered with and prompts for your 48-digit recovery key.
+
+Here are the 3 fixes that resolved it for us:
+
+1. Reset TPM Sealing: Boot in using your 48-digit key, then run `manage-bde -protectors -disable C: -RebootCount 1` and `manage-bde -protectors -add C: -TPM` in CMD (Admin) to force TPM to accept the new boot state as baseline.
+2. Clear TPM 2.0 in UEFI: Enter BIOS -> Security -> Select "Clear TPM" -> Reboot. Enter key one last time and Windows auto-enrolls the cleared chip.
+3. Secure Boot Re-Sync: Disable Secure Boot in BIOS, boot into Windows, suspend BitLocker for 2 reboots, then re-enable Secure Boot.
+
+Full technical guide with Entra ID helpdesk lookup steps and BCD repairs:
+https://www.praveentechworld.com/blog/bitlocker-recovery-screen-loop-after-windows-update
+
+#ITOps #Sysadmin #Windows11 #BitLocker #CyberSecurity #TechTroubleshooting
+```
