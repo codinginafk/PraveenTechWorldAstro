@@ -9,10 +9,20 @@ export default defineConfig({
   build: {
     format: "file",
   },
-  integrations: [mdx(), sitemap({
-    filter: (page) => !page.startsWith("https://www.praveentechworld.com/tag/") && !page.startsWith("https://www.praveentechworld.com/category/"),
-    lastmod: new Date(),
-  }), pagefind()],
+  integrations: [
+    mdx(),
+    sitemap({
+      filter: (page) =>
+        !page.startsWith("https://www.praveentechworld.com/tag/") &&
+        !page.startsWith("https://www.praveentechworld.com/category/") &&
+        !page.startsWith("https://www.praveentechworld.com/contact") &&
+        !page.startsWith("https://www.praveentechworld.com/privacy") &&
+        !page.startsWith("https://www.praveentechworld.com/author") &&
+        !page.startsWith("https://www.praveentechworld.com/demo"),
+      lastmod: new Date(),
+    }),
+    pagefind(),
+  ],
   markdown: {
     shikiConfig: {
       theme: "github-dark",
