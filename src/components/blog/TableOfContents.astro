@@ -1,0 +1,46 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+}
+
+const { headings } = Astro.props;
+
+// Filter to H2 and H3 headings only
+const filteredHeadings = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{filteredHeadings.length > 0 && (
+  <nav class="my-8 rounded-xl border border-border bg-surface-subtle p-5 dark:border-border-dark dark:bg-surface-dark-subtle" aria-label="Table of contents">
+    <details class="group" open>
+      <summary class="flex cursor-pointer items-center justify-between font-bold text-text dark:text-text-dark text-base select-none">
+        <span class="flex items-center gap-2">
+          <svg class="h-5 w-5 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+          </svg>
+          Table of Contents
+        </span>
+        <svg class="h-4 w-4 transform transition-transform group-open:rotate-180 text-text-muted dark:text-text-dark-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
+      <ul class="mt-4 space-y-2.5 border-t border-border pt-4 text-sm dark:border-border-dark">
+        {filteredHeadings.map((heading) => (
+          <li class={heading.depth === 3 ? "pl-4 text-xs" : "font-medium"}>
+            <a
+              href={`#${heading.slug}`}
+              class="text-text-muted hover:text-brand-600 dark:text-text-dark-muted dark:hover:text-brand-400 transition-colors block py-0.5"
+            >
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  </nav>
+)}
