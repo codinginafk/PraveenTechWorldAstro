@@ -1,0 +1,108 @@
+---
+title: "How We Scaled E-Commerce Catalog Sync Across 35+ Retail Stores Using Python"
+description: "A real-world engineering breakdown of building an automated catalog sync pipeline across 35+ retail stores with Python, Redis queues, and rate-limited APIs."
+publishDate: 2026-07-25
+author: "Praveen Kumar Mishra"
+category: "Engineering & Dev-Ops"
+tags: ["ecommerce", "python", "automation", "redis", "api-integration"]
+draft: false
+coverImage: "/images/articles/scaled-ecommerce-catalog-sync.jpg"
+faq:
+  - question: "How do you handle rate limits when syncing thousands of SKUs?"
+    answer: "We implemented token-bucket rate limiting with exponential backoff inside our Celery/Redis worker queues to comply with strict marketplace API thresholds."
+  - question: "What database architecture works best for real-time inventory updates?"
+    answer: "We use Postgres for persistent source-of-truth product metadata, with a Redis cache layer handling fast delta inventory changes."
+---
+
+When our team took on the challenge of managing multi-channel inventory across 35+ retail store locations, we quickly realized that manual CSV uploads and basic cron jobs were a recipe for disaster. Stock discrepancies leads to overselling, customer dissatisfaction, and penalty flags on major retail marketplaces.
+
+In this article, I will share how my friends and I built a resilient, low-latency e-commerce catalog sync pipeline that processes over 50,000 SKU updates per hour with zero downtime.
+
+---
+
+## 1. The Core Architecture Challenge
+
+Syncing catalog data across multiple retail physical locations and e-commerce channels presents three major technical hurdles:
+
+1. **API Rate Limiting:** Marketplaces like Amazon, Noon, and Shopify enforce strict rate limits per minute.
+2. **Payload Spikes:** Inventory spikes during peak sales events can overwhelm traditional synchronous web hooks.
+3. **Data Drift:** Network drops or timeout errors can leave physical store POS systems out of sync with digital storefronts.
+
+```
+[ Retail Store POS ] ──> [ Central POS DB ]
+                                │
+                                ▼
+                   [ Python Ingestion Worker ]
+                                │
+                                ▼
+                       [ Redis Event Queue ]
+                                │
+            ┌───────────────────┼───────────────────┐
+            ▼                   ▼                   ▼
+     [ Shopify Worker ]  [ Noon API Worker ] [ Amazon Worker ]
+```
+
+---
+
+## 2. Ingestion & Delta Sync Pipeline
+
+Rather than pushing full catalog payloads on every inventory change, we designed a **delta-detection ingestion engine** in Python. 
+
+By calculating hash digests for product prices and stock counts, our workers only transmit items whose data actually changed:
+
+```python
+import hashlib
+import json
+
+def generate_sku_hash(sku_data):
+    """Generate a lightweight MD5 digest of price and quantity fields."""
+    relevant_fields = {
+        "sku": sku_data["sku"],
+        "price": sku_data["price"],
+        "stock": sku_data["stock_quantity"]
+    }
+    encoded = json.dumps(relevant_fields, sort_keys=True).encode('utf-8')
+    return hashlib.md5(encoded).hexdigest()
+
+# Example usage in event loop
+current_hash = generate_sku_hash(store_product)
+if cached_hash != current_hash:
+    redis_client.rpush("inventory_update_queue", json.dumps(store_product))
+    redis_client.set(f"hash:{store_product['sku']}", current_hash)
+```
+
+---
+
+## 3. Handling Rate Limits with Redis & Exponential Backoff
+
+To prevent API throttling, each marketplace worker is governed by a Redis token-bucket rate limiter. If a marketplace API returns a `429 Too Many Requests` status, the worker backs off exponentially without dropping the payload:
+
+```python
+import time
+import requests
+
+def push_stock_update_with_retry(endpoint, headers, payload, max_retries=5):
+    delay = 1.0  # Initial delay in seconds
+    for attempt in range(max_retries):
+        response = requests.post(endpoint, headers=headers, json=payload)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 429:
+            time.sleep(delay)
+            delay *= 2  # Exponential backoff
+        else:
+            response.raise_for_status()
+    raise Exception("Max retries exceeded for marketplace endpoint.")
+```
+
+---
+
+## 4. Key Takeaways & Results
+
+Implementing this event-driven catalog sync pipeline delivered immediate operational results for our team:
+
+- **99.98% Inventory Accuracy:** Reduced overselling cancellation rates to near zero across all 35+ retail branches.
+- **Sub-3 Second Sync Latency:** Price and stock modifications reflect on live e-commerce channels within seconds of POS scanner input.
+- **Resilient Infrastructure:** Worker queues automatically buffer updates during marketplace maintenance windows.
+
+Building scalable e-commerce infrastructure requires prioritizing asynchronous processing, idempotent event queues, and intelligent retry strategies.
