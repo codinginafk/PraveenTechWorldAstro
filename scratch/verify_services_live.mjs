@@ -9,7 +9,6 @@ function checkLive(url) {
         resolve({
           url,
           statusCode: res.statusCode,
-          hasExactPhone: body.includes('971562980106'),
           bodyTitle: body.match(/<title>(.*?)<\/title>/)?.[1] || 'No Title'
         });
       });
@@ -18,10 +17,12 @@ function checkLive(url) {
 }
 
 async function run() {
-  console.log('=== EMPIRICAL NEW ARTICLE DEPLOYMENT VERIFICATION ===');
-  const liveArticle = await checkLive('https://www.praveentechworld.com/blog/why-dubai-customers-ignore-contact-us-forms-and-text-on-whatsapp');
+  console.log('=== EMPIRICAL BOTH ARTICLES DEPLOYMENT VERIFICATION ===');
+  const article1 = await checkLive('https://www.praveentechworld.com/blog/why-dubai-customers-ignore-contact-us-forms-and-text-on-whatsapp');
+  const article2 = await checkLive('https://www.praveentechworld.com/blog/tiktok-vs-whatsapp-vs-instagram-which-social-platform-dominates-dubai');
 
-  console.log('NEW ARTICLE LIVE:', liveArticle);
+  console.log('ARTICLE 1 (WHATSAPP FORMS):', article1);
+  console.log('ARTICLE 2 (UAE SOCIAL MEDIA):', article2);
 }
 
 run();
