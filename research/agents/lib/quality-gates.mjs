@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { parseArticle } from "./syndication.mjs";
 import { verifyCodeBlocks } from "./code-verifier.mjs";
+import { scoreTitleAndStructure } from "./seo-scorer.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, "../../..");
@@ -47,6 +48,7 @@ const RULES = {
   T11: { id: "T11", gate: "Technical SEO", name: "author field valid", desc: "Required, must match existing author slug", threshold: {} },
   T12: { id: "T12", gate: "Technical SEO", name: "category field valid", desc: "Required, must match existing category", threshold: {} },
   T13: { id: "T13", gate: "Technical SEO", name: "Code block syntax verification", desc: "All code blocks (Python, Node.js) must have valid syntax", threshold: {} },
+  T14: { id: "T14", gate: "Technical SEO", name: "GSC Title, H1, H2 & Slug Intent Validation", desc: "Title, H1 paragraph front-loading, H2 verbatim error codes, and slug URL must score ≥7.0", threshold: { min: 7.0 } },
 
   // Author/Link Quality Gates (L1-L4)
   L1: { id: "L1", gate: "Author & Links", name: "Author link text", desc: "Use 'Follow on LinkedIn' not just 'LinkedIn'", threshold: {} },
@@ -587,6 +589,19 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   // ---- T12: Category ----
   if (!category) {
     failures.push({ gate: "T12", rule: "Category field", message: "Missing category field" });
+  }
+
+  // ---- T14: GSC Title, H1, H2 & Slug Intent Validation ----
+  const firstParagraphText = bodyText.split(/\n\n+/).find(p => p.trim() && !p.startsWith("#") && !p.startsWith("---")) || "";
+  const h2Headers = [...bodyText.matchAll(/^##\s+(.+)$/gm)].map(m => m[1]);
+  const articleSlug = path.basename(filePath || "", ".mdx");
+  const titleValidation = scoreTitleAndStructure(title || seoTitle || "", firstParagraphText, h2Headers, articleSlug);
+  if (!titleValidation.passed) {
+    failures.push({
+      gate: "T14",
+      rule: "GSC Title, H1, H2 & Slug Intent Validation",
+      message: `Title/Structure Score ${titleValidation.score}/10 is below threshold 7.0. Risk factors: ${titleValidation.penalties.join("; ") || "Needs long-tail / technical hook"}`
+    });
   }
 
   // ---- L1: Author link text ----
