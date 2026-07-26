@@ -9,6 +9,7 @@ function checkLive(url) {
         resolve({
           url,
           statusCode: res.statusCode,
+          firstSentence: body.match(/<p class="[^"]*leading-relaxed[^"]*">(.*?)<\/p>/s)?.[1]?.replace(/<[^>]+>/g, '').trim() || 'Not found',
           bodyTitle: body.match(/<title>(.*?)<\/title>/)?.[1] || 'No Title'
         });
       });
@@ -17,12 +18,14 @@ function checkLive(url) {
 }
 
 async function run() {
-  console.log('=== EMPIRICAL BOTH ARTICLES DEPLOYMENT VERIFICATION ===');
-  const article1 = await checkLive('https://www.praveentechworld.com/blog/why-dubai-customers-ignore-contact-us-forms-and-text-on-whatsapp');
-  const article2 = await checkLive('https://www.praveentechworld.com/blog/tiktok-vs-whatsapp-vs-instagram-which-social-platform-dominates-dubai');
+  console.log('=== EMPIRICAL FRONT-LOADED KEYWORDS VERIFICATION ===');
+  const karama = await checkLive('https://www.praveentechworld.com/services/karama');
+  const burDubai = await checkLive('https://www.praveentechworld.com/services/bur-dubai');
+  const dubai = await checkLive('https://www.praveentechworld.com/services/dubai');
 
-  console.log('ARTICLE 1 (WHATSAPP FORMS):', article1);
-  console.log('ARTICLE 2 (UAE SOCIAL MEDIA):', article2);
+  console.log('KARAMA HUB:', karama);
+  console.log('BUR DUBAI HUB:', burDubai);
+  console.log('DUBAI MASTER HUB:', dubai);
 }
 
 run();
