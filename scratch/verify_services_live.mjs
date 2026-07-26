@@ -18,14 +18,10 @@ function checkLive(url) {
 }
 
 async function run() {
-  console.log('=== EMPIRICAL PHONE NUMBER VERIFICATION ===');
-  const services = await checkLive('https://www.praveentechworld.com/services');
-  const karama = await checkLive('https://www.praveentechworld.com/services/karama');
-  const burDubai = await checkLive('https://www.praveentechworld.com/services/bur-dubai');
+  console.log('=== EMPIRICAL NEW ARTICLE DEPLOYMENT VERIFICATION ===');
+  const liveArticle = await checkLive('https://www.praveentechworld.com/blog/why-dubai-customers-ignore-contact-us-forms-and-text-on-whatsapp');
 
-  console.log('SERVICES HUB PHONE VERIFIED:', services.hasExactPhone, '(Status:', services.statusCode + ')');
-  console.log('KARAMA PAGE PHONE VERIFIED:', karama.hasExactPhone, '(Status:', karama.statusCode + ')');
-  console.log('BUR DUBAI PHONE VERIFIED:', burDubai.hasExactPhone, '(Status:', burDubai.statusCode + ')');
+  console.log('NEW ARTICLE LIVE:', liveArticle);
 }
 
 run();
