@@ -12,6 +12,8 @@ const errors = [];
 
 files.forEach(file => {
   const content = fs.readFileSync(path.join(ARTICLES_DIR, file), "utf-8");
+  if (/draft:\s*true/.test(content)) return; // Skip draft articles
+
   const match = content.match(/coverImage:\s*"([^"]+)"/);
   const imgPath = match ? match[1].trim() : null;
 

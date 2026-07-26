@@ -18,12 +18,12 @@ function checkLive(url) {
 }
 
 async function run() {
-  console.log('--- CHECKING .HTML ROUTES ---');
-  const servicesHtml = await checkLive('https://www.praveentechworld.com/services.html');
-  const karamaHtml = await checkLive('https://www.praveentechworld.com/services/karama.html');
+  console.log('--- CHECKING EXACT LIVE URLS ---');
+  const services = await checkLive('https://www.praveentechworld.com/services');
+  const karama = await checkLive('https://www.praveentechworld.com/services/karama');
 
-  console.log('SERVICES.HTML:', servicesHtml);
-  console.log('KARAMA.HTML:', karamaHtml);
+  console.log('SERVICES HUB:', services);
+  console.log('KARAMA PAGE:', karama);
 }
 
 run();
