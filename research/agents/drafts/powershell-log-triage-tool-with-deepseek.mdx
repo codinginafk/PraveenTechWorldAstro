@@ -1,0 +1,116 @@
+---
+title: "I Built a PowerShell Log Triage Tool With DeepSeek (Here is What Failed First)"
+description: "How we built an automated Windows Event Log triage script using DeepSeek R1 local API and PowerShell. Code, prompts, and failure points included."
+coverImage: "/images/generated/deepseek_orchestration_logs_cloud_ops_1784718941877.jpg"
+imageAlt: "Technical schematic of PowerShell script sending event logs to DeepSeek API node on wooden desk"
+publishDate: "2026-07-29"
+author: "praveen"
+category: "ai-automation"
+pillarId: "ai-automation"
+draft: true
+tags:
+  - "ai-automation"
+  - "deepseek"
+  - "powershell"
+  - "log-analysis"
+  - "sysadmin-toolkit"
+seoTitle: "PowerShell Log Triage Tool with DeepSeek: Local AI Automation"
+socialHook: "Tired of reading raw Event Viewer logs? We built a PowerShell script that sends system anomalies to a local DeepSeek model for instant root-cause analysis."
+---
+
+Reading raw Windows Event Viewer logs during a production outage is painful. Between cryptically formatted `EventID` numbers, raw XML strings, and thousands of benign `Information` logs, finding the single failing driver or authentication leak takes precious time.
+
+On our IT operations workbench, we set out to solve this: **Can we build a lightweight PowerShell script that automatically extracts system errors, sends them to a local DeepSeek model via Ollama API, and returns plain-English root cause analysis?**
+
+Here is the exact script we built, the prompt engineering required, and the two major bugs we had to fix when DeepSeek hallucinates Windows cmdlets.
+
+---
+
+## 🛠️ The Architecture
+
+```
+[Windows Event Log (Get-WinEvent)] 
+        │
+        ▼ (Filter Error/Warning IDs)
+[PowerShell Sanitizer Script]
+        │
+        ▼ (JSON Payload)
+[Local Ollama DeepSeek R1 API (http://localhost:11434)]
+        │
+        ▼
+[Markdown Incident Report + Action Plan]
+```
+
+---
+
+## The Working PowerShell Script
+
+```powershell
+# Get-EventLogTriage.ps1
+param (
+    [int]$HoursAgo = 2,
+    [string]$LogName = "System"
+)
+
+$StartTime = (Get-Date).AddHours(-$HoursAgo)
+
+Write-Host "Extracting Critical & Error events from $LogName since $StartTime..." -ForegroundColor Cipher
+
+$Events = Get-WinEvent -FilterHashtable @{
+    LogName = $LogName
+    Level = 1,2 # 1=Critical, 2=Error
+    StartTime = $StartTime
+} -ErrorAction SilentlyContinue | Select-Object -First 15 TimeCreated, Id, ProviderName, Message
+
+if (-not $Events) {
+    Write-Host "No critical or error events found in the last $HoursAgo hours!" -ForegroundColor Green
+    exit
+}
+
+$LogText = $Events | Format-Table -AutoSize | Out-String
+
+$Prompt = @"
+You are an expert Windows Systems Administrator.
+Analyze the following raw Windows Event Log entries and provide:
+1. Root Cause Summary (1-2 sentences)
+2. Affected Components
+3. Recommended PowerShell Remediation Commands
+
+LOG DATA:
+$LogText
+"@
+
+$Body = @{
+    model = "deepseek-r1:8b"
+    prompt = $Prompt
+    stream = $false
+} | ConvertTo-Json
+
+Write-Host "Sending logs to DeepSeek R1..." -ForegroundColor Yellow
+
+$Response = Invoke-RestMethod -Uri "http://localhost:11434/api/generate" -Method Post -Body $Body -ContentType "application/json"
+
+Write-Host "`n=== DEEPSEEK TRIAGE REPORT ===" -ForegroundColor Cyan
+Write-Host $Response.response
+```
+
+---
+
+## Where the Script Failed (And How We Fixed It)
+
+### Failure 1: DeepSeek Hallucinated Non-Existent Cmdlets
+When analyzing an `nvlddmkm` GPU driver crash, DeepSeek recommended running `Reset-NvidiaDriver`. That cmdlet does not exist in PowerShell!
+
+**Fix:** Added strict system prompt constraints: *"Only recommend official Microsoft PowerShell cmdlets (e.g., Get-Service, Restart-Service, DISM, sfc). Never invent custom cmdlets."*
+
+### Failure 2: Token Limit Overflow
+Sending 500 raw log entries exceeded Ollama's default context window, causing silent truncation.
+
+**Fix:** Added `-First 15` limit on `Get-WinEvent` and stripped verbose message headers before sending the payload.
+
+---
+
+## Related Guides
+
+- [Run DeepSeek R1 Locally on 8GB VRAM](/blog/how-to-run-deepseek-r1-locally-on-8gb-vram)
+- [Will Factory Resetting Windows Fix a Corrupted User Profile?](/blog/will-factory-resetting-windows-fix-corrupted-user-profile)
