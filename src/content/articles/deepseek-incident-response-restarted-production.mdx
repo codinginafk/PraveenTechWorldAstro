@@ -1,5 +1,5 @@
 ---
-title: "I Asked DeepSeek to Automate Incident Response - It Restarted Production During Peak Hours"
+title: "How DeepSeek Automated Incident Response (Production Case Study)"
 description: "DeepSeek wrote an incident response script. It restarted production during peak hours, deleted crash logs, and had zero safety checks. The exact prompt and..."
 coverImage: "/images/generated/deepseek-incident-response-restarted-production.svg"
 imageAlt: "Server room with blinking alert lights."
@@ -29,7 +29,7 @@ faq:
   - question: "What happens if the Slack webhook URL is wrong?"
     answer: "The script catches the HTTP error and falls back to writing the alert to a local file called 'missed_alerts.log'. The AI did not handle this at all - it just crashed with an unhandled exception. That was one of the first things I fixed."
 ---
-## Why I wanted an automated incident response script
+## 1. Why I wanted an automated incident response script
 
 If you've ever been jolted awake at 3 AM by a server issue, you know the drill. A service goes down, the monitoring tool goes wild, and I find myself SSHing in, checking logs, restarting services, and then trying to catch some more sleep. But every morning, I realize the process is the same. So, I thought, why not automate it?
 I manage about 12 Linux servers with a mix of PostgreSQL, Nginx, Redis, and a custom Python API behind Gunicorn. When things go south, I typically need to:
@@ -41,7 +41,7 @@ I manage about 12 Linux servers with a mix of PostgreSQL, Nginx, Redis, and a cu
 
 I figured a single CLI tool could tackle all four tasks. So, I turned to DeepSeek, thinking it would whip up a working script in no time. Spoiler alert: I was wrong.
 
-## The exact prompt I gave DeepSeek
+## 2. The exact prompt I gave DeepSeek
 
 After my morning coffee, I felt pretty optimistic as I crafted my prompt:
 
@@ -69,7 +69,7 @@ Please provide the complete script with comments.
 
 The AI churned out the code in about 11 seconds. It looked neat, and I was excited to test it out. I quickly ran: `python3 incident_responder.py  - service postgresql`. And then... things got a bit wild.
 
-## Where the AI made dangerous mistakes
+## 3. Where the AI made dangerous mistakes
 
 ### Mistake 1: It restarted production during peak hours
 
@@ -110,7 +110,7 @@ except Exception as e:
 
 This meant that errors were only printed and not logged or sent to Slack. If there was an issue with the Slack webhook (which, spoiler alert, there was during my first test), the script just exited without a clue. If this had run from a cron job, I would have missed the error entirely.
 
-## What I had to fix
+## 4. What I had to fix
 
 I ended up spending about 3 hours fixing the AI's output. Here are the changes I made:
 
@@ -147,7 +147,7 @@ Every error now gets logged to three places: a local error log file, the termina
 
 The first thing the script does now is check for ` - dry-run`. If set, it prints what it WOULD do without executing any commands. This allows me to review the sequence of actions before committing to them, which feels way safer.
 
-## The final working result
+## 5. The final working result
 
 After making those fixes, running the script looks a lot clearer:
 
@@ -169,7 +169,7 @@ $ python3 incident_responder.py  - service redis  - slack-webhook https://hooks.
 ```
 
 The script now runs smoothly in about 3 seconds per service. The Slack messages include downtime duration and whether the restart happened inside or outside the maintenance window. It's now scheduled to run every night at 3 AM via a cron job, and in the last week, it has automatically recovered Redis twice and Nginx once, all without any false restarts or log loss. Pretty neat, right?
-## What I learned about prompting AI for ops automation
+## 6. What I learned about prompting AI for ops automation
 
 1. **The AI does not understand production.** It treats every server like a dev environment. You have to explicitly teach it about maintenance windows, connection draining, and graceful degradation.
 
@@ -181,7 +181,7 @@ The script now runs smoothly in about 3 seconds per service. The Slack messages 
 
 5. **Dry-run mode is essential.** Trusting an AI-written script with your production servers is risky. Always run the first test with ` - dry-run`, even after reviewing the code.
 
-## The exact prompt (with safety fixes baked in)
+## 7. The exact prompt (with safety fixes baked in)
 
 If you want to give it a shot, here's my refined prompt with all the safety checks included, so you don't make the same mistakes I did:
 
@@ -209,13 +209,13 @@ Feel free to copy that into DeepSeek, and you should have a much safer starting 
 ---
 What incident response task would you automate? Drop your prompt in the comments, and I'll try it in my next experiment!
 
-## Related Guides
+## 8. Related Guides
 
 - [I Built a Sysadmin Toolkit with DeepSeek: Prompts, Failures & Code](/blog/i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke): The short answer is I built a [sysadmin toolkit](/blog/i-asked-deepseek-to-build-my-sysadmin-toolkit-here-is-what-it-made-and-broke) using DeepSeek. It generated 210 lines across 4 scripts for log parsing, disk monitoring, and user management.
 - [Automated Server Health Checks with DeepSeek](/blog/automated-server-health-checks-with-deepseek): The short answer is that I used DeepSeek to generate a [Python script](/blog/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts) that runs periodic health checks, parses system metrics, and sends alerts when thresholds are breached.
 - [I Built a Log Monitoring Script with DeepSeek: Here is What Went Wrong](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong): The short answer: I built a [log monitoring](/blog/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong) script with DeepSeek but the AI hallucinated log parsing libraries. The final working version that monitors 12 servers runs in production today.
 
-## References & Further Reading
+## 9. References & Further Reading
 
 - [Wikipedia: Incident response](https://en.wikipedia.org/wiki/Incident_response)
 - [DeepSeek](https://deepseek.co/)

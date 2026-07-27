@@ -1,5 +1,5 @@
 ---
-title: "Don't Buy a New GPU: How to Run DeepSeek R1 Locally on an 8GB Card"
+title: "How to Run DeepSeek R1 Locally on 8GB VRAM (Step-by-Step Guide)"
 description: "Hit CUDA out-of-memory errors on DeepSeek R1? Here is how we configured Ollama quantization, context caps, and VRAM settings to run it on 8GB GPUs."
 coverImage: "/images/generated/how-to-run-deepseek-r1-locally-on-8gb-vram.jpg"
 imageAlt: "Technical schematic flow of GPU VRAM allocation for local Ollama DeepSeek R1 inference resting on a wooden desk"
@@ -86,11 +86,9 @@ Before tweaking model parameters, verify that your CUDA environment recognizes y
 
 ### On Linux / WSL2:
 ```bash
-## 
-curl -fsSL https://ollama.com/install.sh | sh
+## 1. curl -fsSL https://ollama.com/install.sh | sh
 
-## 
-nvidia-smi
+## 2. nvidia-smi
 ```
 
 Make sure `nvidia-smi` displays your graphics card (e.g. `NVIDIA GeForce RTX 3060`) and confirms CUDA 12.x driver compatibility.
@@ -115,15 +113,12 @@ nano Modelfile-R1-8GB
 ```dockerfile
 FROM deepseek-r1:8b
 
-## 
-PARAMETER num_ctx 4096
+## 3. PARAMETER num_ctx 4096
 
-## 
-PARAMETER temperature 0.2
+## 4. PARAMETER temperature 0.2
 PARAMETER top_p 0.9
 
-## 
-SYSTEM """You are a senior IT operations engineer and software architect. Provide concise, production-ready code blocks and shell commands without unnecessary conversational preamble."""
+## 5. SYSTEM """You are a senior IT operations engineer and software architect. Provide concise, production-ready code blocks and shell commands without unnecessary conversational preamble."""
 ```
 
 3. Save the file and compile your custom lightweight model entry:
@@ -167,8 +162,7 @@ However, Ollama supports **Hybrid GPU/CPU Layer Offloading**. You can offload 32
 ```dockerfile
 FROM deepseek-r1:14b
 
-## 
-PARAMETER num_gpu 32
+## 6. PARAMETER num_gpu 32
 PARAMETER num_ctx 2048
 PARAMETER temperature 0.2
 ```

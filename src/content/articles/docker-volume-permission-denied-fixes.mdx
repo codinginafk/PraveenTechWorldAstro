@@ -1,5 +1,5 @@
 ---
-title: "How to Fix Docker Volume 'Permission Denied' Errors on Windows and Linux"
+title: "How to Fix Docker Volume Permission Denied Errors (5 IT Steps)"
 description: "File write locks and permission errors in mounted containers can stop development in its tracks. Here is how our team solved mount issues."
 coverImage: "/images/generated/docker-volume-permission-denied-fixes.jpg"
 imageAlt: "Concept representing container filesystem lock and permission error resolution"
@@ -23,7 +23,7 @@ faq:
     answer: "Enable the metadata option in your WSL2 configuration (/etc/wsl.conf) to allow Linux chmod and chown commands to persist on Windows folders."
 ---
 
-## The Host-to-Container Permission Wall
+## 1. The Host-to-Container Permission Wall
 
 It happens to every developer: you set up a fresh docker-compose file, mount a local folder to run live code reloads, run `docker compose up`, and get met with a screen full of write lockouts: `io.ErrPermissionDenied` or `sh: build.sh: Permission denied`.
 
@@ -33,7 +33,7 @@ Here is the exact technical explanation of why this happens and the three produc
 
 ---
 
-## The Root Cause: UID and GID Mismatch
+## 2. The Root Cause: UID and GID Mismatch
 
 In Linux-based containers, file permissions are governed by numeric **User IDs (UID)** and **Group IDs (GID)**, not by usernames. 
 
@@ -44,7 +44,7 @@ When you run a standard container, the default user inside the container is almo
 
 ---
 
-## 🛠️ Fix 1: Align User ID in Docker-Compose (The Quickest Fix)
+## 3. 🛠️ Fix 1: Align User ID in Docker-Compose (The Quickest Fix)
 
 The fastest way to prevent ownership conflicts is to force the container to run using your exact host UID and GID. 
 
@@ -75,7 +75,7 @@ By passing `user: "1000:1000"`, any file written by the node container is owned 
 
 ---
 
-## 🛠️ Fix 2: Enable WSL2 Metadata Mount Flags (For Windows Users)
+## 4. 🛠️ Fix 2: Enable WSL2 Metadata Mount Flags (For Windows Users)
 
 If you are running Docker or Podman inside Windows Subsystem for Linux (WSL2), you will face a unique filesystem hurdle. By default, WSL2 mounts your Windows drives (like `C:\\`) using a driver that does not support Linux file ownership edits. 
 
@@ -102,7 +102,7 @@ The `metadata` flag forces WSL2 to save Linux-style file permissions in NTFS alt
 
 ---
 
-## 🛠️ Fix 3: Implement User Namespace Mapping (Rootless Podman/Docker)
+## 5. 🛠️ Fix 3: Implement User Namespace Mapping (Rootless Podman/Docker)
 
 If you are running in rootless mode (common when using Podman), you must manage namespace sub-UIDs. 
 
@@ -122,21 +122,17 @@ The `--userns=keep-id` flag tells the engine to map your host user ID to the sam
 
 ---
 
-## Diagnostic Cheat Sheet
+## 6. Diagnostic Cheat Sheet
 
 Use this workflow the next time a container throws a permission lockout:
 
 ```bash
-## 
-id -u
+## 7. id -u
 
-## 
-ls -nd /path/to/host/folder
+## 8. ls -nd /path/to/host/folder
 
-## 
-docker exec -it <container_id> whoami
+## 9. docker exec -it <container_id> whoami
 
-## 
-```
+## 10. ```
 
 By applying these three fixes, our team has completely eliminated file permission bottlenecks. Align your compose users, configure your WSL2 metadata flags, and use namespace mappings to keep your developer workflow moving smoothly.
