@@ -76,7 +76,7 @@ function checkStateHealth(state) {
       continue;
     }
 
-    if (!entry.firstSeen || !entry.velocity === undefined) {
+    if (!entry.firstSeen || entry.velocity === undefined) {
       issues.push(`Corrupt memory entry: "${key.slice(0, 50)}" — missing fields`);
       continue;
     }

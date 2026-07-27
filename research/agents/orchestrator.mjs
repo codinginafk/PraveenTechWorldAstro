@@ -519,26 +519,11 @@ Return ONLY a valid JSON array. No markdown. No extra text. Example: [{ "title":
       if (!existingSlugs.has(slug) && !path.startsWith("http") && !path.startsWith("#")) return "";
       return match;
     });
-    // Inject internal links if article has none
+    // NOTE: Related Guides injection is handled by generate.mjs exclusively.
+    // Only log a warning if the article has zero internal links after generation.
     const bodyPart = content.split("---").slice(2).join("---");
     if (bodyPart && !bodyPart.match(/\[.*\]\(\/blog\//)) {
-      const related = [...existingSlugs]
-        .filter(s => s.includes("google-search-console") || s.includes("sitemap") || s.includes("indexing") || s.includes("ga4"))
-        .slice(0, 2);
-      if (related.length > 0) {
-        const linkSection = `\n\n### Related Guides\n${related.map(s => {
-          const title = s.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-          return `- [${title}](/blog/${s})`;
-        }).join("\n")}\n`;
-        const faqIdx = bodyPart.search(/^##\s+faq/i);
-        if (faqIdx > 0) {
-          const before = content.slice(0, content.indexOf(bodyPart) + faqIdx);
-          const after = content.slice(content.indexOf(bodyPart) + faqIdx);
-          content = before + linkSection + "\n\n" + after;
-        } else {
-          content += linkSection;
-        }
-      }
+      log("  ⚠️  Warning: Article has no internal links. generate.mjs should have added Related Guides.");
     }
     if (content !== original) {
       fs.writeFileSync(filePath, content, "utf-8");

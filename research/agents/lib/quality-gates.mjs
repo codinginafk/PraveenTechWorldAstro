@@ -411,8 +411,28 @@ export function validateArticle(filePath, existingArticlePaths = []) {
     failures.push({ gate: "C8", rule: "External citations", message: "No external citations found — at least 1 required" });
   }
 
-  // ---- C9: Unique structure (deferred — requires history) ----
-  // Skipped in single-article validation; run by orchestrator with history
+  // ---- C9: Unique structure — compare H2s against 5 most recent articles ----
+  try {
+    const articleFiles = fs.readdirSync(ARTICLES_DIR)
+      .filter(f => f.endsWith(".mdx") || f.endsWith(".md"))
+      .map(f => ({ name: f, mtime: fs.statSync(path.join(ARTICLES_DIR, f)).mtime }))
+      .sort((a, b) => b.mtime - a.mtime)
+      .slice(0, 5);
+    const currentH2s = h2Headings.map(h => h.replace(/^#+\s*\d*\.?\s*/, "").toLowerCase().trim());
+    for (const file of articleFiles) {
+      const filePath = path.join(ARTICLES_DIR, file.name);
+      const fileContent = fs.readFileSync(filePath, "utf-8");
+      const fileH2s = (fileContent.match(/^##\s+.+$/gm) || [])
+        .map(h => h.replace(/^#+\s*\d*\.?\s*/, "").toLowerCase().trim());
+      if (fileH2s.length < 3 || currentH2s.length < 3) continue;
+      const overlap = currentH2s.filter(h => fileH2s.some(fh => fh === h || fh.includes(h) || h.includes(fh)));
+      const overlapRatio = overlap.length / Math.max(currentH2s.length, 1);
+      if (overlapRatio > 0.7) {
+        failures.push({ gate: "C9", rule: "Unique article structure", message: `H2 structure is ${Math.round(overlapRatio * 100)}% similar to "${file.name}" — vary your subheadings` });
+        break;
+      }
+    }
+  } catch { /* silently skip if articles dir is inaccessible */ }
 
   // ---- C10: Hook quality ----
   if (!hookQuality.pass && !isNarrative) {
@@ -617,10 +637,20 @@ export function validateArticle(filePath, existingArticlePaths = []) {
   // ---- L3: Internal links exist (already checked in C7, T8) ----
 
   // ---- L4: External links security ----
-  for (const link of externalLinks) {
-    if (!link.text.includes("target=") && !link.text.includes("rel=")) {
-      // Can't check rel from markdown — skip; checked at build level
+  // Check for HTML-style external links missing target="_blank" and rel="noopener"
+  const htmlLinkRegex = /<a\s+[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
+  let htmlMatch;
+  const unsafeHtmlLinks = [];
+  while ((htmlMatch = htmlLinkRegex.exec(rawContent)) !== null) {
+    const fullTag = htmlMatch[0];
+    const url = htmlMatch[1];
+    if (url.includes("praveentechworld.com")) continue; // skip internal
+    if (!fullTag.includes('rel="noopener') && !fullTag.includes("rel='noopener")) {
+      unsafeHtmlLinks.push(url);
     }
+  }
+  if (unsafeHtmlLinks.length > 0) {
+    failures.push({ gate: "L4", rule: "External links security", message: `${unsafeHtmlLinks.length} external HTML <a> tag(s) missing rel="noopener": ${unsafeHtmlLinks.slice(0, 3).join(", ")}` });
   }
 
   // ---- M1: External authority citations (at least 1 .gov, .edu, or official docs) ----
