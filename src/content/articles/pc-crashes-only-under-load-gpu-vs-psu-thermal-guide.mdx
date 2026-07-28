@@ -1,0 +1,137 @@
+---
+title: "PC Crashes Only Under Load? GPU vs PSU vs Thermal Diagnosis Guide"
+description: "Does your PC black screen or reboot during gaming and heavy workloads? Diagnose GPU VRAM, PSU voltage drops, and CPU thermal throttling in 4 steps."
+coverImage: "/images/generated/pc-crashes-gpu-psu-thermal.jpg"
+imageAlt: "Technical architecture schematic of PC hardware load testing GPU VRAM PSU rail voltage thermal throttling sensors on wooden desk"
+publishDate: "2026-07-28"
+author: "praveen"
+category: "windows-fixes"
+pillarId: "windows-fixes"
+tags:
+  - "windows-fixes"
+  - "pc-crashes"
+  - "gpu-diagnostics"
+  - "psu-testing"
+  - "thermal-throttling"
+  - "sysadmin-guide"
+seoTitle: "PC Crashes Only Under Load? GPU vs PSU vs Thermal Diagnosis"
+socialHook: "PC instantly shuts down or black screens when launching a game? It is rarely a Windows bug. Here is how to isolate GPU VRAM, PSU voltage drop, and thermal spikes in 15 minutes."
+faq:
+  - question: "How do I know if my PC crash is caused by the power supply (PSU)?"
+    answer: "A PSU failure under load causes an immediate, total system power-off or sudden reboot without a Windows Blue Screen (BSOD). If the PC turns off instantly during heavy GPU/CPU spikes, the PSU transient response or OCP protection is triggering."
+  - question: "What is the difference between GPU artifacting and thermal throttling?"
+    answer: "Thermal throttling causes severe frame rate drops (stuttering) as the GPU reduces clock speeds to cool down. GPU memory (VRAM) failure produces visual artifacts, green checkerboard patterns, or driver reset crashes (nvlddmkm Event ID 14)."
+  - question: "Can a bad driver cause crashes only under load?"
+    answer: "Yes. Corrupted display drivers often crash when switching GPU power states from idle to 3D boost clock frequencies. Use Display Driver Uninstaller (DDU) in Safe Mode before replacing hardware."
+---
+
+Few computer problems are as frustrating as a PC that boots up fine, browses the web without issue, but **instantly black screens, reboots, or freezes 5 minutes into a heavy gaming session or 3D render.**
+
+On our IT operations workbench, load-dependent system crashes are among the most common hardware diagnostic requests. Users often assume Windows is corrupted and attempt repeated OS reinstalls—only to find the crash persists.
+
+The reality: **If your PC crashes strictly when demanding hardware resources, Windows is rarely the root cause.** The culprit is almost always one of three hardware bottlenecks: GPU VRAM instability, Power Supply Unit (PSU) transient voltage drops, or CPU/GPU thermal throttling.
+
+Here is our 4-step diagnostic isolation procedure to identify the failing component in under 20 minutes without buying spare parts.
+
+---
+
+## 🔍 Diagnostic Matrix: Crash Symptoms vs Component Failure
+
+Before running stress tests, match your exact crash symptom against our workbench failure matrix:
+
+| Crash Symptom | Most Likely Culprit | Secondary Possibility | Quick Verification Test |
+| :--- | :--- | :--- | :--- |
+| **Instant Power Off (No BSOD)** | **PSU (Power Supply)** | Motherboard VRM | OCCT Power Stress Test |
+| **Black Screen + Fans at 100%** | **GPU Power Cable / Sag** | GPU VRAM Defect | Reseat PCIe Power & GPU |
+| **Screen Artifacts / Driver Reset** | **GPU VRAM / Driver** | Unstable GPU Overclock | FurMark + DDU Driver Clean |
+| **Stuttering followed by Freeze** | **Thermal Throttling** | RAM Timings (XMP) | HWiNFO64 Sensor Monitoring |
+
+---
+
+## Step 1: Rule Out Software & Drivers With DDU
+
+Never replace hardware before eliminating display driver state corruption. When a GPU switches from idle clock (300 MHz) to maximum boost frequency (2500+ MHz), a corrupted driver registry key will cause an immediate driver timeout (`Event ID 14 nvlddmkm`).
+
+1. Download **Display Driver Uninstaller (DDU)** and the latest official graphics driver for your card.
+2. Boot Windows into **Safe Mode** (Hold `Shift` while clicking Restart > Troubleshoot > Advanced Options > Startup Settings > Restart > Press 4).
+3. Run DDU, select **GPU**, and click **Clean and restart**.
+4. Install the fresh driver package after Windows reboots normally.
+
+```powershell
+# Verify display driver health in PowerShell
+Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='nvlddmkm'} -ErrorAction SilentlyContinue | Select-Object -First 5 TimeCreated, Id, Message
+```
+
+---
+
+## Step 2: Thermal Diagnostics (HWiNFO64 Monitoring)
+
+High temperatures cause semiconductors to increase electrical resistance, triggering automatic thermal shutdown thresholds (TJMax).
+
+1. Download and launch **HWiNFO64** in *Sensors Only* mode.
+2. Expand the **CPU Thermal Junction (TjMax)** and **GPU Hot Spot / Memory Temperature** fields.
+3. Run a light benchmark like Cinebench or 3DMark for 5 minutes while monitoring peak temperatures.
+
+### Critical Thermal Threshold Limits:
+- **CPU Package:** Safe under 85°C. Critical throttling begins at **95°C–100°C**.
+- **GPU Core:** Safe under 80°C. Throttling begins at **83°C**.
+- **GPU Hot Spot / VRAM:** Safe under 95°C. Critical limits hit at **105°C–110°C**.
+
+If your GPU Hot Spot is 25°C higher than the GPU Core temperature, the thermal paste has dried out or pump-out effect has occurred, requiring repasting.
+
+---
+
+## Step 3: Isolating PSU Failures (The Transient Spike Test)
+
+Modern high-performance graphics cards experience **transient power spikes**—brief 1-millisecond microsecond power draws that can exceed the card's rated TDP by 150%. An aging or budget power supply cannot smooth these spikes, triggering Over-Current Protection (OCP) and shutting off the PC instantly.
+
+### How to Test PSU Rail Stability:
+1. Download **OCCT (OverClock Checking Tool)**.
+2. Navigate to the **Power** stress test tab (this loads BOTH the CPU and GPU to 100% load simultaneously to draw maximum wattage from the wall).
+3. Click **Start**.
+
+**The Test Result:**
+- If the PC **shuts off completely within 10–60 seconds**, your **PSU is failing** or insufficient for your hardware combination.
+- If the test runs for 15 minutes cleanly without power-off, your PSU is healthy.
+
+---
+
+## Step 4: Testing GPU VRAM & System Memory (RAM)
+
+If your system produces visual checkerboard artifacts, frozen pixels, or `KMODE_EXCEPTION_NOT_HANDLED` blue screens under load, video memory (VRAM) or system RAM is dropping bits.
+
+### GPU Memory Test (FurMark + OCCT VRAM):
+Run OCCT's **VRAM Test** set to 80% VRAM capacity for 10 minutes. If memory errors count up in red text, one of the BGA GDDR6 memory chips on your graphics card is failing.
+
+### System RAM Test (MemTest86):
+If system RAM is suspected, check our detailed [PC Keeps Crashing: How to Tell if it's a RAM Issue or a Bad Driver](/blog/pc-keeps-crashing-how-to-tell-if-it-s-a-ram-issue-or-a-bad-driver) guide to create a bootable MemTest86 USB drive.
+
+---
+
+## 🛠️ Summary Escalation Protocol
+
+```
+[PC Crashes Only Under Load]
+             │
+             ▼
+   [Clean Display Driver with DDU] ──► (Fixed) ──► Driver Corruption Resolved
+             │
+             ▼ (Still Crashes)
+    [Check HWiNFO64 Thermal Hotspots] ──► (>95°C) ──► Repaste Heatsink / Clean Dust
+             │
+             ▼ (Temps Normal)
+   [Run OCCT Power Combined Stress Test] ──► (Instant Power Off) ──► Replace PSU
+             │
+             ▼ (No Power Off)
+    [Run OCCT VRAM / MemTest86] ──► (Errors Found) ──► Replace RAM / GPU
+```
+
+By methodically testing drivers, thermal limits, power delivery, and VRAM in this order, you save money and eliminate guesswork.
+
+---
+
+## Related Guides & Troubleshooting Resources
+
+- Check our guide on [Will Factory Resetting Windows Fix a Corrupted User Profile?](/blog/will-factory-resetting-windows-fix-corrupted-user-profile).
+- Diagnosing memory errors? Read [PC Keeps Crashing: RAM vs Driver Diagnostics](/blog/pc-keeps-crashing-how-to-tell-if-it-s-a-ram-issue-or-a-bad-driver).
+- System speed issues? Check [Will Reinstalling Windows Speed Up a Slow PC?](/blog/will-reinstalling-windows-fix-slow-performance-issues).

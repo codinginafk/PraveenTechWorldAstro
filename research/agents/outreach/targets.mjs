@@ -34,7 +34,7 @@ export const AUTO_TARGETS = [
     type: "form",
     niche: "ai",
     da: "medium",
-    notes: "CF7 form with consent checkbox bug — use JS eval",
+    notes: "CF7 form — submitted 2026-07-28 (CF7 AJAX success)",
   },
   {
     name: "Setproduct",
@@ -48,11 +48,11 @@ export const AUTO_TARGETS = [
   {
     name: "Novu Handbook",
     url: "https://handbook.novu.co/write-in-our-blog",
-    type: "email", // JS-rendered form
+    type: "email", // HubSpot form
     niche: "dev",
     da: "medium",
     email: "",
-    notes: "JS-rendered form. Needs manual inspect.",
+    notes: "HubSpot form (share.hsforms.com/1ee3kAqPyTpaDzbg0Ta2_Wgqg046) — submitted 2026-07-28",
   },
   {
     name: "LogicSpice",

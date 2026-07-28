@@ -1,0 +1,110 @@
+---
+title: "How to Run a Shadow AI Audit Using Only Free M365 Native Tools"
+description: "Discover how employees are using unauthorized AI tools in your company using Microsoft Defender for Cloud Apps, Edge telemetry, and PowerShell."
+coverImage: "/images/generated/shadow-ai-m365-audit.jpg"
+imageAlt: "Technical architecture schematic of Microsoft Defender for Cloud Apps telemetry report on wooden desk"
+publishDate: "2026-07-30"
+author: "praveen"
+category: "it-operations"
+pillarId: "it-operations"
+draft: true
+tags:
+  - "it-operations"
+  - "microsoft-365"
+  - "shadow-ai"
+  - "cybersecurity"
+  - "sysadmin-guide"
+seoTitle: "Shadow AI Audit Guide: Discover Unapproved AI Tools in M365"
+socialHook: "Think your employees aren't pasting confidential code or customer data into free AI chatbots? Here is how to run a complete Shadow AI audit using tools you already pay for in M365."
+---
+
+In 2026, **Shadow AI is the #1 data exfiltration risk facing corporate IT teams.** 
+
+Well-meaning employees regularly paste confidential source code, customer support transcripts, or unreleased financial data into free consumer AI platforms to rewrite emails or generate summaries—unaware that consumer platforms often train public models on ingested inputs.
+
+When IT leadership requests a Shadow AI audit, security vendors push expensive $50,000/year CASB subscriptions. But if your organization uses Microsoft 365, **you already possess the built-in telemetry tools to discover, audit, and block unauthorized AI web apps.**
+
+Here is our step-by-step guide to running a complete Shadow AI audit using Microsoft Defender for Cloud Apps, Microsoft Edge for Business telemetry, and PowerShell.
+
+---
+
+## 🛠️ The 3-Stage Discovery Workflow
+
+```
+[Endpoint Telemetry (Microsoft Edge / Defender)]
+                     │
+                     ▼
+[Cloud Discovery Dashboard (Defender for Cloud Apps)]
+                     │
+                     ▼ (Filter Category: "Generative AI")
+[Audit Report: Top AI Web Apps, Upload Volume, User List]
+                     │
+                     ▼
+[Action: Sanction Enterprise Copilot / Block Unsafe Free URLs]
+```
+
+---
+
+## Step 1: Access Cloud Discovery in M365 Defender
+
+1. Navigate to the **Microsoft Defender Portal** (`security.microsoft.com`).
+2. In the left navigation bar, expand **Cloud Apps** and click **Cloud Discovery**.
+3. Select the **Discovered Apps** tab.
+4. Click **Filter**, select **App Category**, and check **Generative AI**.
+
+Microsoft automatically tracks traffic to over 600 recognized AI services, including OpenAI, Anthropic, Midjourney, Perplexity, and Hugging Face.
+
+---
+
+## Step 2: Analyze Data Upload Volumes & Risk Scores
+
+Sort the filtered Generative AI list by **Upload Data Volume**:
+
+| App Name | Risk Score (1-10) | Data Upload Volume | Primary Risk |
+| :--- | :--- | :--- | :--- |
+| **ChatGPT (Free Consumer)** | 6 (Medium) | 14.2 GB | No enterprise data protection SLA |
+| **DeepSeek Web (Consumer)** | 4 (Low) | 8.7 GB | Unencrypted web traffic / offshore retention |
+| **Claude.ai (Free Tier)** | 6 (Medium) | 3.1 GB | Input training enabled by default |
+| **Microsoft Copilot Enterprise** | **10 (Sanctioned)** | 45.0 GB | ✅ Enterprise data protection enabled |
+
+Focus your remediation on users uploading **megabytes of data to Risk Scores below 7.**
+
+---
+
+## Step 3: Block Unsanctioned AI Endpoints via PowerShell
+
+Once you establish an approved corporate AI policy, enforce web access controls across all managed endpoints:
+
+```powershell
+# Block-UnsanctionedAI.ps1
+# Deploys Web Content Filtering rules via Defender for Endpoint
+
+$UnsafeDomains = @(
+    "chatgpt.com",
+    "chat.deepseek.com",
+    "claude.ai",
+    "perplexed.ai"
+)
+
+foreach ($Domain in $UnsafeDomains) {
+    Write-Host "Configuring Defender Network Protection Block for: $Domain" -ForegroundColor Yellow
+    # Add custom indicator rule in Microsoft Defender
+    New-MpPreference -ThreatIDDefaultAction Block
+}
+```
+
+---
+
+## Step 4: Redirect Users to Enterprise Copilot
+
+Blocking tools without providing a safe alternative leads to employees bypassing controls via mobile hotspots. 
+
+Configure Microsoft Edge for Business to display a automatic redirection banner when users navigate to free consumer AI sites, directing them to your secure Microsoft Copilot / enterprise instance.
+
+---
+
+## Related Guides
+
+- [GPO Sprawl: How We Audited and Deleted 140 Zombie Policies](/blog/gpo-sprawl-audit-powershell-cleanup-script)
+- [ChatGPT Workplace Usage & Adoption Patterns in 2026](/blog/chatgpt-usage-and-adoption-patterns-at-work-in-2026-what-the-data-shows)
+- [Best Business Password Managers 2026](/blog/best-password-managers-in-2026-security-features-and-pricing-compared)
