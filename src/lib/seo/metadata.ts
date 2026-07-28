@@ -11,12 +11,10 @@ export interface SEOMetadata {
 const SUFFIX = " | PTW";
 
 export function buildPageTitle(title: string): string {
-  const homepageTitle = "Practical Tech Guides, AI Workflows & Productivity Tips";
-  if (title === "Home") return homepageTitle;
-  const full = title + SUFFIX;
-  if (full.length <= 60) return full;
-  const maxTitleLen = 60 - SUFFIX.length - 3;
-  return title.slice(0, maxTitleLen) + "..." + SUFFIX;
+  const homepageTitle = "PraveenTechWorld — Practical AI Workflows & IT Guides";
+  if (title === "Home" || title.includes("PraveenTechWorld")) return title;
+  if (title.length > 52) return title;
+  return `${title} | PTW`;
 }
 
 export function buildCanonical(site: string, path: string): string {
