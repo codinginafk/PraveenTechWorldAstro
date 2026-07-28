@@ -1,4 +1,5 @@
 ---
+
 title: "I Built a PowerShell Log Triage Tool With DeepSeek (Here is What Failed First)"
 description: "How we built an automated Windows Event Log triage script using DeepSeek R1 local API and PowerShell. Code, prompts, and failure points included."
 coverImage: "/images/generated/ps-deepseek-triage-tool.jpg"
@@ -16,8 +17,8 @@ tags:
   - "sysadmin-toolkit"
 seoTitle: "PowerShell Log Triage Tool with DeepSeek: Local AI Automation"
 socialHook: "Tired of reading raw Event Viewer logs? We built a PowerShell script that sends system anomalies to a local DeepSeek model for instant root-cause analysis."
----
 
+---
 Reading raw Windows Event Viewer logs during a production outage is painful. Between cryptically formatted `EventID` numbers, raw XML strings, and thousands of benign `Information` logs, finding the single failing driver or authentication leak takes precious time.
 
 On our IT operations workbench, we set out to solve this: **Can we build a lightweight PowerShell script that automatically extracts system errors, sends them to a local DeepSeek model via Ollama API, and returns plain-English root cause analysis?**
@@ -25,7 +26,6 @@ On our IT operations workbench, we set out to solve this: **Can we build a light
 Here is the exact script we built, the prompt engineering required, and the two major bugs we had to fix when DeepSeek hallucinates Windows cmdlets.
 
 ---
-
 ## 🛠️ The Architecture
 
 ```
@@ -42,11 +42,10 @@ Here is the exact script we built, the prompt engineering required, and the two 
 ```
 
 ---
-
 ## The Working PowerShell Script
 
 ```powershell
-# Get-EventLogTriage.ps1
+## Get-EventLogTriage.ps1
 param (
     [int]$HoursAgo = 2,
     [string]$LogName = "System"
@@ -95,7 +94,6 @@ Write-Host $Response.response
 ```
 
 ---
-
 ## Where the Script Failed (And How We Fixed It)
 
 ### Failure 1: DeepSeek Hallucinated Non-Existent Cmdlets
@@ -109,7 +107,6 @@ Sending 500 raw log entries exceeded Ollama's default context window, causing si
 **Fix:** Added `-First 15` limit on `Get-WinEvent` and stripped verbose message headers before sending the payload.
 
 ---
-
 ## Related Guides
 
 - [Run DeepSeek R1 Locally on 8GB VRAM](/blog/how-to-run-deepseek-r1-locally-on-8gb-vram)

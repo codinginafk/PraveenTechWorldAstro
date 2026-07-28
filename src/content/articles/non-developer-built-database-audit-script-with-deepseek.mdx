@@ -1,4 +1,5 @@
 ---
+
 title: "How to I Built a Database Audit Script with DeepSeek (Step-by-Step)"
 description: "A non-developer IT Ops Lead used DeepSeek to build a database audit Python script. The exact prompt, three AI failures, and the working 20-line script."
 coverImage: "/images/generated/non-developer-built-database-audit-script-with-deepseek.svg"
@@ -27,6 +28,7 @@ faq:
     answer: "The script uses `json.load`. If it fails, argparse will raise `json.JSONDecodeError` and you'll see a traceback. For a more robust solution you could wrap it in a try/except and log the error, but for a quick audit tool the default behavior is fine. "
   - question: "How do I schedule this script?"
     answer: "Add a cron entry like `0 7 * * 1 /usr/bin/python3 /opt/scripts/db_audit.py  - config /opt/configs/db_audit.json  - output /var/log/db_audit_$(date +%Y%m%d).json`. The script runs in under 3 seconds, so it fits comfortably within a weekly window."
+
 ---
 ## 1. What Problem Drove Me to Build a Database Audit Script?
 So, here's the thing: I really needed a database audit [Python script](/blog/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts), and after three attempts with AI, I finally got it right. Every week, I find myself checking my Oracle and MySQL instances to spot oversized tables, unused schemas, and those annoying deprecated `FLOAT` columns. While I could run manual queries, it usually took me about 30 to 45 minutes, plus I had to copy and paste results into spreadsheets for my weekly compliance report. My team kept asking for an automated "audit-once-and-forget" CLI tool that could scan a list of databases, flag anomalies, and even email a [PDF summary](/blog/how-to-use-chatgpt-to-summarize-long-pdfs-for-free). The catch? I'm not a developer - I'm just an IT Operations Lead who spends my days managing runbooks and monitoring dashboards. So, I thought, why not ask AI to help me out? I decided to give [DeepSeek](/blog/automated-tls-certificate-renewal-with-deepseek) (and OpenCode) a shot, hoping for a simple script with just a few tweaks. What I got instead was a saga of coding chaos - three failed attempts, a lot of frustrations, and finally, a working script after spending about 4 hours fixing it.
@@ -110,7 +112,7 @@ Here's a before-and-after comparison:
 ```python
 import cx_Oracle, mysql.connector, psycopg2
 def audit_db(...):
-    # hallucinated Oracle query
+## hallucinated Oracle query
     cur.execute("SELECT * FROM dba_tables WHERE bytes > 100*1024*1024")
 ```
 
@@ -131,14 +133,14 @@ mysql_connector = safe_import('mysql.connector', 'MySQL driver')
 psycopg2 = safe_import('psycopg2', 'PostgreSQL driver')
 
 def audit_db(db_type, config):
-    # generic size check using DB‑specific queries
+## generic size check using DB‑specific queries
     if db_type == 'oracle':
         cur.execute("SELECT table_name, num_rows, empty_blocks FROM user_tables WHERE (num_rows*avg_row_len)/1024/1024 > 100")
     elif db_type == 'mysql':
         cur.execute("SELECT table_name, ROUND((data_length+index_length)/1024/1024,2) as size_mb FROM information_schema.tables WHERE table_schema=DATABASE()")
-    # ... other checks
+## ... other checks
     findings = []
-    # append findings...
+## append findings...
     return {"db_name": config.get('name'), "timestamp": datetime.utcnow().isoformat()+'Z', "findings": findings}
 ```
 

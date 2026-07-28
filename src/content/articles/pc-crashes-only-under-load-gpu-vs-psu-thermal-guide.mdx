@@ -1,4 +1,5 @@
 ---
+
 title: "PC Crashes Only Under Load? GPU vs PSU vs Thermal Diagnosis Guide"
 description: "Does your PC black screen or reboot during gaming and heavy workloads? Diagnose GPU VRAM, PSU voltage drops, and CPU thermal throttling in 4 steps."
 coverImage: "/images/generated/pc-crashes-gpu-psu-thermal.jpg"
@@ -23,8 +24,8 @@ faq:
     answer: "Thermal throttling causes severe frame rate drops (stuttering) as the GPU reduces clock speeds to cool down. GPU memory (VRAM) failure produces visual artifacts, green checkerboard patterns, or driver reset crashes (nvlddmkm Event ID 14)."
   - question: "Can a bad driver cause crashes only under load?"
     answer: "Yes. Corrupted display drivers often crash when switching GPU power states from idle to 3D boost clock frequencies. Use Display Driver Uninstaller (DDU) in Safe Mode before replacing hardware."
----
 
+---
 Few computer problems are as incredibly frustrating as a PC that boots up completely fine, browses the web without any issue all day, but **instantly black screens, reboots, or freezes five minutes into a heavy gaming session or a 3D rendering workload.** My friends and I see this exact scenario all the time on our IT operations workbench. We constantly get desperate, frantic messages from users and fellow developers whose rigs just won't stay alive when the heat is turned up and the pressure is on. 
 
 Over our many years in the trenches, our team has handled hundreds of load-dependent system crashes. These scenarios are genuinely among the most common hardware diagnostic requests we receive on our workbench. Users almost always assume that Windows is somehow deeply corrupted. They will attempt repeated operating system reinstalls, driver rollbacks, and registry tweaks—only to inevitably find that the exact same crash persists the moment they boot up a demanding game.
@@ -34,7 +35,6 @@ The harsh reality we've discovered through grueling, coffee-fueled, late-night d
 Here is our team's definitive 4-step diagnostic isolation procedure. This is the precise methodology we use to identify the failing hardware component in under 20 minutes, without needing to blindly purchase spare parts or guess at the solution. We use this exact workflow on our test benches every single week, and following it will save you days of absolute frustration.
 
 ---
-
 ## 🔍 Diagnostic Matrix: Crash Symptoms vs Component Failure
 
 Before running any intensive stress tests, my friends and I always start by matching the exact crash symptom against our workbench failure matrix. We built this matrix from real-world, firsthand failures that we’ve witnessed on our own infrastructure. Knowing how to read the symptoms correctly is half the battle.
@@ -49,7 +49,6 @@ Before running any intensive stress tests, my friends and I always start by matc
 If you ever suspect that you're dealing with a broader system memory issue instead of just an isolated GPU failure, we highly recommend you read our deeper dive into diagnosing RAM faults at [how to tell if a PC crash is a RAM issue or bad driver](/blog/pc-keeps-crashing-how-to-tell-if-it-s-a-ram-issue-or-a-bad-driver).
 
 ---
-
 ## Step 1: Rule Out Software & Drivers With DDU
 
 Our team's absolute golden rule on the workbench: never, ever replace a piece of hardware before completely eliminating display driver state corruption. When a modern graphics card switches from its idle clock state (usually around 300 MHz) to its maximum boost frequency (often scaling beyond 2500+ MHz), a corrupted driver registry key will cause an immediate driver timeout (`Event ID 14 nvlddmkm`). We've seen this happen constantly on our own high-end rigs right after a Windows Update carelessly pushes a conflicting driver over our clean installation.
@@ -60,14 +59,13 @@ Our team's absolute golden rule on the workbench: never, ever replace a piece of
 4. Once Windows reboots normally into a basic display state, install the fresh driver package.
 
 ```powershell
-# Verify display driver health in PowerShell on your rig
+## Verify display driver health in PowerShell on your rig
 Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='nvlddmkm'} -ErrorAction SilentlyContinue | Select-Object -First 5 TimeCreated, Id, Message
 ```
 
 Sometimes, a totally clean user environment is needed to really verify software faults if drivers aren't the only thing breaking. We documented our experiences with this exact scenario in our post about [will factory resetting Windows fix a corrupted user profile](/blog/will-factory-resetting-windows-fix-corrupted-user-profile).
 
 ---
-
 ## Step 2: Thermal Diagnostics and FurMark Hotspot Deltas
 
 High temperatures cause the semiconductors inside your CPU and GPU to increase their electrical resistance. This triggers automatic thermal shutdown thresholds (known as TJMax) to prevent literal melting. We monitor this strictly because our server rooms and test labs can get incredibly toasty during the summer months. 
@@ -93,7 +91,6 @@ Here is exactly what we look for when we run this test on our workbench:
 When we see a 30°C delta on our dev boxes, we know immediately that the card is frantically protecting itself from burning up. This aggressive self-preservation causes severe downclocking (which you feel as stuttering) or hard system crashes. Repasting the GPU die and replacing the surrounding thermal pads is the only physical fix here.
 
 ---
-
 ## Step 3: Isolating PSU Failures (The Transient Spike Test)
 
 Modern high-performance graphics cards experience what we call **transient power spikes**. These are incredibly brief, microsecond-long power draws that can easily exceed the card's official rated TDP by up to 150%. An aging, degraded, or budget power supply simply cannot smooth out these aggressive spikes. 
@@ -110,7 +107,6 @@ Our team learned this the hard way a few years back. We had older, highly-rated 
 - If the test runs for a solid 15 minutes cleanly without a power-off or a sudden reboot, your PSU is healthy, its capacitors are doing their job, and you can confidently move on to the next component.
 
 ---
-
 ## Step 4: Detailed GPU VRAM Stress Testing with OCCT
 
 If your system produces bizarre visual checkerboard artifacts, frozen neon-colored pixels, or throws `KMODE_EXCEPTION_NOT_HANDLED` blue screens when under heavy load, the video memory (VRAM) is actively dropping bits. My friends and I have diagnosed countless failing graphics cards by honing in directly on the memory modules rather than the core processor itself.
@@ -130,7 +126,6 @@ When we see VRAM errors pop up on our workbench, our first triage step is to att
 While you're waiting for replacement parts or tuning your system to survive on degraded hardware, you might want to optimize your base operating system to give your rig some breathing room. Take a look at our team's comprehensive guide on how to [10 essential Windows performance tweaks to speed up a slow PC](/blog/speed-up-your-slow-pc-in-2026-10-essential-windows-performance-tweaks) to squeeze out every last drop of stability.
 
 ---
-
 ## 🛠️ Summary Escalation Protocol
 
 After thousands of hours of troubleshooting, here is the exact flowchart we keep taped to the wall in our lab:

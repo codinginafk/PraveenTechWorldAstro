@@ -1,4 +1,5 @@
 ---
+
 title: "How to Docker Desktop licensing changes (Step-by-Step)"
 description: "A firsthand case study of migrating 120 developers from Docker Desktop to Podman, profiling latency, local volume mapping, and runner setups."
 coverImage: "/images/generated/docker-desktop-licensing-changes.svg"
@@ -12,14 +13,13 @@ tags:
   - "tech"
 seoTitle: "Docker Desktop licensing changes"
 socialHook: "A firsthand case study of migrating 120 developers from Docker Desktop to Podman, profiling latency, local volume mapping, and runner setups."
----
 
+---
 ## 1. Docker's updated licensing terms for large enterprises have forced many engineering teams to re-evaluate their local container strategy. While personal and small-team use of Docker Desktop remains free, organizations exceeding 250 employees or $10 million in annual revenue must purchase paid subscriptions. For a development team of 120 users, this licensing overhead translates to a recurring annual expense that is difficult to justify when open-source alternatives exist.
 
 This case study outlines our firsthand experience migrating a 120-developer engineering team from Docker Desktop to Podman. We profile the design decisions, trade-offs, and container-layer limitations we encountered during the transition, alongside the exact configurations used to preserve developer velocity.
 
 ---
-
 ## 1. Design Considerations and Trade-offs
 
 Any tool migration in a larger team introduces operational friction. We evaluated the transition along three core dimensions: production readiness, latency overhead, and refactoring complexity.
@@ -38,7 +38,6 @@ A common recommendation is to simply set `alias docker=podman`. While this works
 - Rootless volume mapping: Rootless containers map UID/GID spaces differently, which can cause local volume mounts to render as read-only inside the container.
 
 ---
-
 ## 2. Technical Limitations and Workarounds
 
 Migrating to a daemon-less, rootless architecture introduces security benefits but restricts standard system integrations. Below are the three primary limitations we hit and the configurations we implemented to resolve them.
@@ -67,7 +66,6 @@ In rootless mode, the user inside the container is mapped to the host user UID i
     *(The `:Z` flag ensures SELinux labels are updated correctly on systems running Fedora or RHEL).*
 
 ---
-
 ## 3. Configuration Blueprints
 
 To automate the migration, we distributed standard templates to the team, replacing standard compose files with native systemd units and Podman CLI invocations.
@@ -98,7 +96,7 @@ variables:
   DOCKER_HOST: "unix:///run/user/1000/podman/podman.sock"
 
 before_script:
-  # Verify runner environment is functional
+## Verify runner environment is functional
   - podman info
 
 build_image:
@@ -109,7 +107,6 @@ build_image:
 ```
 
 ---
-
 ## 4. Performance Metrics
 
 Following the complete rollout to all 120 users, we tracked development velocity metrics over a 30-day period:

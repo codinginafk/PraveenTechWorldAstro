@@ -1,4 +1,5 @@
 ---
+
 title: "How Berkeley CS Students Built Autonomous Agents (Step-by-Step)"
 description: "Autonomous LLM agents: ACI design, visual grounding, checkpointing, and anti-detection — with code and benchmarks from SWE-agent and WebArena."
 coverImage: "/images/generated/breaking-the-ai-chatbox-berkeley-students-build-autonomous-agents.svg"
@@ -15,8 +16,8 @@ tags:
   - "llm"
 seoTitle: "We Broke the AI Chatbox: Architecture, Code, and Benchmarks"
 socialHook: "Autonomous LLM agents fail silently unless you nail the interface. Here's how SWE-agent, visual grounding, and checkpointing work at production scale."
----
 
+---
 ## 1. The Agent-Computer Interface Paradigm
 
 Most people think building an autonomous AI agent is about picking the right model. It's not. The bottleneck is the **interface** — how the model talks to the computer.
@@ -26,7 +27,6 @@ The SWE-agent paper (Yang et al., NeurIPS 2024) from Princeton NLP showed that a
 The ACI insight: human-friendly interfaces (bash, CSS selectors, XPath) are brittle for LLMs. Agents need commands designed for their capabilities — simple, structured, with precise feedback loops.
 
 ---
-
 ## 1. Architecture: The ACI Pattern
 
 An autonomous agent system has three layers:
@@ -51,7 +51,6 @@ SWE-agent's ACI provides specialized commands that replace the raw Linux shell:
 The key design choice: **context window management**. The ACI limits file views to 100 lines with only the last 5 observations retained. The paper's hyperparameter sweep showed this outperformed larger windows — models confuse themselves with too much history.
 
 ---
-
 ## 2. Visual Grounding: Beyond Brittle Selectors
 
 Web agents need to interact with UIs that change on every render. Standard CSS/XPath selectors break on React/NextJS SPAs where elements get dynamic IDs like `:r1q:`.
@@ -60,7 +59,7 @@ There are three approaches, in order of robustness:
 
 ### Approach A: DOM-based (fragile but fast)
 ```python
-## 2. 
+## 2.
 await page.click("#submit-button-7f3a")
 ```
 
@@ -90,7 +89,7 @@ async def click_visual_target(page, target_description: str, screenshot_path: st
             ]
         }]
     )
-    # Parse "x,y" from response
+## Parse "x,y" from response
     x, y = map(int, resp.choices[0].message.content.strip().split(","))
     await page.mouse.click(x, y)
 ```
@@ -100,7 +99,6 @@ async def click_visual_target(page, target_description: str, screenshot_path: st
 **When to use each**: DOM for stable internal dashboards, semantic for well-maintained SPAs with `aria` attributes, visual for third-party SaaS where you control nothing.
 
 ---
-
 ## 3. Anti-Detection: The Cat-and-Mouse Game
 
 Cloudflare, Akamai, and DataDome flag headless browsers within milliseconds. The Berkeley EECS technical report (Ozdarendeli, 2026) showed that prompt-injection attacks succeed on 63.1% of unprotected web agents, but a layered defense reduces that to 1.9%.
@@ -109,7 +107,7 @@ Common evasion techniques and their real trade-offs:
 
 ### Stealth fingerprinting
 ```python
-## 4. 
+## 4.
 ## 5. from playwright_stealth import stealth_sync
 from playwright.sync_api import sync_playwright
 
@@ -117,7 +115,7 @@ with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
     stealth_sync(page)  # Patches ~25 browser detection signals
-    # 85% reduction in bot flags per EV-000007
+## 85% reduction in bot flags per EV-000007
 ```
 
 ### Residential proxy rotation
@@ -138,7 +136,6 @@ await page.context.add_cookies(cookies)
 **The hard truth**: Anti-detection is a maintenance burden, not a one-time fix. Security vendors update signatures weekly. Expect 5-10% of your agent engineering time to go to keeping evasion working.
 
 ---
-
 ## 4. State Machines and Checkpointing
 
 Multi-step agents fail. The question is how expensively.
@@ -195,7 +192,6 @@ class CheckpointManager:
 At GPT-4 pricing ($15/1M input, $60/1M output), a 100-step retry costs roughly $3-8. Checkpointing cuts that to $1.50-4 per recovery.
 
 ---
-
 ## 5. Budget Enforcement: Preventing Runaway Costs
 
 The most expensive bug is an agent stuck in a loop. Production systems enforce both token and dollar caps:
@@ -231,7 +227,6 @@ class BudgetEnforcer:
 The mini-swe-agent 2.0 (Feb 2026) hit 74% on SWE-bench Verified with aggressive budget caps — proof that constraints don't necessarily hurt performance.
 
 ---
-
 ## 6. Benchmark Comparison
 
 | System | SWE-bench Verified | HumanEvalFix | Year |
@@ -245,7 +240,6 @@ The mini-swe-agent 2.0 (Feb 2026) hit 74% on SWE-bench Verified with aggressive 
 The jump from 12.5% to 74%+ comes mostly from better models and improved ACI design — not architectural breakthroughs.
 
 ---
-
 ## 7. Production Considerations
 
 ### When not to use a web agent
@@ -268,7 +262,6 @@ The jump from 12.5% to 74%+ comes mostly from better models and improved ACI des
 4. **Session expiry**: Re-authenticate via cookie refresh before each workflow.
 
 ---
-
 ## 7. References
 - Yang et al., "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering," NeurIPS 2024. arxiv:2405.15793
 - Luo et al., "Connecting the Dots: Training-Free Visual Grounding via Agentic Reasoning," AAAI 2026. arxiv:2511.19516

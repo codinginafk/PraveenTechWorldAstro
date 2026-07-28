@@ -1,4 +1,5 @@
 ---
+
 title: "How to Automate Student Grade Reports with Python & DeepSeek"
 description: "The short answer is you can use a Python script with DeepSeek prompts to automatically pull grade data and generate weekly student reports without."
 coverImage: "/images/generated/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts.svg"
@@ -26,6 +27,7 @@ faq:
     answer: "Absolutely. Add a `smtplib` block after the upload step, and you can send the CSV as an attachment. The same prompting technique works for generating the email body. "
   - question: "What's the cost per month for this pipeline?"
     answer: "The DeepSeek prompt cost is negligible (~$0.004 per run). The biggest expense is the Dropbox storage (~$5/month for 5 GB). Overall, you're looking at under $10/month for a fully automated workflow.  What task would you automate with this approach' "
+
 ---
 ## 1. The Friday Night Grade Report Grind
 
@@ -88,7 +90,7 @@ def main():
     args = parser.parse_args()
 
     df = pd.read_csv(args.input)
-    # Wrong grouping
+## Wrong grouping
     report = df.groupby(['student_id', 'name']).agg(
         total_score=('score', 'sum'),
         average_score=('score', 'mean')
@@ -116,23 +118,23 @@ def main():
     parser.add_argument(' - output', default='weekly_report.csv')
     args = parser.parse_args()
 
-    # Load data
+## Load data
     df = pd.read_csv(args.input)
 
-    # Ensure correct data types
+## Ensure correct data types
     df['score'] = pd.to_numeric(df['score'], errors='coerce')
 
-    # Group by student only (unique per student)
+## Group by student only (unique per student)
     report = df.groupby(['student_id', 'name'], as_index=False).agg(
         total_score=('score', 'sum'),
         average_score=('score', 'mean')
     )
 
-    # Round to 2 decimal places for cleanliness
+## Round to 2 decimal places for cleanliness
     report['total_score'] = report['total_score'].round(2)
     report['average_score'] = report['average_score'].round(2)
 
-    # Save report
+## Save report
     report.to_csv(args.output, index=False)
     print(f"Processed {len(df)} rows, report saved to {args.output}")
 
@@ -164,7 +166,7 @@ So, how does it all run every Friday? Here's the setup:
    END=$(date +%s)
    DURATION=$((END-START))
    echo "Script finished in ${DURATION}s" >> /var/log/grade_reports.log
-   # Upload to Dropbox (simplified)
+## Upload to Dropbox (simplified)
    curl -X POST "https://content.dropboxapi.com/2/files/upload" \
       - header "Authorization: Bearer $DROPBOX_TOKEN" \
       - header "Dropbox-API-Result: json" \
@@ -190,14 +192,14 @@ I now keep the original prompt version-controlled as `prompt.txt` - it's become 
 
 Feeling inspired to try this out for yourself? Here's the exact prompt I used:
 
-```
+```text
 Prompt:
 I need a Python CLI tool that:
 1. Reads a CSV file (student_grades.csv) containing columns: student_id, name, assignment, score.
 2. Calculates each student's total score and average score.
 3. Writes a new CSV (weekly_report.csv) with columns: student_id, name, total_score, average_score.
 4. Includes a command‑line argument  - input to specify the input CSV (default: student_grades.csv) and  - output for the output CSV (default: weekly_report.csv).
-5. Prints a simple log: "Processed X rows, report saved to <output_path>".
+5. Prints a simple log: "Processed X rows, report saved to [output_path]".
 6. Uses only the standard library and pandas (assume pandas is installed).
 7. Provide the complete script with a shebang and a comment block describing usage.
 ```
