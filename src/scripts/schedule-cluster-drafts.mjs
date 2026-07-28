@@ -12,24 +12,19 @@ const schedulePath = path.join(projectRoot, "src/scripts/publish_schedule.json")
 
 const draftMap = [
   {
-    draftFile: "windows-11-update-stuck-at-0-percent-fixes.mdx",
-    coverImage: "/images/generated/win11-update-stuck-fixes.jpg",
+    draftFile: "open-webui-ollama-rag-it-runbooks-setup.mdx",
+    coverImage: "/images/generated/open-webui-ollama-rag.jpg",
     staggerMinutes: 75, // 1 hr 15 mins
   },
   {
-    draftFile: "powershell-log-triage-tool-with-deepseek.mdx",
-    coverImage: "/images/generated/ps-deepseek-triage-tool.jpg",
+    draftFile: "shadow-ai-audit-microsoft-365-native-tools.mdx",
+    coverImage: "/images/generated/shadow-ai-m365-audit.jpg",
     staggerMinutes: 165, // 2 hrs 45 mins
   },
   {
-    draftFile: "ollama-gpu-offload-num-ctx-slowdown-fix.mdx",
-    coverImage: "/images/generated/ollama-gpu-num-ctx-fix.jpg",
+    draftFile: "indirect-prompt-injection-attack-scenario-guide.mdx",
+    coverImage: "/images/generated/indirect-prompt-injection.jpg",
     staggerMinutes: 255, // 4 hrs 15 mins
-  },
-  {
-    draftFile: "gpo-sprawl-audit-powershell-cleanup-script.mdx",
-    coverImage: "/images/generated/gpo-sprawl-audit-cleanup.jpg",
-    staggerMinutes: 350, // 5 hrs 50 mins
   }
 ];
 

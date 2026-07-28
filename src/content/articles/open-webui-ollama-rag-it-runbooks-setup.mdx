@@ -1,0 +1,113 @@
+---
+title: "Open WebUI + Ollama RAG: How We Indexed Our IT Runbooks Privately"
+description: "How to set up Open WebUI and Ollama with nomic-embed-text to query internal IT runbooks, network diagrams, and incident notes offline."
+coverImage: "/images/generated/open-webui-ollama-rag.jpg"
+imageAlt: "Technical schematic of Open WebUI RAG architecture indexing local vector database on wooden desk"
+publishDate: "2026-07-28"
+author: "praveen"
+category: "ai-automation"
+pillarId: "ai-automation"
+draft: true
+tags:
+  - "ai-automation"
+  - "open-webui"
+  - "ollama"
+  - "rag"
+  - "local-llm"
+  - "sysadmin-guide"
+seoTitle: "Open WebUI + Ollama RAG Setup: Index IT Runbooks Offline"
+socialHook: "Tired of searching through messy Confluence pages or PDF runbooks during outages? We set up Open WebUI + Ollama RAG locally to query our infrastructure docs in 2 seconds."
+---
+
+During a network outage or server crash, searching through dozens of internal Confluence pages, PDF network diagrams, and scattered text runbooks wastes critical minutes. 
+
+While public AI tools like ChatGPT or Claude can summarize documents, **uploading proprietary IP addresses, network topologies, or database passwords to public cloud APIs violates IT compliance policies.**
+
+On our IT operations workbench, we built a 100% offline solution: **Open WebUI combined with local Ollama embeddings (`nomic-embed-text`) running Retrieval-Augmented Generation (RAG).**
+
+Here is our step-by-step setup guide, hardware requirements, and chunking parameters for indexing technical documentation privately.
+
+---
+
+## 🛠️ The Local RAG Architecture
+
+```
+[Local Markdown / PDF Runbooks]
+             │
+             ▼
+[Open WebUI Document Ingestion Engine]
+             │
+             ▼ (Chunking: 512 tokens / Overlap: 50)
+[Ollama nomic-embed-text Model (Vector Embedding)]
+             │
+             ▼
+[Local Chromadb Vector Store]
+             │
+             ▼ (Query Retrieval)
+[DeepSeek R1 / Llama 3.1 Local Model Response]
+```
+
+---
+
+## Step 1: Install Ollama & Required Models
+
+First, pull both your primary chat model and the dedicated embedding model into Ollama:
+
+```bash
+# Pull chat model
+ollama pull deepseek-r1:8b
+
+# Pull dedicated vector embedding model
+ollama pull nomic-embed-text
+```
+
+`nomic-embed-text` is specifically trained for technical semantic retrieval with an 8,192 token context window, outperforming generic OpenAI text-embedding-ada-002 models on code and configuration files.
+
+---
+
+## Step 2: Configure Open WebUI via Docker
+
+Launch Open WebUI using Docker Desktop or Podman on your workstation:
+
+```bash
+docker run -d -p 3000:8080 \
+  --add-host=host.docker.internal:host-gateway \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main
+```
+
+Open your browser to `http://localhost:3000` and create your local admin account.
+
+---
+
+## Step 3: Configure Optimal Document RAG Parameters
+
+In Open WebUI, navigate to **Admin Panel > Settings > Documents**:
+
+1. **Embedding Model Engine:** Select `Ollama`.
+2. **Embedding Model:** Select `nomic-embed-text:latest`.
+3. **Chunk Size:** Set to `512` (Optimal for technical documentation with code blocks).
+4. **Chunk Overlap:** Set to `64` (Prevents cutting off PowerShell functions across chunk boundaries).
+5. **Top K Retrieval:** Set to `4` (Fetches the 4 most relevant text snippets per query).
+
+---
+
+## Step 4: Ingesting Runbooks & Querying Privately
+
+1. Click the **Workspace > Knowledge** tab.
+2. Create a new Knowledge Base named `IT-Infrastructure-Runbooks`.
+3. Drag and drop your `.md`, `.txt`, `.pdf`, or `.docx` incident runbooks into the upload dropzone.
+4. Open a new chat session, type `#IT-Infrastructure-Runbooks`, and ask:
+   *"What is the failover procedure if the primary Active Directory domain controller loses sync?"*
+
+Open WebUI will retrieve the exact lines from your local documents, display source citations, and generate plain-English remediation steps without a single byte leaving your local network.
+
+---
+
+## Related Guides
+
+- [Ollama Running Slow? Fix num_ctx GPU Offload in 3 Commands](/blog/ollama-gpu-offload-num-ctx-slowdown-fix)
+- [PowerShell Log Triage Tool with DeepSeek](/blog/powershell-log-triage-tool-with-deepseek)
+- [Run DeepSeek R1 Locally on 8GB VRAM](/blog/how-to-run-deepseek-r1-locally-on-8gb-vram)
