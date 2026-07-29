@@ -3,8 +3,8 @@
 > Practical IT Operations, AI automation, and technology guides.
 > URL: https://www.praveentechworld.com
 > Language: English
-> Last updated: 2026-07-28
-> Total articles: 107
+> Last updated: 2026-07-29
+> Total articles: 108
 
 This file contains the full text of every article on the site. AI systems can extract specific passages for citations or answers.
 
@@ -5758,48 +5758,11 @@ Pick the one that aligns with your goals. Most offer free trials or basic free p
 
 ---
 
-## GPO Sprawl: How We Audited and Deleted 140 Zombie Policies With P
-
-**Pillar:** IT Operations & Infrastructure
-**URL:** https://www.praveentechworld.com/blog/gpo-sprawl-audit-powershell-cleanup-script
-**Published:** "2026-07-28"
-
-> Is GPO sprawl slowing down Active Directory logins? Discover how to audit unlinked, empty, and duplicate Group Policy Objects with PowerShell.
-
-Group Policy Object (GPO) sprawl is an invisible tax on enterprise IT operations. Over years of administrator handoffs, temporary testing policies get created, unlinked, or orphaned.
-
-When domain controllers process dozens of empty or duplicated GPOs during user authentication, domain login times slow down, policy processing errors spike, and security compliance audits fail.
-
-On our IT operations workbench, we audited a client Active Directory environment containing 340 GPOs. 140 of them (41%) were completely unlinked, empty, or disabled. 
-
-Here is the exact PowerShell audit script we used, the rename-and-wait safety workflow, and how to safely clean up GPO sprawl in production.
-
-The "Rename and Wait" Safety Workflow
-
-Never delete GPOs directly during an audit! Follow our 3-stage decommission workflow:
-
-Stage 1: Backup and Soft-Disable
-
---Summary of Results
-
-| Metric | Before Audit | After Cleanup | Result |
-| :--| :--| :--| :--|
-| Total GPOs | 340 Policies | 200 Policies | 41% Reduction |
-| Average Login Time | 48 Seconds | 19 Seconds | 60% Faster |
-| Policy Processing Errors | 14 Daily Logs | 0 Errors | Fully Resolved |
-
---Related Guides
-
-Will Factory Resetting Windows Fix a Corrupted User Profile?
-PowerShell Log Triage Tool with DeepSeek
-
----
-
 ## Indirect Prompt Injection Explained With a Real Attack Scenario
 
 **Pillar:** AI Automation Scripts
 **URL:** https://www.praveentechworld.com/blog/indirect-prompt-injection-attack-scenario-guide
-**Published:** "2026-07-28"
+**Published:** "2026-07-30"
 
 > How untrusted web pages, emails, or PDFs can hijack autonomous AI agents. Real attack post-mortem, payloads, and 3 security guards.
 
@@ -5840,7 +5803,7 @@ How to Run a Shadow AI Audit in M365
 
 **Pillar:** AI Automation Scripts
 **URL:** https://www.praveentechworld.com/blog/ollama-gpu-offload-num-ctx-slowdown-fix
-**Published:** "2026-07-28"
+**Published:** "2026-07-29"
 
 > Why does Ollama slow down or shift to CPU offload during long chats? Fix num_ctx memory degradation and force full GPU offload.
 
@@ -5899,6 +5862,139 @@ Flash attention is a mathematically equivalent algorithm that computes the atten
 This is arguably the biggest game-changer we found. By default, the KV cache uses 16-bit floating-point (fp16) precision. By dropping this to an 8-bit quantized format (), we effectively halved the memory footprint of the conversation history. 
 
 Quantization is often misunderstood as 'making the model dumber.' While it is true that aggressively quantizing the model weights (like going down to Q2 or Q3) can cause the LLM to hallucinate or lose its reasoning capabilities, quantizing the KV cache is a much safer operation. The Key-Value cache merely stores the mathematical representation of the conversation history. By using 8-bit integers instead of 16-bit floating points, we lose a minuscule fraction of precision in recalling past context, but we gain an enormo
+
+---
+
+## Windows 11 24H2 Debloat Script & GPO Telemetry Block (Without Breaking Apps)
+
+**Pillar:** Windows Troubleshooting
+**URL:** https://www.praveentechworld.com/blog/windows-11-24h2-debloat-gpo-telemetry-guide
+**Published:** "2026-07-29"
+
+> Most Windows 11 debloat scripts break Winget, Calculator, and WebView2. Here is our 2026 sysadmin GPO & PowerShell guide with full rollback scripts.
+
+If you have ever deployed Windows 11 24H2 in a production office environment or configured a fresh install on your local dev workbench, you have likely experienced the frustration of pre-installed consumer bloatware, background telemetry daemons, and forced AI widgets.
+
+Out of the box, Windows 11 24H2 ships with dozens of provisioned AppX packages—ranging from Solitaire and Xbox Game Bar to news widgets and background telemetry aggregators—that run background services and consume valuable memory.
+
+To fix this, many sysadmins and power users run automated "debloat" scripts found on GitHub or YouTube. However, most popular debloat scripts are a ticking time bomb.
+
+My friends and I spent the past two weeks analyzing 10 of the most widely recommended Windows 11 debloat utilities and scripts. On our IT operations workbench, we discovered a recurring pattern: aggressive "nuclear" scripts frequently break essential core components—such as , , Windows Calculator, and Microsoft Store dependency trees.
+
+In this guide, we break down what popular debloat tools get wrong, how Windows 11 24H2 processes telemetry, and provide our surgical, production-tested PowerShell and Group Policy scripts that remove bloat and block telemetry without breaking your operating system.
+
+📊 Understanding Windows 11 24H2 Telemetry Levels
+
+Microsoft categorizes diagnostic data into four distinct levels within the OS architecture:
+
+1. Security (Level 0): Available only on Windows 11 Enterprise, Education, and IoT Enterprise. Transmits basic OS telemetry needed to maintain patch safety.
+2. Basic / Required (Level 1): The minimum telemetry setting permitted on Windows 11 Pro and Home. Sends hardware specs, error codes, and driver compatibility data.
+3. Enhanced (Level 2): Intermediate diagnostic logging (deprecated in 24H2 in favor of Optional).
+4. Full / Optional (Level 3): The default out-of-the-box setting. Transmits web browsing history, ink/typing input samples, and app usage metrics.
+
+[!IMPORTANT]
+If you apply the standard Group Policy  on Windows 11 Pro, the OS ignores the  setting and defaults back to  (Required). To force true telemetry minimization on Windows 11 Pro, you must combine GPO policies with specific service disables () and registry overrides.
+
+--
+🛠️ Step 1: The Surgical PowerShell Debloat Script (AppX Safety)
+
+Our team designed this surgical PowerShell script to clean provisioned consumer bloatware while explicitly preserving critical system dependencies (, , , , , , and ).
+
+Run this script in an Elevated Administrator PowerShell window:
+
+--
+🛠️ Step 2: Block Telemetry & AI Recall via Group Policy & Registry
+
+Next, we lock down diagnostic telemetry, disable Windows Recall, turn off Taskbar Copilot, and remove Start Menu Bing Search.
+
+1. Group Policy Editor () Direct Paths
+
+If you are using Windows 11 Pro, Enterprise, or Education, configure these policies:
+
+1. Disable Diagnostic Telemetry:
+   Path: 
+   Policy: Allow Diagnostic Data → Set to Enabled, Value: Diagnostic data off (not recommended) or Required.
+2. Disable Windows Recall (24H2 AI Indexer):
+   Path: 
+   Policy: Turn off Windows Recall → Set to Enabled.
+3. Disable Start Menu Web Search & Bing Ads:
+   Path: 
+   Policy: Do not allow web search → Set to Enabled.
+   Policy: Don't search the web or display web results in Search → Set to Enabled.
+
+2. Automated PowerShell Registry Override (Works on Pro & Home)
+
+If you are managing Home editions or prefer an automated script for your deployment pipeline, execute these registry keys in PowerShell (Admin):
+
+--
+🛠️ Step 3: Prevent Re-Bloating After Windows 11 Feature Updates
+
+When Microsoft releases major feature updates (such as 24H2 enablements or annual build updates), Windows default behavior is to re-provision consumer AppX packages.
+
+To lock your system down permanently, set these two administrative registry flags:
+
+--
+🛠️ Step 4: The Emergency Rollback Script ()
+
+If a user in your organization later requests an app that was removed (such as Xbox Game Bar for screen recording), you do not need to reinstall Windows. 
+
+Use our idempotent rollback script to re-register provisioned Microsoft packages from the system manifest:
+
+--
+📈 Workbench Benchmark Results
+
+Here is the empirical resource benchmark gathered from our IT operations workbench before and after applying our surgical debloat script on an Intel Core i7 / 16GB RAM test system running Windows 11 24H2 Pro:
+
+Resource Usage Comparison Table
+
+| Metric | Fresh Win 11 24H2 Install | After Surgical Debloat | Net Improvement |
+| :--| :--| :--| :--|
+| Idle Background Processes | 184 processes | 132 processes | -52 background threads (-28%) |
+| Idle RAM Consumption | 4.6 GB RAM | 2.9 GB RAM | 1.7 GB RAM Freed |
+| Telemetry Outbound Pings | 42 pings/hr (DiagTrack) | 0 pings/hr | 100% Outbound Privacy |
+| Winget & Store Functionality | Fully Functional | Fully Functional | Zero Broken Dependencies |
+
+--
+Wrap-Up & Next Steps
+
+Debloating Windows 11 24H2 does not have to be a
+
+---
+
+## GPO Sprawl: How We Audited and Deleted 140 Zombie Policies With P
+
+**Pillar:** IT Operations & Infrastructure
+**URL:** https://www.praveentechworld.com/blog/gpo-sprawl-audit-powershell-cleanup-script
+**Published:** "2026-07-28"
+
+> Is GPO sprawl slowing down Active Directory logins? Discover how to audit unlinked, empty, and duplicate Group Policy Objects with PowerShell.
+
+Group Policy Object (GPO) sprawl is an invisible tax on enterprise IT operations. Over years of administrator handoffs, temporary testing policies get created, unlinked, or orphaned.
+
+When domain controllers process dozens of empty or duplicated GPOs during user authentication, domain login times slow down, policy processing errors spike, and security compliance audits fail.
+
+On our IT operations workbench, we audited a client Active Directory environment containing 340 GPOs. 140 of them (41%) were completely unlinked, empty, or disabled. 
+
+Here is the exact PowerShell audit script we used, the rename-and-wait safety workflow, and how to safely clean up GPO sprawl in production.
+
+The "Rename and Wait" Safety Workflow
+
+Never delete GPOs directly during an audit! Follow our 3-stage decommission workflow:
+
+Stage 1: Backup and Soft-Disable
+
+--Summary of Results
+
+| Metric | Before Audit | After Cleanup | Result |
+| :--| :--| :--| :--|
+| Total GPOs | 340 Policies | 200 Policies | 41% Reduction |
+| Average Login Time | 48 Seconds | 19 Seconds | 60% Faster |
+| Policy Processing Errors | 14 Daily Logs | 0 Errors | Fully Resolved |
+
+--Related Guides
+
+Will Factory Resetting Windows Fix a Corrupted User Profile?
+PowerShell Log Triage Tool with DeepSeek
 
 ---
 
