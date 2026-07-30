@@ -39,7 +39,8 @@ export default defineConfig({
         !page.startsWith("https://www.praveentechworld.com/author") &&
         !page.startsWith("https://www.praveentechworld.com/demo") &&
         !page.endsWith("/rss.xml") &&
-        !page.endsWith("/rss"),
+        !page.endsWith("/rss") &&
+        !page.endsWith("/portfolio"),
     }),
     pagefind(),
   ],
