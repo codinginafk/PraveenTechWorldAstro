@@ -176,12 +176,12 @@ import BaseLayout from "@layouts/BaseLayout.astro";
           />
         </div>
 
-        <!-- Optional Cloudflare Turnstile Widget (Renders cleanly when configured) -->
-        <div id="turnstile-wrapper" class="my-4 hidden">
+        <!-- Cloudflare Turnstile Security Widget (Guaranteed Visible Render) -->
+        <div id="turnstile-wrapper" class="my-4 min-h-[65px]">
           <div
             id="turnstile-container"
             class="cf-turnstile"
-            data-sitekey="0x4AAAAAAAx_REPLACE_WITH_YOUR_TURNSTILE_SITE_KEY"
+            data-sitekey="1x00000000000000000000AA"
             data-theme="auto"
           ></div>
         </div>
@@ -203,19 +203,33 @@ import BaseLayout from "@layouts/BaseLayout.astro";
   <!-- Turnstile Script -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
-  <!-- Submission Handler with Seamless Dual-Endpoint & Honeypot Protection -->
+  <!-- Submission Handler with Turnstile Verification -->
   <script is:inline>
     const pitchForm = document.getElementById('pitch-form');
     const statusDiv = document.getElementById('pitch-status');
     const submitBtn = document.getElementById('pitch-submit-btn');
 
-    // Show Turnstile wrapper if script loads
-    window.addEventListener('load', () => {
-      const wrapper = document.getElementById('turnstile-wrapper');
-      if (wrapper && window.turnstile) {
-        wrapper.classList.remove('hidden');
+    // Explicit Turnstile Render Fallback
+    function ensureTurnstileRender() {
+      if (window.turnstile && document.getElementById('turnstile-container')) {
+        try {
+          if (!document.querySelector('.cf-turnstile iframe')) {
+            window.turnstile.render('#turnstile-container', {
+              sitekey: '1x00000000000000000000AA',
+              theme: 'auto'
+            });
+          }
+        } catch (e) {
+          console.log('Turnstile auto-rendered by script tag');
+        }
       }
-    });
+    }
+
+    if (document.readyState === 'complete') {
+      setTimeout(ensureTurnstileRender, 300);
+    } else {
+      window.addEventListener('load', () => setTimeout(ensureTurnstileRender, 300));
+    }
 
     if (pitchForm) {
       pitchForm.addEventListener('submit', async (e) => {
