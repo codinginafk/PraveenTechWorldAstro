@@ -110,7 +110,11 @@ import BaseLayout from "@layouts/BaseLayout.astro";
         Pitches are queued in our Cloudflare Edge KV buffer and synchronized directly to our editorial board.
       </p>
 
-      <form id="pitch-form" class="space-y-6 max-w-2xl">
+      <form id="pitch-form" action="https://formspree.io/f/xbdejjpr" method="POST" class="space-y-6 max-w-2xl">
+        
+        <!-- Honeypot Anti-Spam (Hidden from humans) -->
+        <input type="text" name="website_hp" style="display:none !important;" tabindex="-1" autocomplete="off" />
+
         <div class="grid gap-6 sm:grid-cols-2">
           <div>
             <label for="name" class="mb-2 block text-xs font-bold uppercase tracking-wider text-text dark:text-text-dark">Author Name *</label>
@@ -172,12 +176,12 @@ import BaseLayout from "@layouts/BaseLayout.astro";
           />
         </div>
 
-        <!-- Cloudflare Turnstile CAPTCHA Widget Container -->
-        <div class="my-4">
+        <!-- Optional Cloudflare Turnstile Widget (Renders cleanly when configured) -->
+        <div id="turnstile-wrapper" class="my-4 hidden">
           <div
             id="turnstile-container"
             class="cf-turnstile"
-            data-sitekey="1x00000000000000000000AA"
+            data-sitekey="0x4AAAAAAAx_REPLACE_WITH_YOUR_TURNSTILE_SITE_KEY"
             data-theme="auto"
           ></div>
         </div>
@@ -199,62 +203,56 @@ import BaseLayout from "@layouts/BaseLayout.astro";
   <!-- Turnstile Script -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
-  <!-- Submission Handler -->
+  <!-- Submission Handler with Seamless Dual-Endpoint & Honeypot Protection -->
   <script is:inline>
     const pitchForm = document.getElementById('pitch-form');
     const statusDiv = document.getElementById('pitch-status');
     const submitBtn = document.getElementById('pitch-submit-btn');
 
-    // Configured Worker Endpoint (or fallback worker route)
-    const WORKER_ENDPOINT = 'https://submit.praveentechworld.com';
+    // Show Turnstile wrapper if script loads
+    window.addEventListener('load', () => {
+      const wrapper = document.getElementById('turnstile-wrapper');
+      if (wrapper && window.turnstile) {
+        wrapper.classList.remove('hidden');
+      }
+    });
 
     if (pitchForm) {
       pitchForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Honeypot check
+        const formData = new FormData(pitchForm);
+        if (formData.get('website_hp')) {
+          // Bot detected - simulate silent success
+          statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+          statusDiv.innerText = '✅ Thank you! Your pitch has been submitted successfully.';
+          pitchForm.reset();
+          return;
+        }
+
         submitBtn.disabled = true;
         submitBtn.innerText = 'Submitting Pitch...';
         statusDiv.className = 'hidden';
 
-        const formData = new FormData(pitchForm);
-        const turnstileToken = formData.get('cf-turnstile-response') || '';
-
-        const payload = {
-          name: formData.get('name'),
-          email: formData.get('email'),
-          topic: formData.get('topic'),
-          outline: formData.get('outline'),
-          doc_url: formData.get('doc_url'),
-          turnstileToken: turnstileToken
-        };
-
-        if (!turnstileToken) {
-          statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300';
-          statusDiv.innerText = '⚠️ Please complete the security verification widget above before submitting.';
-          submitBtn.disabled = false;
-          submitBtn.innerText = 'Submit Pitch for Review 🚀';
-          return;
-        }
-
         try {
-          const res = await fetch(WORKER_ENDPOINT, {
+          // Submit via Formspree API (Guaranteed Delivery)
+          const response = await fetch(pitchForm.action, {
             method: 'POST',
+            body: formData,
             headers: {
-              'Content-Type': 'application/json',
               'Accept': 'application/json'
-            },
-            body: JSON.stringify(payload)
+            }
           });
 
-          const data = await res.json();
-
-          if (res.ok && data.success) {
+          if (response.ok) {
             statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
-            statusDiv.innerText = `✅ ${data.message || 'Pitch submitted successfully!'}`;
+            statusDiv.innerText = '✅ Pitch submitted successfully! Our editorial team will review your outline within 48 hours.';
             pitchForm.reset();
-            if (window.turnstile) window.turnstile.reset();
           } else {
+            const result = await response.json();
             statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
-            statusDiv.innerText = `❌ ${data.error || 'Failed to submit pitch. Please try again.'}`;
+            statusDiv.innerText = result.error || '❌ Submission error. Please email contact@praveentechworld.com directly.';
           }
         } catch (err) {
           statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';

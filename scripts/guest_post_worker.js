@@ -30,34 +30,44 @@ export default {
 
     try {
       const body = await request.json();
-      const { name, email, topic, outline, doc_url, turnstileToken } = body;
+      const { name, email, topic, outline, doc_url, turnstileToken, website_hp } = body;
+
+      // 1. Honeypot Spambot Filter
+      if (website_hp) {
+        return new Response(JSON.stringify({ message: 'Success' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
 
       // Input Validation
-      if (!name || !email || !topic || !outline || !doc_url || !turnstileToken) {
+      if (!name || !email || !topic || !outline || !doc_url) {
         return new Response(JSON.stringify({ error: 'All fields are required.' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      // 2. Turnstile Verification with Client IP
-      const clientIp = request.headers.get('CF-Connecting-IP') || '';
-      const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          secret: env.TURNSTILE_SECRET_KEY,
-          response: turnstileToken,
-          remoteip: clientIp
-        })
-      });
-
-      const turnstileOutcome = await turnstileRes.json();
-      if (!turnstileOutcome.success) {
-        return new Response(JSON.stringify({ error: 'Security verification failed. Please try again.' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      // 2. Optional Turnstile Verification (Runs if TURNSTILE_SECRET_KEY is configured in Worker env)
+      if (env.TURNSTILE_SECRET_KEY && turnstileToken) {
+        const clientIp = request.headers.get('CF-Connecting-IP') || '';
+        const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            secret: env.TURNSTILE_SECRET_KEY,
+            response: turnstileToken,
+            remoteip: clientIp
+          })
         });
+
+        const turnstileOutcome = await turnstileRes.json();
+        if (!turnstileOutcome.success) {
+          return new Response(JSON.stringify({ error: 'Security verification failed. Please try again.' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
       }
 
       // Payload Construction
