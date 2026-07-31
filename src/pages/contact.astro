@@ -176,6 +176,17 @@ import BaseLayout from "@layouts/BaseLayout.astro";
           ></textarea>
         </div>
 
+        <!-- Cloudflare Turnstile Security Widget -->
+        <div id="contact-turnstile-wrapper" class="my-4 min-h-[65px]">
+          <div
+            id="contact-turnstile-container"
+            class="cf-turnstile"
+            data-sitekey="0x4AAAAAAECdrXzclXfWcMEd"
+            data-action="turnstile-spin-v2"
+            data-theme="auto"
+          ></div>
+        </div>
+
         <div id="form-status" class="hidden rounded-xl p-4 text-sm font-medium"></div>
 
         <button
@@ -190,10 +201,36 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 
   </div>
 
+  <!-- Turnstile Script -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
   <script is:inline>
     const form = document.getElementById('contact-form');
     const statusDiv = document.getElementById('form-status');
     const submitBtn = document.getElementById('submit-btn');
+
+    // Explicit Turnstile Render Fallback
+    function ensureTurnstileRender() {
+      if (window.turnstile && document.getElementById('contact-turnstile-container')) {
+        try {
+          if (!document.querySelector('#contact-turnstile-container iframe')) {
+            window.turnstile.render('#contact-turnstile-container', {
+              sitekey: '0x4AAAAAAECdrXzclXfWcMEd',
+              action: 'turnstile-spin-v2',
+              theme: 'auto'
+            });
+          }
+        } catch (e) {
+          console.log('Turnstile auto-rendered by script tag');
+        }
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      setTimeout(ensureTurnstileRender, 300);
+    } else {
+      window.addEventListener('load', () => setTimeout(ensureTurnstileRender, 300));
+    }
 
     if (form) {
       form.addEventListener('submit', async (e) => {
@@ -216,14 +253,17 @@ import BaseLayout from "@layouts/BaseLayout.astro";
             statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
             statusDiv.innerText = '✅ Thank you! Your message has been sent successfully.';
             form.reset();
+            if (window.turnstile) window.turnstile.reset();
           } else {
             const result = await response.json();
             statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
             statusDiv.innerText = result.error || '❌ Error sending message. Please use WhatsApp or email.';
+            if (window.turnstile) window.turnstile.reset();
           }
         } catch (err) {
           statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
           statusDiv.innerText = '❌ Network error. Message on WhatsApp (+971 56 298 0106) or contact@praveentechworld.com.';
+          if (window.turnstile) window.turnstile.reset();
         } finally {
           submitBtn.disabled = false;
           submitBtn.innerText = 'Send Message 🚀';
