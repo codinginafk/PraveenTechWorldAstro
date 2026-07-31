@@ -177,7 +177,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
         </div>
 
         <!-- Cloudflare Turnstile Security Widget -->
-        <div id="turnstile-wrapper" class="my-4 min-h-[65px]">
+        <div id="turnstile-wrapper" class="my-4 min-h-[65px] flex justify-start items-center">
           <div
             id="turnstile-container"
             class="cf-turnstile"
@@ -201,8 +201,8 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 
   </div>
 
-  <!-- Turnstile Script -->
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <!-- Cloudflare Turnstile Script with is:inline -->
+  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <!-- Submission Handler with Turnstile Verification -->
   <script is:inline>
@@ -210,28 +210,37 @@ import BaseLayout from "@layouts/BaseLayout.astro";
     const statusDiv = document.getElementById('pitch-status');
     const submitBtn = document.getElementById('pitch-submit-btn');
 
-    // Explicit Turnstile Render Fallback
-    function ensureTurnstileRender() {
-      if (window.turnstile && document.getElementById('turnstile-container')) {
+    // Safe Turnstile Render Fallback
+    function initTurnstileWidget() {
+      const container = document.getElementById('turnstile-container');
+      if (!container) return;
+
+      // If iframe already rendered by Cloudflare auto-script, do nothing
+      if (container.querySelector('iframe')) return;
+
+      if (window.turnstile && typeof window.turnstile.render === 'function') {
         try {
-          if (!document.querySelector('.cf-turnstile iframe')) {
-            window.turnstile.render('#turnstile-container', {
-              sitekey: '0x4AAAAAAECdrXzclXfWcMEd',
-              action: 'turnstile-spin-v2',
-              theme: 'auto'
-            });
-          }
-        } catch (e) {
-          console.log('Turnstile auto-rendered by script tag');
+          window.turnstile.render('#turnstile-container', {
+            sitekey: '0x4AAAAAAECdrXzclXfWcMEd',
+            action: 'turnstile-spin-v2',
+            theme: 'auto'
+          });
+        } catch (err) {
+          console.warn('Turnstile render notice:', err);
         }
       }
     }
 
-    if (document.readyState === 'complete') {
-      setTimeout(ensureTurnstileRender, 300);
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setTimeout(initTurnstileWidget, 200);
+      setTimeout(initTurnstileWidget, 1000);
     } else {
-      window.addEventListener('load', () => setTimeout(ensureTurnstileRender, 300));
+      window.addEventListener('load', () => {
+        setTimeout(initTurnstileWidget, 200);
+        setTimeout(initTurnstileWidget, 1000);
+      });
     }
+
 
     if (pitchForm) {
       pitchForm.addEventListener('submit', async (e) => {
