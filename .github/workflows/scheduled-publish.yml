@@ -2,9 +2,8 @@ name: Scheduled Article Publisher
 
 on:
   schedule:
-    - cron: '20 23 19 7 *' # Phase 1: 3 hours later (July 19, 23:20 UTC)
-    - cron: '20 3 20 7 *'  # Phase 2: 7 hours later (July 20, 03:20 UTC)
-  workflow_dispatch: # Allow manual trigger
+    - cron: '*/30 * * * *'  # Every 30 minutes - checks publish_schedule.json and flips draft: true → false
+  workflow_dispatch:          # Manual trigger from GitHub Actions UI
 
 permissions:
   contents: write
@@ -12,21 +11,35 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
 
       - name: Run Scheduled Publisher
         run: node src/scripts/run-scheduled-publish.mjs
 
-      - name: Commit and Push if Changed
+      - name: Check for Changes
+        id: changes
         run: |
-          git config --global user.name "Github Action Poster"
+          git diff --quiet src/content/articles/ src/scripts/publish_schedule.json || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and Push Published Articles
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config --global user.name "PraveenTechWorld Publisher"
           git config --global user.email "hello@praveentechworld.com"
-          git add -A
-          git diff-index --quiet HEAD || (git commit -m "chore: Auto-publish scheduled drafts" && git push origin main)
+          git add src/content/articles/ src/scripts/publish_schedule.json
+          git commit -m "publish: Auto-release scheduled draft(s) [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git push origin main
