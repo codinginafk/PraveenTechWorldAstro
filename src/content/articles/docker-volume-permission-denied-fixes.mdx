@@ -135,4 +135,46 @@ Use this workflow the next time a container throws a permission lockout:
 
 ## 10. ```
 
-By applying these three fixes, our team has completely eliminated file permission bottlenecks. Align your compose users, configure your WSL2 metadata flags, and use namespace mappings to keep your developer workflow moving smoothly.
+## 7. 🛠️ Fix 4: The Dockerfile Entrypoint Chown (For CI/CD Pipelines)
+
+While tweaking `docker-compose.yml` or WSL2 metadata works well for local developer environments, those fixes don't scale perfectly when deploying to CI/CD pipelines (like GitHub Actions) where the host UID is dynamic and unpredictable.
+
+In automated environments, the most robust solution is to use an entrypoint script that dynamically adjusts the container user's UID to match the mounted volume's UID at runtime. 
+Here is how our team configures this:
+
+First, create a script named `entrypoint.sh`:
+```bash
+#!/bin/sh
+# Get the UID of the mounted volume directory
+TARGET_UID=$(stat -c "%u" /usr/src/app)
+
+# Change the node user's UID to match the volume
+usermod -u $TARGET_UID node
+chown -R node:node /usr/src/app
+
+# Drop root privileges and execute the main command as the node user
+exec su-exec node "$@"
+```
+
+Then, in your `Dockerfile`, ensure this script runs on startup:
+```dockerfile
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["npm", "start"]
+```
+This guarantees that regardless of which host machine or CI runner mounts the volume, the internal container user will always adopt the correct permissions dynamically, completely eliminating `Permission Denied` errors across your entire engineering team.
+
+## 8. SELinux Security Contexts (RHEL/Fedora Systems)
+
+If you are running Fedora, CentOS, or Red Hat Enterprise Linux, file permissions aren't just controlled by UID/GID; they are enforced by **SELinux Security Contexts**. Even if your UID matches perfectly, SELinux will block the container from writing to the host mount if the folder lacks the correct container-access label.
+
+To resolve SELinux lockouts, append the `:z` or `:Z` flag to your volume mount in `docker-compose.yml`. Use `:z` for shared volumes across multiple containers, and `:Z` for private unshared volumes:
+
+```yaml
+    volumes:
+      - .:/usr/src/app:z
+```
+This instructs Docker to automatically apply the `container_file_t` SELinux label to the host directory, permitting secure write access.
+
+By applying these fixes, our team has completely eliminated file permission bottlenecks. Align your compose users, configure your WSL2 metadata flags, and use namespace mappings to keep your developer workflow moving smoothly.

@@ -1,0 +1,149 @@
+---
+title: "How to Fix nvlddmkm.sys Event ID 13 GPU Driver Crashes in Windows 11"
+description: "Fix nvlddmkm.sys Event ID 13 and TDR GPU crashes on Windows 11 using DDU, registry adjustments, and PCIe power stability tweaks."
+coverImage: "/images/articles/nvlddmkm-gpu-driver-crash-fix.jpg"
+imageAlt: "Minimal vector line drawing of a graphics card with an interrupted signal trace on an off-white background"
+publishDate: "2026-08-04"
+author: "praveen"
+category: "hardware-troubleshooting"
+tags:
+  - "windows"
+  - "gpu"
+  - "nvidia"
+  - "troubleshooting"
+  - "bsod"
+  - "drivers"
+seoTitle: "Fix nvlddmkm.sys Event ID 13 GPU Driver Crashes (Windows 11)"
+socialHook: "Spent three hours yesterday troubleshooting a client workstation that kept crashing during local AI model training with nvlddmkm Event ID 13. Here is the exact fix workflow that resolved it without buying a new GPU."
+faq:
+  - question: "What is the difference between nvlddmkm Event ID 13 and Event ID 14?"
+    answer: "Event ID 13 is a general TDR (Timeout Detection and Recovery) event triggered when the Windows graphics kernel resets an unresponsive GPU driver. Event ID 14 indicates a hardware-level bus fault, severe VRAM instability, or physical PCIe lane corruption."
+  - question: "Does increasing TdrDelay harm my graphics card?"
+    answer: "No. Increasing TdrDelay from 2 seconds to 8 or 10 seconds simply gives your GPU more time to complete heavy compute tasks (like local LLM inference or complex 3D rendering) before Windows assumes the card has frozen and resets the driver."
+  - question: "Why does DDU (Display Driver Uninstaller) need to run in Windows Safe Mode?"
+    answer: "Windows locks display driver files and registry keys while normal graphics services are running. Running DDU in Safe Mode prevents Windows from loading active display drivers, allowing complete removal of leftover DLLs and registry entries."
+references:
+  - title: "Microsoft Learn: Timeout Detection and Recovery (TDR) Architecture"
+    url: "https://learn.microsoft.com/en-us/windows-hardware/drivers/display/timeout-detection-and-recovery"
+    publisher: "Microsoft Learn"
+  - title: "NVIDIA Support: Display Driver Uninstaller (DDU) Official Usage Guide"
+    url: "https://www.wagnardsoft.com/"
+    publisher: "Wagnardsoft"
+---
+
+A client brought a workstation into our shop last week with a symptom every PC gamer and local AI dev dreads: mid-session freezes followed by a quick desktop crash or a black screen. In Event Viewer, the logs were full of yellow warning icons pointing to the same source:
+
+`The description for Event ID 13 from source nvlddmkm cannot be found. \Device\Video3 \GraphicsException: ESM error`
+
+Windows was detecting that the GPU had stopped responding for more than two seconds and executed a Timeout Detection and Recovery (TDR) reset. 
+
+Many forums jump straight to recommending a GPU replacement or a full OS reinstall. But after dealing with dozens of these crashes across client rigs, test benches, and local LLM servers, our team found that `nvlddmkm.sys` Event ID 13 is usually a software-level sync conflict, a aggressive power saving setting, or a corrupted driver stack.
+
+Here is the step-by-step process we use to fix it.
+
+---
+
+## Step 1: Confirm the Exact Error Code in Event Viewer
+
+Before changing settings, verify whether you are dealing with a software timeout or a hardware failure. Open PowerShell as Administrator and run this command to pull all `nvlddmkm` events from the past 7 days:
+
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='nvlddmkm'; StartTime=(Get-Date).AddDays(-7)} | Select-Object TimeCreated, Id, Message | Format-List
+```
+
+Look at the `Id` and the text message in the output:
+- **Event ID 13:** Indicates a driver timeout or payload execution fault. The GPU took too long to complete a batch job.
+- **Event ID 14:** Points to physical VRAM corruption, unstable XMP memory timings, or a sagging PCIe slot connection.
+- **Event ID 4101:** Indicates Windows successfully reset the driver (`Display driver nvlddmkm stopped responding and has successfully recovered`).
+
+If you see Event ID 13, proceed with the software and driver fixes below.
+
+---
+
+## Step 2: Perform a Clean Driver Wipe with DDU in Safe Mode
+
+Overwriting NVIDIA drivers using the standard installer often leaves behind cached shader files, old registry keys, and broken PhysX components that cause `nvlddmkm.sys` crashes.
+
+1. Download the latest WHQL driver installer from NVIDIA's official site and save it to your desktop.
+2. Download **Display Driver Uninstaller (DDU)** from Wagnardsoft.
+3. Disconnect your internet connection (unplug Ethernet or disconnect Wi-Fi) so Windows Update does not automatically install a generic display driver during reboot.
+4. Hold down the `Shift` key on your keyboard while clicking **Restart** in the Start Menu.
+5. Navigate to **Troubleshoot > Advanced Options > Startup Settings** and click **Restart**.
+6. Press `4` or `F4` to boot into **Safe Mode**.
+7. Run `Display Driver Uninstaller.exe`, select **GPU** on the right drop-down, choose **NVIDIA**, and click **Clean and restart**.
+
+Once your PC reboots back into normal Windows, run the NVIDIA WHQL installer you downloaded earlier. Select **Custom (Advanced) Installation** and check **Perform a clean installation**.
+
+---
+
+## Step 3: Increase Windows TDR Timeout via Registry (`TdrDelay`)
+
+By default, Windows gives the GPU exactly **2 seconds** to finish processing a render thread or compute command. If a heavy game scene loads or a local AI model (like Ollama or Stable Diffusion) claims the GPU for 2.5 seconds, Windows assumes the card has hung, kills the task, and resets `nvlddmkm.sys`.
+
+Increasing `TdrDelay` gives the graphics processor a longer cushion to finish heavy work.
+
+1. Press `Win + R`, type `regedit`, and press **Enter**.
+2. Navigate to the following key path:
+   `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicDrivers`
+3. Check if a value named `TdrDelay` exists in the right-hand panel.
+   - If it does not exist, right-click an empty area, select **New > DWORD (32-bit) Value**, and name it `TdrDelay`.
+4. Double-click `TdrDelay`, set the **Base** to **Decimal**, and set the **Value data** to `8` (this increases the timeout limit from 2 seconds to 8 seconds).
+5. Create another DWORD value named `TdrDdiDelay`, set the Base to **Decimal**, and set the Value data to `8`.
+6. Click **OK** and restart your computer.
+
+```text
+Registry Path: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicDrivers
+Value Name:    TdrDelay
+Value Type:    REG_DWORD
+Value Data:    8 (Decimal)
+```
+
+---
+
+## Step 4: Adjust NVIDIA Control Panel Power & Performance Settings
+
+Windows default power plans like to put PCIe lanes and GPU clock states into ultra-low-power sleep modes. When a sudden workload demands maximum clock frequency, the voltage spike can cause the driver to crash before the VRM stabilizes power.
+
+1. Right-click your desktop and open **NVIDIA Control Panel**.
+2. Go to **Manage 3D Settings > Global Settings**.
+3. Scroll down to **Power management mode** and change it from *Normal* to **Prefer maximum performance**.
+4. Scroll down to **CUDA - Sysmem Fallback Policy** and set it to **Prefer No Sysmem Fallback** (this prevents the driver from spilling VRAM allocations into slow system RAM, which frequently causes Event ID 13 crashes during AI workloads).
+5. Click **Apply** in the bottom right corner.
+
+---
+
+## Step 5: Disable PCI Express Link State Power Management in Windows
+
+Windows power plans have an aggressive Link State Power Management setting for PCI Express that throttles PCIe slot power to save electricity.
+
+1. Press `Win + R`, type `powercfg.cpl`, and press **Enter**.
+2. Next to your active power plan, click **Change plan settings**, then click **Change advanced power settings**.
+3. Expand **PCI Express > Link State Power Management**.
+4. Change the setting for both *On battery* and *Plugged in* to **Off**.
+5. Click **Apply** and **OK**.
+
+---
+
+## Step 6: Test Memory and VRAM Stability
+
+If Event ID 13 continues to appear after DDU wiping and adjusting registry timeouts, the issue may stem from system RAM instability that corrupts data passed to the GPU.
+
+Run a quick memory diagnostic command from PowerShell:
+
+```powershell
+mdsched.exe
+```
+
+Select **Restart now and check for problems**. Allow the Windows Memory Diagnostic tool to run its pass. If any errors are detected, disable XMP/EXPO profiles in your motherboard BIOS and run your RAM at stock JEDEC speeds (e.g., 4800 MHz for DDR5 or 2133/2400 MHz for DDR4) to verify if unstable RAM timing was the root cause.
+
+---
+
+## Summary Checklist
+
+- [x] Verified Event ID 13 vs Event ID 14 in Event Viewer logs.
+- [x] Cleaned display drivers in Safe Mode using DDU with network disconnected.
+- [x] Added `TdrDelay` = 8 and `TdrDdiDelay` = 8 under `HKLM\SYSTEM\CurrentControlSet\Control\GraphicDrivers`.
+- [x] Configured NVIDIA Power Management to *Prefer maximum performance*.
+- [x] Disabled PCIe Link State Power Management in Advanced Power Options.
+
+For more advanced sysadmin and hardware troubleshooting, check out our guide on [fixing BitLocker recovery loops](/blog/bitlocker-recovery-screen-loop-after-windows-update-or-bios-flash) and our [Windows 11 telemetry debloat script](/blog/windows-11-24h2-debloat-gpo-telemetry-script). If you're building out an AI rig, don't miss our breakdown on [running local AI models on Windows 11](/blog/how-to-run-local-ai-models-on-windows-11-phi-4-deepseek).

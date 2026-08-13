@@ -13,16 +13,21 @@ tags:
   - "tech"
 seoTitle: "Docker Desktop licensing changes"
 socialHook: "A firsthand case study of migrating 120 developers from Docker Desktop to Podman, profiling latency, local volume mapping, and runner setups."
+faq:
+  - question: "Is Docker Desktop still free?"
+    answer: "Docker Desktop remains free for personal use, education, and small businesses. However, for organizations with more than 250 employees or $10 million in annual revenue, a paid subscription is required."
+  - question: "What is the best alternative to Docker Desktop?"
+    answer: "Podman is widely considered the best drop-in replacement for Docker Desktop because it supports the same container images, offers a compatible CLI, and runs daemon-less for better resource efficiency."
+  - question: "Does Podman work on Windows and macOS?"
+    answer: "Yes, Podman provides desktop applications for Windows and macOS that utilize lightweight virtual machines to run Linux containers natively, similar to Docker Desktop's architecture."
 
 ---
 ## 1. Enterprise Docker Licensing Changes
 
 Docker's updated licensing terms for large enterprises have forced many engineering teams to re-evaluate their local container strategy. While personal and small-team use of Docker Desktop remains free, organizations exceeding 250 employees or $10 million in annual revenue must purchase paid subscriptions. For a development team of 120 users, this licensing overhead translates to a recurring annual expense that is difficult to justify when open-source alternatives exist.
 
-This case study outlines our firsthand experience migrating a 120-developer engineering team from Docker Desktop to Podman. We profile the design decisions, trade-offs, and container-layer limitations we encountered during the transition, alongside the exact configurations used to preserve developer velocity.
-
 ---
-## 1. Design Considerations and Trade-offs
+## 2. Design Considerations and Trade-offs
 
 Any tool migration in a larger team introduces operational friction. We evaluated the transition along three core dimensions: production readiness, latency overhead, and refactoring complexity.
 
@@ -40,7 +45,7 @@ A common recommendation is to simply set `alias docker=podman`. While this works
 - Rootless volume mapping: Rootless containers map UID/GID spaces differently, which can cause local volume mounts to render as read-only inside the container.
 
 ---
-## 2. Technical Limitations and Workarounds
+## 3. Technical Limitations and Workarounds
 
 Migrating to a daemon-less, rootless architecture introduces security benefits but restricts standard system integrations. Below are the three primary limitations we hit and the configurations we implemented to resolve them.
 
@@ -68,7 +73,7 @@ In rootless mode, the user inside the container is mapped to the host user UID i
     *(The `:Z` flag ensures SELinux labels are updated correctly on systems running Fedora or RHEL).*
 
 ---
-## 3. Configuration Blueprints
+## 4. Configuration Blueprints
 
 To automate the migration, we distributed standard templates to the team, replacing standard compose files with native systemd units and Podman CLI invocations.
 
@@ -109,7 +114,7 @@ build_image:
 ```
 
 ---
-## 4. Performance Metrics
+## 5. Performance Metrics
 
 Following the complete rollout to all 120 users, we tracked development velocity metrics over a 30-day period:
 - **Startup Latency:** Startup times for multi-container development environments decreased by 12% compared to Docker Desktop, due to Podman's daemon-less execution model eliminating the overhead of a persistent background coordinator daemon.

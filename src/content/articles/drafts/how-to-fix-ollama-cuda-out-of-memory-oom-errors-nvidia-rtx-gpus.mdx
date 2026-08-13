@@ -1,0 +1,112 @@
+---
+title: "How to Fix Ollama CUDA Out of Memory (OOM) Errors on NVIDIA RTX GPUs"
+description: "Fix Ollama CUDA out-of-memory (OOM) errors during LLM inference by configuring num_ctx, GPU layer offloading, and VRAM swap parameters."
+coverImage: "/images/articles/nvlddmkm-gpu-driver-crash-fix.jpg"
+imageAlt: "Minimal vector illustration of GPU memory optimization"
+publishDate: "2026-08-04"
+author: "praveen"
+category: "ai-engineering"
+tags:
+  - "ai"
+  - "ollama"
+  - "gpu"
+  - "nvidia"
+  - "troubleshooting"
+draft: true
+seoTitle: "Fix Ollama CUDA Out of Memory Errors (NVIDIA RTX)"
+socialHook: "Spent half of yesterday debugging why Ollama crashed with CUDA OOM on an 8GB RTX 4060 when loaded with Llama 3 8B. Here is how we tuned layer offloading and num_ctx to fix it."
+faq:
+  - question: "What causes CUDA out of memory in Ollama?"
+    answer: "CUDA OOM occurs when the model weights, KV cache (context window), and activation tensors combined exceed your GPU's physical VRAM capacity."
+  - question: "How do I force Ollama to offload specific layers to system RAM?"
+    answer: "You can adjust the `num_gpu` parameter in your Modelfile or API payload to split model layers between GPU VRAM and system CPU memory."
+references:
+  - title: "Ollama Documentation: Modelfile Reference & GPU Tuning"
+    url: "https://github.com/ollama/ollama/blob/main/docs/modelfile.md"
+    publisher: "Ollama GitHub"
+---
+
+Running open-weights LLMs locally using Ollama is one of the best workflows for privacy and developer speed. But if you are working on a consumer GPU with 8GB, 12GB, or 16GB of VRAM, running into a `CUDA out of memory` or `ggml_cuda_host_malloc: failed to allocate memory` error is almost inevitable when scaling up context lengths.
+
+When VRAM fills up completely, Ollama either crashes the inference server or drops context violently.
+
+Here is the exact workbench tuning process my team and I use to get large context windows running stably without hitting CUDA OOM errors.
+
+---
+
+## 1. Calculate Your Exact Memory Usage Requirements
+
+An LLM's memory footprint on your GPU consists of three distinct components:
+
+1. **Model Weights:** A 8B parameter model quantized to 4-bit (`Q4_K_M`) requires approximately 4.8 GB of static VRAM just to load.
+2. **KV Cache (Context Window):** Storing attention tokens across long context windows consumes VRAM dynamically. At 8,192 context (`num_ctx 8192`), the KV cache adds roughly 1.2 GB to 2 GB depending on model architecture.
+3. **CUDA Context Overhead:** PyTorch/GGML runtime reserves ~400MB to 600MB of VRAM overhead.
+
+If your total VRAM is 8 GB and your total required memory is 8.5 GB, CUDA will crash.
+
+---
+
+## 2. Limit Context Window Size (`num_ctx`) in Modelfile
+
+By default, many Ollama client integrations (like Open-WebUI or Continue.dev) request large context lengths (8,192 or 16,384 tokens), which quickly inflates KV cache memory.
+
+You can restrict the context window by creating a custom Modelfile.
+
+1. Create a file named `Modelfile` in your working folder:
+
+```dockerfile
+FROM llama3.1:8b
+PARAMETER num_ctx 4096
+```
+
+2. Build your tuned model instance in terminal:
+
+```bash
+ollama create llama3-4k -f ./Modelfile
+```
+
+3. Run your custom model:
+
+```bash
+ollama run llama3-4k
+```
+
+Setting `num_ctx` to 4,096 reduces the KV cache size by half compared to an 8k context window, preventing VRAM overflow while retaining generous conversation history.
+
+---
+
+## 3. Tune Layer Offloading (`num_gpu`)
+
+If a model is slightly too large for your GPU VRAM, you can instruct Ollama to offload a specific number of transformer layers to CPU system RAM while keeping the remaining layers on the GPU.
+
+In your `Modelfile`:
+
+```dockerfile
+FROM mistral:7b
+PARAMETER num_gpu 28
+```
+
+For example, if Mistral 7B has 32 total layers, setting `num_gpu 28` places 28 layers into fast VRAM and offloads 4 layers to system DDR4/DDR5 RAM. While offloading layers to system RAM slightly reduces tokens-per-second, it prevents CUDA out-of-memory crashes entirely.
+
+---
+
+## 4. Disable NVIDIA CUDA Sysmem Fallback Policy
+
+By default, newer NVIDIA drivers automatically fall back to system RAM when VRAM is exhausted. However, this fallback mode can drastically slow down inference speeds to under 1 token per second or cause driver timeouts.
+
+To force Ollama to handle memory allocation cleanly instead of hanging:
+
+1. Open **NVIDIA Control Panel**.
+2. Go to **Manage 3D Settings > Program Settings**.
+3. Add `ollama_llama_server.exe` (found under `C:\Users\<User>\AppData\Local\Programs\Ollama`).
+4. Set **CUDA - Sysmem Fallback Policy** to **Prefer No Sysmem Fallback**.
+5. Click **Apply**.
+
+---
+
+## Summary Checklist
+
+- [x] Calculated total memory footprint (Model weights + KV Cache + CUDA overhead).
+- [x] Reduced `num_ctx` to 4096 or 2048 in custom Modelfile.
+- [x] Set `num_gpu` parameter to offload excess layers to system RAM.
+- [x] Configured NVIDIA Control Panel to *Prefer No Sysmem Fallback*.

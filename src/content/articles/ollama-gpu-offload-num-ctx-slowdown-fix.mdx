@@ -16,6 +16,13 @@ tags:
   - "local-llm"
 seoTitle: "Fix Ollama GPU Offload & Slow Inference (num_ctx Memory Guide)"
 socialHook: "Is Ollama dropping tokens/sec after 10 minutes? Check 'ollama ps' — your GPU might be silently offloading layers back to CPU. Here is the 3-line fix."
+faq:
+  - question: "Why does Ollama slow down after 10 minutes?"
+    answer: "Ollama slows down if your context window (num_ctx) exceeds your GPU's VRAM capacity. When this happens, it silently offloads layers back to your system's slower CPU RAM, causing tokens/sec to drop dramatically."
+  - question: "How do I check if Ollama is using my CPU instead of GPU?"
+    answer: "Open a terminal and run the 'ollama ps' command while a model is generating text. Look at the 'Processor' column; if it says something like '80% GPU / 20% CPU', your model has spilled over into system RAM."
+  - question: "What is OLLAMA_NUM_PARALLEL?"
+    answer: "OLLAMA_NUM_PARALLEL is an environment variable that defines how many concurrent inference requests Ollama should process. Setting it properly helps prevent VRAM thrashing when multiple agents query the model at once."
 ---
 
 If you run local LLMs with Ollama on Windows or Linux, you have likely experienced this frustrating issue: **The model starts fast (40+ tokens/sec), but after 10–15 minutes of chatting, inference slows to a crawl (3-5 tokens/sec) and system fans spin up.**
@@ -111,7 +118,7 @@ Let's break down exactly what our team discovered about these three magic bullet
 Flash attention is a mathematically equivalent algorithm that computes the attention mechanism in LLMs much faster and with a significantly smaller memory footprint. When we enabled this on our RTX 3060, we saw an immediate reduction in peak memory spikes during long prompt ingestions. It acts as an incredible buffer against sudden memory exhaustion during large context loads.
 
 ### 2. `OLLAMA_KV_CACHE_TYPE=q8_0`
-This is arguably the biggest game-changer we found. By default, the KV cache uses 16-bit floating-point (fp16) precision. By dropping this to an 8-bit quantized format (`q8_0`), we effectively halved the memory footprint of the conversation history. 
+This single configuration tweak gave us our largest performance gain. By default, the KV cache uses 16-bit floating-point (fp16) precision. By dropping this to an 8-bit quantized format (`q8_0`), we effectively halved the memory footprint of the conversation history. 
 
 Quantization is often misunderstood as 'making the model dumber.' While it is true that aggressively quantizing the model weights (like going down to Q2 or Q3) can cause the LLM to hallucinate or lose its reasoning capabilities, quantizing the KV cache is a much safer operation. The Key-Value cache merely stores the mathematical representation of the conversation history. By using 8-bit integers instead of 16-bit floating points, we lose a minuscule fraction of precision in recalling past context, but we gain an enormous amount of physical memory space. During our extensive workbench tests—where we fed the model 5,000-line server logs and asked it to find specific anomalies—we noticed absolutely zero degradation in its ability to recall the necessary information. The accuracy remained pristine, but the speed was preserved.
 

@@ -13,11 +13,18 @@ tags:
   - "workflow-automation"
 seoTitle: "Cost Caps & Loop Guards in LLM Agent Pipelines"
 socialHook: "Runaway LLM loops can cost thousands in minutes. Here is how to build cost caps, finite state machines, and context-safe loop guards."
+faq:
+  - question: "What is a finite state machine (FSM) in AI?"
+    answer: "A finite state machine is a logic structure that restricts an AI agent to a defined set of states (e.g., RESEARCHING, WRITING) and only allows explicit transitions between them, preventing unauthorized tool use."
+  - question: "How do you calculate LLM costs before calling the API?"
+    answer: "You can calculate costs by using local tokenizer libraries like tiktoken to count the exact number of prompt tokens, multiplying by the model's input rate, and adding the estimated output cost."
+  - question: "What causes an LLM agent to loop infinitely?"
+    answer: "Infinite loops often happen due to context window truncation. If the agent's history is deleted to save space, it forgets it has already tried an action and will repeat it indefinitely."
 ---
 
 ## 1. Managing the Hidden Costs of Autonomous AI Agents
 
-Building an autonomous AI agent sounds straightforward: you wrap an LLM in a loop, give it tool access, and let it run until it achieves its goal. But in production, you quickly run into a major problem: **uncontrolled cost loops**. 
+Building an autonomous AI agent sounds straightforward: you wrap an LLM in a loop, give it tool access, and let it run until it achieves its goal. But when our team deployed our first agents to production, we quickly ran into a major problem: **uncontrolled cost loops**. 
 
 If your agent hits a corner case, a tool failure, or a logic loop, it will keep making expensive API requests indefinitely. Within minutes, a single run can rack up hundreds of dollars in API bills.
 
@@ -27,7 +34,7 @@ Here is a practical, production-grade guide to building these guardrails into yo
 
 ---
 
-## 1. Designing the Agent as a Finite State Machine (FSM)
+## 2. Designing the Agent as a Finite State Machine (FSM)
 
 The first step in controlling an agent is defining its boundaries. Instead of letting the LLM decide its next action dynamically, define a set of strict **states** and **allowed transitions**. This makes the agent's behavior highly predictable and simple to debug.
 
@@ -59,7 +66,7 @@ By locking the agent into explicit states, you limit the surface area of potenti
 
 ---
 
-## 2. Implementing Pre-Flight Cost Caps
+## 3. Implementing Pre-Flight Cost Caps
 
 Before sending a prompt to expensive models like GPT-4 or Claude 3.5 Sonnet, estimate the token count and calculate the cost. If the estimate exceeds your budget threshold, halt the process before calling the API.
 
@@ -86,7 +93,7 @@ Do not call an LLM API to get token counts — that defeats the purpose of a pre
 
 ---
 
-## 3. Enforcing Hard Execution Ceilings
+## 4. Enforcing Hard Execution Ceilings
 
 To catch loops that manage to pass cost checks, implement hard counters on repeated states. If an agent tries to cycle through the `RESEARCHING ➔ VERIFYING` loops more than 5 times, it must trigger a safety halt.
 
@@ -109,7 +116,7 @@ When a loop limit is breached, the agent transitions to a `NEEDS_HUMAN_REVIEW` s
 
 ---
 
-## 4. The Silent Threat: Truncation-Induced Loop Evasion
+## 5. The Silent Threat: Truncation-Induced Loop Evasion
 
 Even with cost caps and loop ceilings, you are still vulnerable to a subtle failure mode: **the silent truncation loop**.
 
@@ -135,7 +142,7 @@ async function checkIterationLimit(agentRunId, maxLimit) {
 
 ---
 
-## 5. Architectural Tradeoffs in Bounded Orchestration
+## 6. Architectural Tradeoffs in Bounded Orchestration
 
 Implementing these safeguards introduces clear tradeoffs in your system design:
 
@@ -148,7 +155,7 @@ Implementing these safeguards introduces clear tradeoffs in your system design:
 
 ---
 
-## 6. Production Observability and Tracing
+## 7. Production Observability and Tracing
 
 You cannot manage what you do not measure. In production, connect your agent's FSM transitions to open telemetry libraries or centralized logging systems. Each transition should emit a structured JSON payload:
 
@@ -170,5 +177,5 @@ By parsing these logs, you can build real-time Grafana alert pipelines that trig
 
 ---
 
-## 2. Summary
+## 8. Summary
 Building cost guards and loop ceilings is not optional for production agents. By establishing an explicit FSM, calculating token costs pre-flight, and using out-of-band state databases like Redis to prevent truncation loops, you can run autonomous workflows confidently without fear of runaway API bills.

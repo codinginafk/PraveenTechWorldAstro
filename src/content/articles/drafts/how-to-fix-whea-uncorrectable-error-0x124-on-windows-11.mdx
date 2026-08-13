@@ -1,0 +1,90 @@
+---
+title: "How to Fix WHEA_UNCORRECTABLE_ERROR (0x124) on Windows 11"
+description: "Fix WHEA_UNCORRECTABLE_ERROR 0x124 blue screens on Windows 11 by troubleshooting hardware voltage drops, PCIe lane failures, and thermal throttling."
+coverImage: "/images/articles/nvlddmkm-gpu-driver-crash-fix.jpg"
+imageAlt: "Minimal line vector of hardware bus diagnostic"
+publishDate: "2026-08-04"
+author: "praveen"
+category: "hardware-troubleshooting"
+tags:
+  - "windows"
+  - "bsod"
+  - "hardware"
+  - "troubleshooting"
+  - "cpu"
+draft: true
+seoTitle: "Fix WHEA_UNCORRECTABLE_ERROR (0x124) Windows 11 Guide"
+socialHook: "WHEA_UNCORRECTABLE_ERROR (0x124) is the hardware watchdog alarm of Windows. Here is how we trace hardware log errors to pinpoint bad NVMe controllers, sagging PCIe slots, and VCORE drops."
+faq:
+  - question: "What is WHEA_UNCORRECTABLE_ERROR (0x124)?"
+    answer: "WHEA (Windows Hardware Error Architecture) 0x124 is a critical stop code generated when the CPU or motherboard chipset detects a non-recoverable hardware error, such as a CPU cache parity fault, PCIe bus timeout, or DRAM parity mismatch."
+references:
+  - title: "Microsoft Support: Bug Check 0x124 WHEA_UNCORRECTABLE_ERROR"
+    url: "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/bug-check-0x124--whea-uncorrectable-error"
+    publisher: "Microsoft Learn"
+---
+
+Unlike software-based Blue Screen of Death errors caused by corrupt drivers or bad updates, `WHEA_UNCORRECTABLE_ERROR` (stop code `0x124`) is triggered directly by the CPU and motherboard chipset hardware error architecture.
+
+When Windows encounters a `0x124` crash, it means the hardware watchdog detected a physical error — such as a CPU cache parity failure, a PCIe bus link loss, or a degraded NVMe SSD controller — before the operating system could recover.
+
+Here is how my team and I systematically isolate and resolve `0x124` errors on the workbench.
+
+---
+
+## 1. Inspect WHEA Record Logs via Event Viewer
+
+Windows logs detailed WHEA records under the System log whenever a `0x124` crash occurs.
+
+Open PowerShell as Administrator and run:
+
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='Microsoft-Windows-WHEA-Logger'} | Select-Object TimeCreated, Id, Message | Format-List
+```
+
+Examine the output for specific Event IDs:
+- **Event ID 18 (Fatal Hardware Error):** Points to a CPU internal core error or cache parity fault.
+- **Event ID 17 (PCIe Express Error):** Points to a PCIe device (such as a GPU or NVMe SSD controller) dropping communication across the PCIe bus.
+- **Event ID 47 (Corrected Memory Error):** Points to ECC memory or unstable DRAM timings.
+
+---
+
+## 2. Reseat PCIe Expansion Cards and Clean NVMe Contacts
+
+PCIe card sag and oxidation on M.2 SSD gold contacts are surprisingly common causes of intermittent `0x124` crashes.
+
+1. Power off your PC and unplug the power supply cable.
+2. Remove your graphics card from the main PCIe slot. Use a soft isopropyl alcohol wipe to clean the gold contact pins.
+3. Remove your M.2 NVMe SSDs, clean the contact fingers, and reinsert them firmly into their slot. Ensure thermal pads on heatsinks are properly contacting the controller chip.
+4. Reinstall the GPU and use a GPU support bracket to eliminate physical slot sag.
+
+---
+
+## 3. Check NVMe SSD Health & Controller Temperature
+
+NVMe controllers that overheat past 75°C under heavy read/write loads will trigger a PCIe link reset, resulting in an immediate `0x124` hardware panic.
+
+Run CrystalDiskInfo or smartctl in PowerShell to inspect SMART health logs:
+
+```powershell
+Get-PhysicalDisk | Get-StorageReliabilityCounter | Select-Object DeviceId, Temperature, ReadErrorsTotal, WriteErrorsTotal
+```
+
+If your NVMe drive temperature exceeds 70°C under load, install an M.2 heatsink or adjust intake fan speeds.
+
+---
+
+## 4. Test RAM & Restore JEDEC Stock Frequencies
+
+If XMP or EXPO memory profiles apply excessive memory controller voltage (VDD_MISC / SOC voltage), CPU bus instability can follow.
+
+Disable XMP/EXPO in BIOS and run MemTest86 for 4 complete passes to rule out corrupted RAM cells.
+
+---
+
+## Summary Checklist
+
+- [x] Extracted WHEA Logger Event IDs (17, 18, 47) from System event logs.
+- [x] Cleaned contact pins and reseated GPU and M.2 NVMe SSDs.
+- [x] Monitored NVMe controller temperatures under load.
+- [x] Tested DRAM stability at stock JEDEC frequencies.

@@ -18,9 +18,16 @@ tags:
   - "sysadmin-guide"
 seoTitle: "Open WebUI + Ollama RAG Setup: Index IT Runbooks Offline"
 socialHook: "Tired of searching through messy Confluence pages or PDF runbooks during outages? We set up Open WebUI + Ollama RAG locally to query our infrastructure docs in 2 seconds."
+faq:
+  - question: "What is Open WebUI used for?"
+    answer: "Open WebUI is a self-hosted graphical interface that allows users to interact with local Large Language Models (LLMs) running on Ollama, functioning similarly to ChatGPT but keeping all data 100% on-premises."
+  - question: "Why run RAG locally instead of using cloud AI APIs?"
+    answer: "Running Retrieval-Augmented Generation (RAG) locally ensures that sensitive proprietary data—like internal network diagrams, administrative passwords, and source code—never leaves your corporate network, maintaining strict compliance."
+  - question: "What is nomic-embed-text?"
+    answer: "Nomic-embed-text is an optimized open-source embedding model that converts text documents into dense vector representations. It boasts an 8k token context window, making it vastly superior to older models for technical documents."
 
 ---
-During a network outage or server crash, searching through dozens of internal Confluence pages, PDF network diagrams, and scattered text runbooks wastes critical minutes. 
+During a network outage or server crash, searching through dozens of internal Confluence pages, PDF network diagrams, and scattered text runbooks wastes critical minutes. In our team's experience, this fragmented knowledge retrieval is the primary bottleneck for incident response.
 
 While public AI tools like ChatGPT or Claude can summarize documents, **uploading proprietary IP addresses, network topologies, or database passwords to public cloud APIs violates IT compliance policies.**
 
@@ -99,6 +106,29 @@ In Open WebUI, navigate to **Admin Panel > Settings > Documents**:
    *"What is the failover procedure if the primary Active Directory domain controller loses sync?"*
 
 Open WebUI will retrieve the exact lines from your local documents, display source citations, and generate plain-English remediation steps without a single byte leaving your local network.
+
+---
+## Advanced Maintenance: Updating the Vector Store and Network Security
+
+On our team's IT workbench, simply standing up the RAG system wasn't the final step. We had to ensure the vector database stayed synchronized with our live documentation and that the endpoint was secured against unauthorized queries from junior staff.
+
+### Automating Document Syncs
+
+When a senior engineer updates a disaster recovery runbook on Confluence, the local Open WebUI instance does not magically know about it. Vector stores rely on point-in-time document embeddings.
+
+To solve this, we implemented a scheduled Python script using the Open WebUI REST API. Every night at 2:00 AM, the script pulls the latest exported PDFs from our documentation repository, compares file hashes, and uses the `/api/v1/documents/` endpoint to re-chunk and embed the updated files into the ChromaDB instance. This ensures that when the system asks for the IP address of the primary database server, it retrieves the address configured yesterday, not the one from six months ago.
+
+### Hardware Considerations for Production RAG
+
+While you can technically run this pipeline on a laptop CPU, doing so under pressure during a sev-1 outage is agonizing. The `nomic-embed-text` embedding process is CPU-bound if not offloaded, but the retrieval and generation phases (powered by Llama 3 or DeepSeek) absolutely require a dedicated GPU.
+
+For a team of 10 system administrators querying the tool concurrently, we recommend provisioning an Ubuntu server equipped with at least an NVIDIA RTX 4070 (12GB VRAM) or an older Tesla T4. This guarantees that token generation remains above 30 tokens per second, allowing engineers to get immediate answers rather than waiting 45 seconds for a single paragraph.
+
+### Securing the Open WebUI Endpoint
+
+Because this RAG instance contains the literal blueprints to your entire network architecture, it cannot sit exposed on the local LAN without authentication. By default, Open WebUI allows the first user to register as an administrator. 
+
+We highly recommend deploying the Docker container behind an NGINX reverse proxy with TLS encryption, and integrating Open WebUI's built-in OAuth support with your Azure AD or Okta tenant. This enforces Multi-Factor Authentication (MFA) before any engineer can ask the AI for administrative runbooks, fulfilling zero-trust security architecture requirements.
 
 ---
 ## Related Guides

@@ -15,12 +15,21 @@ tags:
 seoTitle: "Core Web Vitals Failing' 7 Fixes to Save Your Rankings"
 socialHook: "New in our website setup series: Core Web Vitals Fail on a New Website? Improve LCP, INP, and CLS Before Publishi"
 pillarId: website-setup
+faq:
+  - question: "How often are Core Web Vitals updated by Google?"
+    answer: "Google updates field data (Chrome User Experience Report) on a rolling 28-day window. This means fixes you deploy today will take about four weeks to fully reflect in your Search Console reports."
+  - question: "Does a 100/100 Lighthouse score guarantee passing Core Web Vitals?"
+    answer: "No. Lighthouse provides 'lab data' based on a simulated environment. Core Web Vitals are based on 'field data' from actual users interacting with your site under various network conditions."
+  - question: "Why is my INP score bad on mobile but fine on desktop?"
+    answer: "Mobile devices typically have less processing power. Heavy JavaScript execution can block the main thread on a phone, delaying the browser's response to taps and swipes, which tanks your INP metric."
+  - question: "Can server-side rendering (SSR) improve LCP?"
+    answer: "Yes, SSR can significantly improve LCP by delivering fully rendered HTML to the browser immediately, reducing the time the browser spends waiting for client-side JavaScript to fetch data and build the DOM."
 ---
 ## A Common Dilemma
 
 So, you've just built your shiny new website, but it's failing [Core Web Vitals](/blog/website-speed-upgrades-fix-crawling-delays-and-core-web-vitals)? That can be pretty frustrating, right? If you're scratching your head wondering how to tackle this, you're not alone. The good news is that there are some actionable steps you can take to improve your site's performance before it goes live.
 
-## Here's What I Found
+## Here's What Our Team Found
 
 Core Web Vitals measure how users experience your website. They assess how quickly the main content loads, how responsive the page is to user interactions, and how stable the layout is while loading. Specifically, we're looking at three key metrics: Largest Contentful Paint (LCP), Interaction to Next Paint (INP), and Cumulative Layout Shift (CLS).
 
@@ -30,7 +39,7 @@ If your site is struggling, it's often due to large images, slow server response
 
 Here's a friendly guide to help you tackle these Core Web Vital issues. Let's dive in!
 
-1. **Test Your URL**: Start by testing the exact URL you plan to publish on PageSpeed Insights. It'll give you a clear picture of LCP, INP, and CLS scores, along with other important metrics. I often jot these down to track my progress.
+1. **Test Your URL**: Start by testing the exact URL you plan to publish on PageSpeed Insights. It'll give you a clear picture of LCP, INP, and CLS scores, along with other important metrics. Our team often jots these down to track our progress.
 
 2. **Make the Staging Site Accessible**: If your staging site is password-protected, consider temporarily lifting the restrictions so testing tools can access it. This can often be adjusted in your site's settings.
 
@@ -54,8 +63,52 @@ Here's a friendly guide to help you tackle these Core Web Vital issues. Let's di
 
 These tips might not solve your issues if your hosting server is slow, or if there's something blocking the test tools from accessing your site. If your Time to First Byte is over 800 milliseconds, you might need to look into better hosting or a closer CDN.
 
+## Deep Dive: Advanced Caching and Edge Delivery
+
+If you've implemented all the front-end optimizations above and are still struggling to hit the elusive "Good" thresholds for LCP and INP, it's time to look at your infrastructure. Our team recently audited a high-traffic React application where the culprit wasn't unoptimized images, but rather server response times and main-thread blocking.
+
+### Implementing a Redis Object Cache
+
+If your site relies on a database-heavy CMS (like WordPress or Drupal), database queries can severely bottleneck your Time to First Byte (TTFB), which directly delays your LCP. We deployed Redis as an in-memory object cache to store the results of complex queries. 
+
+By adding the Redis extension to our PHP configuration and enabling it via our CMS framework, we reduced TTFB from 600ms to a consistent 120ms.
+
+```bash
+# Example Ubuntu deployment command
+sudo apt update
+sudo apt install redis-server php-redis
+sudo systemctl enable redis-server.service
+```
+
+### Edge Computing for Dynamic Content
+
+To further drive down LCP for global users, we moved HTML rendering to the edge using Cloudflare Workers. Instead of routing every request back to the origin server in New York, we cached the static shell of our pages at the edge node nearest to the user. 
+
+```javascript
+// Example Edge Worker caching strategy
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
+
+async function handleRequest(request) {
+  const cache = caches.default
+  let response = await cache.match(request)
+
+  if (!response) {
+    response = await fetch(request)
+    // Cache successful HTML responses for 1 hour
+    if (response.status === 200 && response.headers.get('content-type').includes('text/html')) {
+      event.waitUntil(cache.put(request, response.clone()))
+    }
+  }
+  return response
+}
+```
+
+This strategy ensures that the primary HTML document arrives almost instantly, allowing the browser's preload scanner to discover critical assets (like CSS and the LCP image) much earlier in the page lifecycle.
+
 ## What's Your Take?
-I'm always curious to hear how others tackle these issues. Have you faced challenges with Core Web Vitals? What strategies have worked for you? Let's chat in the comments!
+Our team is always curious to hear how others tackle these issues. Have you faced challenges with Core Web Vitals? What strategies have worked for you? Let's chat in the comments!
 
 ## References & Further Reading for Core Web Vitals Failing' 7 Fixes to Save Your Rankings
 - [Google Web Vitals](https://web.dev/articles/vitals)

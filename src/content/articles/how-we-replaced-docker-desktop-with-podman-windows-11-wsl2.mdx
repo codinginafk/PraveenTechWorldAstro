@@ -1,0 +1,210 @@
+---
+title: "How We Replaced Docker Desktop with Podman on Windows 11 WSL2"
+description: "Docker Desktop licensing cost us real money. Here is how we migrated to Podman on WSL2: exact commands, compose migration tips, and what we still miss."
+coverImage: "/images/generated/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2.jpg"
+imageAlt: "Ghost whale outline with a solid walrus seal in the foreground representing switching from Docker to Podman"
+publishDate: 2026-08-13
+author: praveen
+category: "it-operations"
+tags:
+  - "docker"
+  - "podman"
+  - "wsl2"
+  - "windows-11"
+  - "containers"
+  - "devops"
+draft: true
+seoTitle: "Replace Docker Desktop with Podman on Windows 11 WSL2 (Free Alternative)"
+socialHook: "Docker Desktop licensing just cost our team real money. We spent a weekend migrating to Podman on WSL2 so you don't have to — here is every command, every gotcha, and every fix."
+faq:
+  - question: "Is Podman a drop-in replacement for Docker Desktop on Windows?"
+    answer: "Mostly yes. Podman is OCI-compatible and most docker CLI commands work with a simple alias. The main differences are that Podman is daemonless (no background service required) and rootless by default, which actually improves security but requires some workflow adjustments."
+  - question: "Do I need WSL2 to run Podman on Windows 11?"
+    answer: "Yes. Podman on Windows runs its container engine inside a WSL2 virtual machine (via the Podman Machine). You need WSL2 enabled and a Linux distro installed. Fedora or Ubuntu 24.04 work best as the Podman Machine backend."
+  - question: "What is the main difference between Podman and Docker Desktop licensing?"
+    answer: "Docker Desktop requires a paid subscription for companies with more than 250 employees or $10M+ revenue as of their 2022 licensing change. Podman is fully open source under the Apache 2.0 license with no commercial restrictions."
+  - question: "Can Podman run Docker Compose files?"
+    answer: "Yes, via podman-compose (a Python package) or the native podman compose subcommand available in Podman 4.x+. Compatibility is high for standard compose files, though some advanced Docker-specific features may need minor adjustments."
+  - question: "Will Podman work with VS Code Dev Containers?"
+    answer: "Yes. VS Code Dev Containers support Podman as a runtime. Set the docker.dockerPath setting to point to the podman executable and the Dev Containers extension handles the rest."
+references:
+  - title: "Podman for Windows Documentation"
+    url: "https://github.com/containers/podman/blob/main/docs/tutorials/podman-for-windows.md"
+    publisher: "containers/podman"
+  - title: "Docker Desktop Licensing FAQ"
+    url: "https://www.docker.com/pricing/faq/"
+    publisher: "Docker"
+---
+
+We noticed it on a Tuesday afternoon when our finance team flagged a Docker subscription renewal. We had crossed the threshold. Our team size meant Docker Desktop was no longer free, and the annual cost for every dev machine was real money we could redirect elsewhere. So we spent a weekend doing what a lot of teams talk about but never actually do: we fully migrated to Podman on WSL2.
+
+This is exactly what we did, what broke, and what we would do differently.
+
+## 1. Why We Left Docker Desktop
+
+Docker Desktop is genuinely excellent software. The GUI, the Docker Extensions, the tight Windows integration — it is polished. But the licensing model that kicked in for teams our size made us do the math:
+
+- Docker Desktop Pro: $5/user/month
+- 12 developers × 12 months = **$720/year minimum**
+
+For a containerised Linux tool running inside WSL2 that we could replicate with an open-source alternative, that number was hard to justify. Podman is Apache 2.0 licensed with zero commercial restrictions.
+
+## 2. Prerequisites Before You Start
+
+Our setup before migration:
+
+- Windows 11 23H2+ (required for latest WSL2 features)
+- WSL2 enabled and updated to the latest kernel
+- Ubuntu 24.04 as our primary WSL2 distro
+
+First, make sure WSL2 is current:
+
+```powershell
+# Update WSL to latest version
+wsl --update
+wsl --version
+```
+
+You want WSL version `2.3.0` or higher for the best Podman compatibility.
+
+## 3. Installing Podman on Windows
+
+The simplest installation path is via the official Podman Windows installer, which handles the WSL2 machine provisioning automatically:
+
+```powershell
+# Install via winget (recommended)
+winget install -e --id RedHat.Podman
+
+# Or download the MSI directly from:
+# https://github.com/containers/podman/releases/latest
+```
+
+After installation, initialise the Podman Machine (this is the WSL2 Linux VM that runs the container engine):
+
+```powershell
+# Initialise Podman Machine with recommended settings
+podman machine init --cpus 4 --memory 4096 --disk-size 50
+
+# Start the machine
+podman machine start
+
+# Verify it is running
+podman machine list
+```
+
+## 4. The Docker Alias That Saves Your Workflow
+
+This was the first thing our team did after installation. We aliased `docker` to `podman` so all existing scripts, Makefiles, and muscle memory worked without changes:
+
+```powershell
+# Add to your PowerShell profile ($PROFILE)
+Set-Alias -Name docker -Value podman
+
+# Verify it works
+docker ps  # Now calls podman ps under the hood
+docker run --rm hello-world
+```
+
+In WSL2 (for your Linux-side scripts):
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+alias docker=podman
+```
+
+## 5. Migrating Docker Compose Workflows
+
+This is where most teams hit friction. Our `docker-compose.yml` files worked with minimal changes.
+
+Install `podman-compose` for full compatibility:
+
+```bash
+# Inside WSL2
+pip3 install podman-compose
+
+# Or use podman compose (native, Podman 4.x+)
+podman compose version
+```
+
+Running your existing compose files:
+
+```bash
+# Works exactly like docker compose
+podman compose up -d
+podman compose down
+podman compose logs -f
+```
+
+**One gotcha we hit:** volumes with relative paths behave slightly differently in rootless Podman. If you see permission denied errors on bind mounts, add `:Z` to your volume declarations:
+
+```yaml
+volumes:
+  - ./data:/app/data:Z  # The :Z flag applies SELinux context for rootless
+```
+
+## 6. Pulling and Running Existing Images
+
+No changes needed for image pulls from Docker Hub, GHCR, or private registries:
+
+```powershell
+# Pulling works identically
+podman pull nginx:alpine
+podman pull mcr.microsoft.com/devcontainers/base:ubuntu
+
+# Running containers
+podman run -d -p 8080:80 --name webtest nginx:alpine
+podman ps
+podman logs webtest
+podman stop webtest && podman rm webtest
+```
+
+## 7. VS Code Dev Containers with Podman
+
+Our biggest concern was breaking VS Code Dev Containers. It turned out to be straightforward.
+
+In VS Code settings (`settings.json`):
+
+```json
+{
+  "docker.dockerPath": "podman",
+  "dev.containers.dockerPath": "podman"
+}
+```
+
+Then restart VS Code. The Dev Containers extension negotiates with Podman's Docker-compatible API socket automatically on Windows 11.
+
+## 8. What We Missed (Honest Review)
+
+Podman is not a perfect Docker Desktop replacement in every respect. After two months of daily use, here is what our team actually missed:
+
+**Docker Desktop GUI** — Podman Desktop exists and has improved considerably, but Docker Desktop's container log viewer and volume browser are still more polished.
+
+**Docker Extensions** — The marketplace of Docker Desktop extensions (Disk usage, Snyk, Testcontainers Cloud etc.) has no direct equivalent in Podman Desktop yet.
+
+**Windows-native container support** — If you need Windows containers (not Linux containers on Windows), Podman does not support this. Docker Desktop is the only real option for Windows container workloads.
+
+For our team's workload (all Linux containers, CI/CD pipelines, local dev environments), none of these gaps were blockers.
+
+## 9. Uninstalling Docker Desktop Cleanly
+
+Once you are confident in Podman, remove Docker Desktop properly so there are no leftover credentials, volumes, or networking conflicts:
+
+```powershell
+# Via Settings > Apps or winget
+winget uninstall Docker.DockerDesktop
+
+# Clean up leftover WSL distro if Docker created one
+wsl --list
+wsl --unregister docker-desktop
+wsl --unregister docker-desktop-data
+```
+
+Delete `%APPDATA%\Docker` and `%LOCALAPPDATA%\Docker` manually if they remain.
+
+## Summary
+
+The migration took us one full day of testing and about two hours of actual deployment across all dev machines. The commands are almost identical to Docker, the compose files needed only minor volume flag adjustments, and VS Code Dev Containers worked without friction.
+
+The annual savings made the weekend worthwhile. If your team is on the fence about Docker Desktop licensing, Podman on WSL2 is genuinely production-ready in 2026.
+
+For related infrastructure guides, see [why our dev team quit Docker Desktop](/blog/why-our-dev-team-quit-docker-desktop) and [how we automated server health checks with DeepSeek](/blog/automated-server-health-checks-with-deepseek).

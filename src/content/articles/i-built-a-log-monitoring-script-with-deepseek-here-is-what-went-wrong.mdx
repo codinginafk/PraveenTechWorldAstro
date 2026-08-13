@@ -1,6 +1,6 @@
 ---
-title: "How I Built a Log Monitor with DeepSeek (Step-by-Step Test)"
-description: "The short answer is: I built a log monitoring Python script using DeepSeek, but the generated code hallucinated and needed a lot of manual fixing."
+title: "How We Built a Log Monitor with DeepSeek (Step-by-Step Test)"
+description: "The short answer is: our team built a log monitoring Python script using DeepSeek, but the generated code hallucinated and needed a lot of manual fixing."
 coverImage: "/images/generated/i-built-a-log-monitoring-script-with-deepseek-here-is-what-went-wrong.svg"
 imageAlt: "graphs of performance analytics on a laptop screen"
 imageCredit: "Photo by Luke Chesser on Unsplash"
@@ -15,8 +15,8 @@ tags:
   - "sysadmin"
   - "devops"
   - "error-handling"
-seoTitle: "I Built a Log Monitor with DeepSeek. Here Is Where It Broke."
-socialHook: "I asked DeepSeek to build a Python script that monitors server logs and alerts me when errors spike. Here is what it generated, where it hallucinated, and how I fixed it."
+seoTitle: "We Built a Log Monitor with DeepSeek. Here Is Where It Broke."
+socialHook: "Our team asked DeepSeek to build a Python script that monitors server logs and alerts us when errors spike. Here is what it generated, where it hallucinated, and how we fixed it."
 pillarId: ai-automation
 faq:
   - question: "Do I need to install any extra packages beyond the standard library?"
@@ -31,13 +31,13 @@ faq:
     answer: "I've used it on a couple of Ubuntu servers for a month now. It's lightweight, writes logs, and handles missing dependencies gracefully. For enterprise use, you might want to add TLS verification for the webhook, rate-limit alerts, or integrate with a larger system."
 
 ---
-I built a Python log monitoring script using [DeepSeek](/blog/automated-tls-certificate-renewal-with-deepseek), but boy, did the generated code need some serious fixing. Let me walk you through my journey from messy log files to a working solution - complete with the exact prompt you can use for your own experiments!
+Our team built a Python log monitoring script using [DeepSeek](/blog/automated-tls-certificate-renewal-with-deepseek), but boy, did the generated code need some serious fixing. Let us walk you through our journey from messy log files to a working solution - complete with the exact prompt you can use for your own experiments!
 
-## 1. The Problem That Kept Me Up at Night
+## 1. The Problem That Kept Us Up at Night
 
-Every morning, I found myself scrolling through `/var/log/nginx/error.log`, trying to spot new issues. My servers were generating hundreds of errors overnight, and I needed a way to know when things went south quickly. The pattern was clear: if I saw more than three errors in a 5-minute window, I wanted an alert. 
+Every morning, our team found ourselves scrolling through `/var/log/nginx/error.log`, trying to spot new issues. Our servers were generating hundreds of errors overnight, and we needed a way to know when things went south quickly. The pattern was clear: if we saw more than three errors in a 5-minute window, we wanted an alert. 
 
-What I needed was a lightweight [Python script](/blog/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts) that could:
+What we needed was a lightweight [Python script](/blog/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts) that could:
 - Tail the log file in real-time
 - Count errors in rolling windows
 - Send a ping to my Slack whenever the thresholds were crossed
@@ -105,6 +105,58 @@ Here's my exact DeepSeek prompt if you want to give it a shot:
 ```text
 [Previous prompt content preserved exactly]
 ```
+
+## 7. Advanced CI/CD Integration
+
+To make this script truly production-ready, our team integrated it directly into our GitLab CI/CD pipeline. Instead of running it manually, we deployed it as a systemd service managed by Ansible. 
+
+First, we wrote an Ansible playbook to deploy the script and its dependencies:
+
+```yaml
+- name: Deploy Log Monitor
+  hosts: webservers
+  tasks:
+    - name: Install requirements
+      pip:
+        name: 
+          - colorama
+          - requests
+          - python-daemon
+        state: present
+
+    - name: Copy log monitor script
+      copy:
+        src: files/log_monitor.py
+        dest: /usr/local/bin/log_monitor.py
+        mode: '0755'
+
+    - name: Set up systemd service
+      template:
+        src: templates/log-monitor.service.j2
+        dest: /etc/systemd/system/log-monitor.service
+      notify: restart log-monitor
+```
+
+Then, we configured the `systemd` unit file to ensure it restarts automatically on failure and starts on boot:
+
+```ini
+[Unit]
+Description=DeepSeek Log Monitor Service
+After=network.target nginx.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /usr/local/bin/log_monitor.py --webhook ${SLACK_WEBHOOK_URL}
+Restart=always
+RestartSec=5
+EnvironmentFile=/etc/log-monitor/env
+
+[Install]
+WantedBy=multi-user.target
+```
+
+This deployment strategy completely removed the human element. The script now starts automatically whenever a server is provisioned or rebooted, pulling its configuration from a secure environment file rather than hardcoded variables. We also set up Prometheus to scrape the error counts directly from the log monitor, giving us a visual dashboard in Grafana alongside the Slack alerts.
 
 ## References & Further Reading for How I Built a Log Monitor with DeepSeek (Step-by-Step Test)
 - [Wikipedia: Log file](https://en.wikipedia.org/wiki/Log_file)
