@@ -1,8 +1,8 @@
 ---
-title: "PC Keeps Crashing? How to Tell If RAM or Driver (5 IT Fixes)"
+title: "PC Keeps Crashing? How to Diagnose Bad RAM vs. Driver Crashes"
 description: "Is your PC crashing randomly? Learn how to diagnose nvlddmkm.sys Event ID 13/14, BSOD 0x101/0x124, RAM errors, and driver corruptions like a sysadmin."
-coverImage: "/images/generated/pc-keeps-crashing-how-to-tell-if-it-s-a-ram-issue-or-a-bad-driver.jpg"
-imageAlt: "Technical schematic diagram of RAM memory diagnostic workflows, nvlddmkm.sys TDR GPU driver crashes, and BSOD minidump analysis on a wooden desk"
+coverImage: "/images/articles/nvlddmkm-gpu-driver-crash-fix.jpg"
+imageAlt: "Minimal flat illustration of a computer hardware RAM module and GPU driver diagnostic node"
 publishDate: "2026-07-14"
 author: "praveen"
 category: "hardware-troubleshooting"
@@ -12,19 +12,19 @@ tags:
   - "troubleshooting"
   - "ram"
   - "bsod"
-seoTitle: "PC Keeps Crashing: RAM vs Driver Diagnostic Guide"
-socialHook: "Our team has lost count of how many times a client swore their RAM was dead, only for us to find a nvlddmkm.sys TDR timeout or a bad audio driver. Here is the exact bench playbook."
+seoTitle: "PC Keeps Crashing? How to Diagnose Bad RAM vs. Driver Crashes"
+socialHook: "Our team has lost count of how many times a user swore their RAM was dead, only for us to find a nvlddmkm.sys TDR timeout or bad driver. Here is our exact diagnostic playbook."
 faq:
   - question: "What is the difference between nvlddmkm Event ID 13 and Event ID 14?"
-    answer: "Event ID 13 indicates a general NVIDIA TDR (Timeout Detection and Recovery) driver crash where the GPU driver stopped responding and restarted. Event ID 14 indicates a severe GPU clock watchdog timeout or bus reset, often caused by unstable overclocks, PCIe bus errors, or power starvation."
+    answer: "Event ID 13 indicates a general NVIDIA TDR driver crash where the GPU driver stopped responding and restarted. Event ID 14 indicates a severe GPU clock watchdog timeout or bus reset, often caused by unstable overclocks or power starvation."
   - question: "What causes a CLOCK_WATCHDOG_TIMEOUT (0x101) blue screen?"
-    answer: "CLOCK_WATCHDOG_TIMEOUT (0x101) occurs when a logical CPU core stops handling clock interrupts, deadlocking the system. It is almost always caused by CPU voltage instability, aggressive overclocks/undervolts, thermal throttling, or outdated BIOS microcode."
+    answer: "CLOCK_WATCHDOG_TIMEOUT (0x101) occurs when a logical CPU core stops handling clock interrupts. It is almost always caused by CPU voltage instability, aggressive overclocks/undervolts, thermal throttling, or outdated BIOS microcode."
   - question: "What is WHEA_UNCORRECTABLE_ERROR 0x124?"
-    answer: "WHEA_UNCORRECTABLE_ERROR (0x124) is a hardware architecture error generated directly by the CPU or motherboard chipset. It indicates physical hardware instability such as CPU cache parity failure, PCIe bus instability, or inadequate VCORE voltage."
-  - question: "Why does ntoskrnl.exe show up as the crashing module in Minidumps?"
-    answer: "ntoskrnl.exe is the Windows Operating System Kernel executable. When a bad driver or memory corruption causes a system crash, the exception handler inside ntoskrnl.exe triggers the BSOD screen, making it appear as the faulting module even though another driver or bad RAM caused the underlying corruption."
-  - question: "What is Thaiphoon Burner used for in RAM troubleshooting?"
-    answer: "Thaiphoon Burner is a specialized software utility that reads the low-level SPD (Serial Presence Detect) EEPROM chip on RAM sticks to identify the exact DRAM manufacturer (Samsung, SK Hynix, Micron) and die revision (e.g. B-die, A-die)."
+    answer: "WHEA_UNCORRECTABLE_ERROR (0x124) is a hardware architecture error generated directly by the CPU or motherboard. It indicates physical hardware instability such as CPU cache parity failure, PCIe bus instability, or inadequate VCORE voltage."
+  - question: "Why does ntoskrnl.exe show up as the faulting module in Minidumps?"
+    answer: "ntoskrnl.exe is the Windows Operating System Kernel executable. When a bad driver or memory corruption causes a crash, the exception handler inside ntoskrnl.exe triggers the BSOD screen, making it appear as the faulting module."
+  - question: "How do I parse BSOD minidump logs using PowerShell?"
+    answer: "Open PowerShell as Administrator and run: Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='Microsoft-Windows-WER-SystemErrorReporting'} | Select-Object -First 5 | Format-List Message."
 references:
   - title: "Microsoft Support: BugCheck Code Reference"
     url: "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/bug-check-code-reference2"
@@ -34,20 +34,18 @@ references:
     publisher: "Microsoft Learn"
 ---
 
-Our team has lost count of how many times a client has sworn their RAM was dead, only for us to find an NVIDIA `nvlddmkm.sys` driver timeout or a buggy audio driver causing `DRIVER_IRQL_NOT_LESS_OR_EQUAL`. 
+Our team has lost count of how many times a client swore their RAM was dead, only for us to find an NVIDIA `nvlddmkm.sys` driver timeout or a buggy audio driver causing `DRIVER_IRQL_NOT_LESS_OR_EQUAL`.
 
 The symptoms look identical on the surface: sudden reboots, freezes, or the Blue Screen of Death (BSOD). But the fix? Worlds apart. One costs $0 and a driver update; the other requires a DIMM swap and an RMA.
 
-Here is the exact workflow our team uses on the workbench to separate silicon failure from code rot.
+Here is the exact diagnostic workflow our team uses on the workbench to separate silicon failure from code rot.
 
 ---
 
-## 1. The Cheat Sheet: RAM vs. Driver Symptoms
-
-Don't guess. Compare what you're seeing against this decision matrix:
+## 📊 Diagnostic Matrix: RAM vs. Driver Symptoms
 
 | Symptom / Behavior | Likely Bad RAM / Hardware | Likely Bad Driver / Software |
-| :--- | :--- | :--- |
+|:---|:---|:---|
 | **BSOD Error Codes** | `MEMORY_MANAGEMENT` (0x1A), `PAGE_FAULT_IN_NONPAGED_AREA` (0x50), random varying codes | `SYSTEM_THREAD_EXCEPTION_NOT_HANDLED` (0x3B), `DRIVER_IRQL_NOT_LESS_OR_EQUAL` (0xD1), `KMODE_EXCEPTION_NOT_HANDLED` (0x1E) |
 | **Crash Timing** | Random. Idle, light browsing, heavy load—no pattern. | Deterministic. Happens *only* when gaming, rendering, waking from sleep, or plugging in USB. |
 | **Application Behavior** | Silent data corruption (zip CRC errors, Chrome "Aw Snap" pages constantly). | Specific app crashes (Explorer.exe restarts, game crashes to desktop, GPU driver resets). |
@@ -57,17 +55,31 @@ Don't guess. Compare what you're seeing against this decision matrix:
 
 ---
 
-## 2. Phase 1: Zero-Cost Physical Checks
+## ⚡ Fast PowerShell Command: Extract BSOD Minidump Logs
+
+Skip searching through Event Viewer manually. Run this PowerShell command to parse the last 5 System crash dumps:
+
+```powershell
+# Parse recent Blue Screen (WER) crash events in PowerShell (Admin)
+Get-WinEvent -FilterHashtable @{LogName='System'; ProviderName='Microsoft-Windows-WER-SystemErrorReporting'} -ErrorAction SilentlyContinue | 
+Select-Object TimeCreated, Message | Format-List
+```
+
+Look at the `Message` payload for specific `.sys` filenames (e.g., `nvlddmkm.sys`, `rtwlane.sys`, `nfk.sys`).
+
+---
+
+## Step 1: Zero-Cost Physical Checks
 
 Before running software tools, pull the PSU power cord and hold the power button for 15 seconds to drain residual charge:
 
-1. **Reseat the DIMMs:** Pull them out. Clean gold contacts gently with a pencil eraser and 99% Isopropyl Alcohol (IPA). Reseat firmly into primary slots (A2/B2) until retention clips click.
+1. **Reseat the DIMMs:** Pull them out. Clean gold contacts gently with 99% Isopropyl Alcohol (IPA). Reseat firmly into primary slots (A2/B2) until retention clips click.
 2. **Test Single Sticks:** If you have dual-channel RAM (2x16GB), test **one stick at a time in slot A2**. This isolates a bad stick vs. a bad slot vs. the Integrated Memory Controller (IMC).
 3. **Disable XMP / EXPO:** Reset BIOS to *Optimized Defaults* running JEDEC base speeds (4800/5600 MT/s). If crashes stop, your CPU memory controller or RAM kit cannot sustain rated overclock profiles.
 
 ---
 
-## 3. Phase 2: Software Triage & Driver Verifier
+## Step 2: Software Triage & Driver Verifier
 
 ### Windows Memory Diagnostic vs. MemTest86
 Run `mdsched.exe` for a quick 5-minute sanity check. *Note:* A "Pass" here does not guarantee RAM stability. If Windows Memory Diagnostic passes, run **MemTest86 (Free Edition)** from a bootable USB for 4 complete passes.
@@ -76,13 +88,15 @@ Run `mdsched.exe` for a quick 5-minute sanity check. *Note:* A "Pass" here does 
 To force buggy drivers to reveal themselves, open Administrator Command Prompt:
 
 ```cmd
+:: Enable Windows Driver Verifier
 verifier /standard /all
 ```
+
 Reboot your PC. If a driver is corrupt, Windows will immediately BSOD on boot and display the exact faulting `.sys` file name. (If you enter a boot loop, boot into Safe Mode and run `verifier /reset`).
 
 ---
 
-## 4. Fixing nvlddmkm.sys Crashes: Event ID 13 vs. 14 Explained
+## Step 3: Fixing nvlddmkm.sys Crashes (Event ID 13 vs. 14)
 
 One of the most common crash signatures in Event Viewer is the NVIDIA display driver crash (`nvlddmkm.sys`). Windows uses **Timeout Detection and Recovery (TDR)** to reset the GPU driver if it stops responding within 2 seconds.
 
@@ -100,14 +114,9 @@ Event ID 13 (General TDR Timeout)                                      Event ID 
 * **Event ID 13 (`nvlddmkm`):** General TDR driver timeout. The GPU engine hung in a rendering loop and Windows successfully restarted the driver. This is usually software or driver corruption.
 * **Event ID 14 (`nvlddmkm`):** Severe Clock Watchdog GPU timeout or PCIe bus reset. The GPU hardware stopped communicating with the PCIe bus entirely. This points to unstable GPU overclocks/undervolts, PCIe riser cable degradation, or power supply rail droop.
 
-### Troubleshooting Sequence for nvlddmkm.sys:
-1. **DDU Clean Reinstall:** Download **Display Driver Uninstaller (DDU)**. Boot into Windows Safe Mode (disconnect internet), wipe all NVIDIA driver stores, and install the latest WHQL driver release.
-2. **PCIe Power Cabling:** Ensure your GPU uses **separate 8-pin PCIe cables** directly from the PSU rather than daisy-chained pigtails.
-3. **Remove Overclocks & Undervolts:** Reset MSI Afterburner profiles back to stock voltage curves.
-
 ---
 
-## 5. What CLOCK_WATCHDOG_TIMEOUT (0x101) and WHEA_UNCORRECTABLE_ERROR (0x124) Actually Mean
+## Step 4: What CLOCK_WATCHDOG_TIMEOUT (0x101) & WHEA (0x124) Mean
 
 If your Minidump reports `0x101` or `0x124`, **stop testing RAM**. These BSOD codes represent CPU and motherboard silicon instability:
 
@@ -124,18 +133,14 @@ If your Minidump reports `0x101` or `0x124`, **stop testing RAM**. These BSOD co
 
 ---
 
-## 6. Key Diagnostic Terms & Tools Explained
-
-When analyzing system crashes, you will frequently encounter these terms:
-
-* **`ntoskrnl.exe`:** Windows NT Operating System Kernel. It appears as the faulting module in over 90% of Minidumps because crash trap routines execute inside the kernel space. It is rarely the actual cause—look past `ntoskrnl.exe` to find the underlying driver or memory fault.
-* **Thaiphoon Burner:** A specialized utility that reads the low-level SPD EEPROM chip on memory modules, revealing the exact DRAM manufacturer (Samsung B-die, SK Hynix A-die, Micron) and die revision.
-* **IMC (Integrated Memory Controller):** The memory controller silicon embedded inside modern CPUs (Ryzen / Intel Core). If RAM passes individually but fails dual-channel XMP, the CPU IMC is failing to sustain rated voltage.
-
----
-
-## 7. Summary: The Decision Matrix
+## Summary & Related Guides
 
 1. **Crashes are random, MemTest86 fails** ──► **Hardware Issue (RAM / Slot / IMC).**
 2. **Crashes happen only in specific games, `nvlddmkm` Event ID 13** ──► **GPU Driver Issue.** Run DDU in Safe Mode.
 3. **Crashes trigger `0x101` or `0x124`** ──► **CPU / Voltage / Thermal Issue.** Update BIOS microcode and check CPU cooler torque.
+
+For related PC diagnostic and troubleshooting guides, check out:
+- [Fix nvlddmkm.sys Event ID 13 GPU Driver Crashes](/blog/how-to-fix-nvlddmkm-sys-event-id-13-gpu-driver-crashes-windows-11)
+- [How to Tell If Your RAM Is Bad (Step-by-Step Diagnostics)](/blog/how-to-tell-if-your-ram-is-bad-a-step-by-step-pc-diagnostics-guide)
+- [Will Reinstalling Windows Fix Blue Screen Errors?](/blog/will-reinstalling-windows-fix-blue-screen-errors)
+- [Does Resetting Windows Remove Viruses? (Tested)](/blog/does-resetting-windows-remove-viruses-completely)
