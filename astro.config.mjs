@@ -34,7 +34,7 @@ export default defineConfig({
     "/blog/why-you-dont-have-gemini-spark-mode-yet-access-guide": "/blog/google-gemini-spark-mode-features-guide",
     "/blog/understanding-sitemap-indexing-fix-crawling-issues": "/blog/how-to-fix-sitemap-errors-in-google-search-console",
     "/blog/sitemap-urls-blocked-by-robotstxt-clean-and-resubmit": "/blog/how-to-fix-sitemap-errors-in-google-search-console",
-    "/blog/sitemap-submitted-but-pages-undiscovered-robotstxt-check": "/blog/how-to-fix-sitemap-errors-in-google-search-console",
+    "/blog/sitemap-submitted-but-pages-undiscovered-robotstxt-check": "/blog/how-to-fix-google-indexing-errors-crawled-not-indexed",
     "/blog/how-to-use-google-analytics-4-to-improve-your-content-strategy": "/blog/ga4-not-tracking-visitors-12-troubleshooting-steps",
     "/blog/ga4-traffic-looks-wrong-check-consent-mode-and-filters": "/blog/ga4-not-tracking-visitors-12-troubleshooting-steps",
     "/blog/ga4-shows-realtime-users-but-reports-blank-fix-processing": "/blog/ga4-not-tracking-visitors-12-troubleshooting-steps",
