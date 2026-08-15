@@ -27,6 +27,9 @@ export default defineConfig({
   site: "https://www.praveentechworld.com",
   trailingSlash: "never",
   redirects: {
+    "/services/bur-dubai": "/contact",
+    "/services/dubai": "/contact",
+    "/services/karama": "/contact",
     "/tag/Windows update": "/tag/windows-update",
     "/tag/GA4": "/tag/ga4",
     "/tag/open-source": "/tag/open-source",
@@ -345,6 +348,12 @@ export default defineConfig({
       filter: (page) =>
         !page.startsWith("https://www.praveentechworld.com/tag") &&
         !page.startsWith("https://www.praveentechworld.com/tags") &&
+        !page.startsWith("https://www.praveentechworld.com/category") &&
+        !page.startsWith("https://www.praveentechworld.com/categories") &&
+        !page.startsWith("https://www.praveentechworld.com/guides") &&
+        !page.startsWith("https://www.praveentechworld.com/guide") &&
+        !page.startsWith("https://www.praveentechworld.com/services") &&
+        !page.startsWith("https://www.praveentechworld.com/about") &&
         !page.startsWith("https://www.praveentechworld.com/contact") &&
         !page.startsWith("https://www.praveentechworld.com/privacy") &&
         !page.startsWith("https://www.praveentechworld.com/author") &&
