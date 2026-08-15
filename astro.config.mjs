@@ -67,13 +67,9 @@ export default defineConfig({
     "/blog/ga4-shows-realtime-users-but-standard-reports-stay-blank-fix-event-processing-an": "/blog/ga4-not-tracking-visitors-12-troubleshooting-steps",
     "/blog/chrome-removes-ai-privacy-wording-what-googles-on-device-data-claim-means-for-us": "/blog/chrome-removes-ai-privacy-wording-google-on-device-data",
     "/tags/tech/": "/tag/tech",
-    "/tags/tech": "/tag/tech",
     "/blog/post-8/": "/blog",
-    "/blog/post-8": "/blog",
     "/blog/post-5/": "/blog",
-    "/blog/post-5": "/blog",
     "/categories/youtube/": "/blog",
-    "/categories/youtube": "/blog",
     "/p/contact-us": "/contact",
     "/p/contact-us.html": "/contact",
     "/blog/website-speed-optimization-why-it-matters-for-seo-and-how-to-fix-it": "/blog/website-speed-upgrades-fix-crawling-delays-and-core-web-vitals",
@@ -97,8 +93,6 @@ export default defineConfig({
     "/tag/DATAPRIVACY": "/tag/dataprivacy",
     "/tag/HIGHEREDUCATION": "/tag/highereducation",
     "/tag/EDTECH": "/tag/edtech",
-    "/tag/STUDENTDATA": "/tag/studentdata",
-    "/tag/PRIVACYSECURITY": "/tag/privacysecurity",
     "/tag/WEBSITE": "/tag/website",
     "/tag/TUTORIAL": "/tag/tutorial",
     "/tag/MICROSOFT-AI": "/tag/microsoft-ai",
@@ -138,9 +132,7 @@ export default defineConfig({
     "/tag/LOGO-GENERATOR": "/tag/logo-generator",
     "/tag/BRANDING": "/tag/branding",
     "/tag/VIDEO-GENERATION": "/tag/video-generation",
-    "/tag/OPEN-SOURCE": "/tag/open-source",
     "/tag/FREE-SOFTWARE": "/tag/free-software",
-    "/tag/PRODUCTIVITY": "/tag/productivity",
     "/tag/TOOLS": "/tag/tools",
     "/tag/ALTERNATIVES": "/tag/alternatives",
     "/tag/MONEY-SAVING": "/tag/money-saving",
@@ -159,7 +151,6 @@ export default defineConfig({
     "/tag/PLAYWRIGHT": "/tag/playwright",
     "/tag/LLM": "/tag/llm",
     "/tag/CHATGPT": "/tag/chatgpt",
-    "/tag/EXCEL": "/tag/excel",
     "/tag/FINANCIAL-DATA": "/tag/financial-data",
     "/tag/OFFICE-TIPS": "/tag/office-tips",
     "/tag/AI-PRIVACY": "/tag/ai-privacy",
@@ -236,7 +227,6 @@ export default defineConfig({
     "/tag/SEO-BASICS": "/tag/seo-basics",
     "/tag/FREE-TOOLS": "/tag/free-tools",
     "/tag/WORKFLOW": "/tag/workflow",
-    "/tag/ZAPIER": "/tag/zapier",
     "/tag/IFTTT": "/tag/ifttt",
     "/tag/WEBSITE-BUILDING": "/tag/website-building",
     "/tag/BEGINNER-GUIDE": "/tag/beginner-guide",
@@ -267,7 +257,6 @@ export default defineConfig({
     "/tag/CONTENTSTRATEGY": "/tag/contentstrategy",
     "/tag/EMAIL": "/tag/email",
     "/tag/WRITING": "/tag/writing",
-    "/tag/GUIDE": "/tag/guide",
     "/tag/AI-WORKFLOWS": "/tag/ai-workflows",
     "/tag/CONTENT-STRATEGY": "/tag/content-strategy",
     "/tag/ANALYTICS": "/tag/analytics",
@@ -281,7 +270,6 @@ export default defineConfig({
     "/tag/EDUCATION-TECHNOLOGY": "/tag/education-technology",
     "/tag/AI-FOR-STUDENTS": "/tag/ai-for-students",
     "/tag/TEACHER-RESOURCES": "/tag/teacher-resources",
-    "/tag/COPILOT": "/tag/copilot",
     "/tag/NON-DEVELOPER": "/tag/non-developer",
     "/tag/DATABASE-AUDIT": "/tag/database-audit",
     "/tag/PROMPT-ENGINEERING": "/tag/prompt-engineering",
@@ -346,8 +334,8 @@ export default defineConfig({
     "/tag/SOFTWAREDISTRIBUTION": "/tag/softwaredistribution",
     "/tag/AUDIO-ISSUES": "/tag/audio-issues",
     "/tag/VOLUME-CONTROL": "/tag/volume-control",
-    "/tag/SOUND-PROBLEMS": "/tag/sound-problems"
-},
+    "/tag/SOUND-PROBLEMS": "/tag/sound-problems",
+  },
   build: {
     format: "directory",
   },
@@ -361,6 +349,8 @@ export default defineConfig({
         !page.startsWith("https://www.praveentechworld.com/privacy") &&
         !page.startsWith("https://www.praveentechworld.com/author") &&
         !page.startsWith("https://www.praveentechworld.com/demo") &&
+        !page.includes("best-free-vpn-services") &&
+        !page.includes("best-password-managers") &&
         !page.endsWith("/rss.xml") &&
         !page.endsWith("/rss") &&
         !page.endsWith("/portfolio"),
