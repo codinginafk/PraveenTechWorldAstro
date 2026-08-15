@@ -12,6 +12,8 @@ import AuthorBox from "@components/content/AuthorBox.astro";
 import SocialShare from "@components/content/SocialShare.astro";
 import ArticleCard from "@components/content/ArticleCard.astro";
 import References from "@components/content/References.astro";
+import DubaiWhatsAppCTA from "@components/blog/DubaiWhatsAppCTA.astro";
+import NewsletterLeadMagnet from "@components/blog/NewsletterLeadMagnet.astro";
 
 export async function getStaticPaths() {
   const articles = await getCollection("articles");
@@ -30,6 +32,7 @@ const author = await getEntry("authors", article.data.author);
 const readingTime = article.data.readingTime || calculateReadingTime(article.body || article.data.description);
 const articleUrl = buildCanonical("https://www.praveentechworld.com", `/blog/${article.id}`);
 const headings = extractHeadings(article.body || "");
+const isDubaiArticle = article.data.category === "business" || (article.data.tags && article.data.tags.some((t: string) => t.toLowerCase().includes("dubai") || t.toLowerCase().includes("uae")));
 
 const breadcrumbItems = [
   { name: "Home", url: "https://www.praveentechworld.com/" },
@@ -61,12 +64,14 @@ const howToData = howToSteps ? {
 ---
 
 <BaseLayout
+  noindex={article.data.noindex}
   seo={{
     title: article.data.seoTitle || article.data.title,
     description: article.data.seoDescription || article.data.description,
     canonical: article.data.canonical,
     ogImage: article.data.coverImage,
     ogType: "article",
+    noindex: article.data.noindex,
   }}
 >
   <!-- Reading progress bar -->
@@ -186,6 +191,12 @@ const howToData = howToSteps ? {
         <div class="prose max-w-none dark:prose-invert">
           <Content />
         </div>
+
+        {isDubaiArticle ? (
+          <DubaiWhatsAppCTA />
+        ) : (
+          <NewsletterLeadMagnet />
+        )}
 
         {article.data.faq && article.data.faq.length > 0 && (
           <div class="mt-12 border-t border-border dark:border-border-dark pt-8">
