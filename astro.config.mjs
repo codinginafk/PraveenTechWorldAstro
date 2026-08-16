@@ -358,8 +358,6 @@ export default defineConfig({
         !page.startsWith("https://www.praveentechworld.com/privacy") &&
         !page.startsWith("https://www.praveentechworld.com/author") &&
         !page.startsWith("https://www.praveentechworld.com/demo") &&
-        !page.includes("best-free-vpn-services") &&
-        !page.includes("best-password-managers") &&
         !page.endsWith("/rss.xml") &&
         !page.endsWith("/rss") &&
         !page.endsWith("/portfolio"),
