@@ -61,7 +61,7 @@ services:
     ports:
       - "3000:3000"
     command: npm run dev
-```
+```bash
 
 Next, ensure these environment variables are exported in your terminal session before launching the containers:
 
@@ -69,7 +69,7 @@ Next, ensure these environment variables are exported in your terminal session b
 export UID=$(id -u)
 export GID=$(id -g)
 docker-compose up
-```
+```bash
 
 By passing `user: "1000:1000"`, any file written by the node container is owned by your host user, eliminating write locks entirely.
 
@@ -87,16 +87,16 @@ To resolve this, my team configured WSL2 to preserve Linux permissions:
 2. Edit (or create) `/etc/wsl.conf`:
    ```bash
    sudo nano /etc/wsl.conf
-   ```
+   ```bash
 3. Add the following mount settings:
    ```ini
    [automount]
    options = "metadata,umask=22,fmask=11"
-   ```
+   ```bash
 4. Save the file, exit, and restart WSL2 from a PowerShell window:
    ```powershell
    wsl --shutdown
-   ```
+   ```bash
 
 The `metadata` flag forces WSL2 to save Linux-style file permissions in NTFS alternate data streams, allowing `chmod` and `chown` commands to work on Windows folders.
 
@@ -116,7 +116,7 @@ podman run -d \
   --userns=keep-id \
   -v /home/praveen/app:/app:Z \
   node:20-alpine
-```
+```bash
 
 The `--userns=keep-id` flag tells the engine to map your host user ID to the same numeric user ID inside the container namespace. Also, appending the `:Z` flag to the volume declaration automatically handles SELinux labeling on distributions like Fedora, CentOS, and Red Hat.
 
@@ -133,7 +133,7 @@ Use this workflow the next time a container throws a permission lockout:
 
 ## 9. docker exec -it <container_id> whoami
 
-## 10. ```
+## 10. ```bash
 
 ## 7. 🛠️ Fix 4: The Dockerfile Entrypoint Chown (For CI/CD Pipelines)
 
@@ -154,7 +154,7 @@ chown -R node:node /usr/src/app
 
 # Drop root privileges and execute the main command as the node user
 exec su-exec node "$@"
-```
+```bash
 
 Then, in your `Dockerfile`, ensure this script runs on startup:
 ```dockerfile
@@ -162,7 +162,7 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["npm", "start"]
-```
+```bash
 This guarantees that regardless of which host machine or CI runner mounts the volume, the internal container user will always adopt the correct permissions dynamically, completely eliminating `Permission Denied` errors across your entire engineering team.
 
 ## 8. SELinux Security Contexts (RHEL/Fedora Systems)

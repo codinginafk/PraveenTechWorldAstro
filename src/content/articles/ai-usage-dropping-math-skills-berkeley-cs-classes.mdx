@@ -90,7 +90,7 @@ Output a JSON array of subtasks. Each subtask must have:
 Max 8 subtasks. Output only valid JSON."""
   resp = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], temperature=0.1)
   return json.loads(resp.choices[0].message.content.strip().removeprefix("```json").removesuffix("```").strip())
-```
+```bash
 
 The planner gives back a structured plan where each subtask knows its dependencies and success verification methods.
 
@@ -107,7 +107,7 @@ Output only the code inside a ```python block."""
   code = code.split("```python")[1].split("```")[0] if "```python" in code else code
   result = subprocess.run(["python", "-c", code], capture_output=True, text=True, timeout=30)
   return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
-```
+```bash
 
 The executor runs in a subprocess (or Docker container for production), capturing all output and retrying on failure.
 
@@ -120,7 +120,7 @@ for subtask in subtasks:
   result = execute_subtask(subtask)
   db.execute("INSERT INTO subtask_results VALUES (', ', ', ', ', datetime('now'))", (subtask["id"], subtask["description"], result["stdout"], result["stderr"], result["returncode"]))
 db.commit()
-```
+```bash
 
 The database acts as the agent's memory, allowing any subtask to query previous results directly from the table.
 

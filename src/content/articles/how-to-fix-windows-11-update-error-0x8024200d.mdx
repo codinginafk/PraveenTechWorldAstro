@@ -40,7 +40,7 @@ When downloading cumulative updates or security patches in Windows 11, seeing th
 ```text
 Install error - 0x8024200d
 There were some problems installing updates, but we'll try again later.
-```
+```bash
 
 In the Windows Update API specification, `0x8024200d` translates to **`WU_E_UH_NEEDCHECKING`**. It means the update handler downloaded the package payload, but when the **Component-Based Servicing (CBS)** subsystem attempted to unpack and stage the files into the `C:\Windows\WinSxS` component store, hash verification failed due to archive corruption or locked payload fragments.
 
@@ -70,7 +70,7 @@ Open **PowerShell as Administrator** and execute:
 ```powershell
 # Search CBS.log for 0x8024200d and staging errors
 Get-Content -Path "C:\Windows\Logs\CBS\CBS.log" | Select-String -Pattern "0x8024200d", "Failed to stage", "CBS_E_" | Select-Object -Last 10
-```
+```bash
 
 The output will point directly to the failing update package (e.g., `Package_for_RollupFix~...` or `KB5089549`).
 
@@ -100,7 +100,7 @@ Start-Service -Name wuauserv
 Start-Service -Name trustedinstaller
 
 Write-Host "✅ Update buffers successfully reset and services restarted!" -ForegroundColor Green
-```
+```bash
 
 ---
 
@@ -119,7 +119,7 @@ dism.exe /Online /Cleanup-Image /RestoreHealth
 
 # 3. Run System File Checker to verify protected system DLLs
 sfc /scannow
-```
+```powershell
 
 *If `DISM /RestoreHealth` stalls or claims source files cannot be found, mount a clean Windows 11 ISO and run: `dism.exe /Online /Cleanup-Image /RestoreHealth /Source:WIM:D:\sources\install.wim:1 /LimitAccess` (replace `D:` with your mounted drive letter).*
 

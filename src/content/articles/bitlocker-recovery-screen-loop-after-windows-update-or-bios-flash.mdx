@@ -32,7 +32,7 @@ In this guide, we'll explain why firmware updates trip TPM security, provide the
 
 **BitLocker relies on Platform Configuration Registers (PCRs) inside your TPM 2.0 chip to verify system integrity before releasing encryption keys.**
 
-```
+```bash
 +-----------------------------------------------------------------------+
 |  Platform Configuration Registers (TPM 2.0 Chip)                      |
 |  - PCR 0: BIOS / UEFI Firmware Code Checksum                          |
@@ -50,7 +50,7 @@ In this guide, we'll explain why firmware updates trip TPM security, provide the
 +-----------------------------------------------------------------------+
 |  TPM Refuses to Auto-Release Key -> BitLocker Recovery Screen Loop    |
 +-----------------------------------------------------------------------+
-```
+```bash
 
 When you update your BIOS microcode or install a major Windows update that alters Secure Boot certificates (PCR 7), the checksum stored inside the TPM chip changes. On the next startup, BitLocker checks the physical hardware measurement against the expected PCR baseline.
 
@@ -67,7 +67,7 @@ Run this command in an elevated PowerShell terminal before initiating the update
 ```powershell
 # Run in Administrator PowerShell prior to BIOS/Firmware flash
 manage-bde -protectors -disable C: -RebootCount 1
-```
+```bash
 
 This command temporarily unbinds the TPM requirement for exactly **one reboot cycle**, allowing the BIOS update to finish and recalculate new PCR measurements automatically on startup.
 
@@ -101,7 +101,7 @@ In the Command Prompt terminal, verify your encrypted drive letter and unlock it
 ```cmd
 :: Command Prompt (WinRE) - Step 1: Unlock Drive C:
 manage-bde -unlock C: -RecoveryPassword "YOUR-48-DIGIT-RECOVERY-KEY-HERE"
-```
+```bash
 
 ### Step 3: Suspend BitLocker Protectors
 
@@ -110,7 +110,7 @@ Once the volume reports *The password successfully unlocked volume C:*, execute 
 ```cmd
 :: Command Prompt (WinRE) - Step 2: Suspend Protectors
 manage-bde -protectors -disable C:
-```
+```bash
 
 ### Step 4: Reboot and Re-seal the TPM Baseline
 
@@ -132,7 +132,7 @@ manage-bde -status C:
 
 For enterprise fleets, enforcing centralized vault backups prevents lost recovery keys during unexpected BitLocker triggers. On our dev environment, we mandate Active Directory & Azure AD auto-archiving.
 
-You can read our complete architecture breakdown on securing credentials and access controls in our guide to [enterprise password manager security](/blog/best-business-password-managers-enterprise-guide) and our walkthrough on [university data protection compliance](/blog/data-protection-for-universities-compliance-and-security-guide).
+You can read our complete architecture breakdown on securing credentials and access controls in our guide to [enterprise password manager security](/blog/best-password-managers-in-2026-security-features-and-pricing-compared) and our walkthrough on [university data protection compliance](/blog/data-protection-for-universities-compliance-and-security-guide).
 
 ---
 

@@ -96,7 +96,7 @@ while True:
         continue
 
     time.sleep(43000)
-```
+```bash
 
 ### Step 2: Store Tokens in Azure Key Vault
 When storing the token via Azure CLI, ensure it is properly escaped (quotes break easily):
@@ -105,7 +105,7 @@ az keyvault secret set \
   --vault-name <YourKeyVaultName> \
   --name DeepSeekToken \
   --value "$DEEPSEEK_TOKEN"
-```
+```bash
 
 ### Step 3: Configure Worker Environment Variables
 Your custom worker must read this token on startup:
@@ -114,7 +114,7 @@ export DEEPSEEK_TOKEN=$(az keyvault secret show \
   --vault-name <YourKeyVaultName> \
   --name DeepSeekToken \
   --query value -o tsv)
-```
+```bash
 
 ### Step 4: Worker Logging Settings
 Since DeepSeek doesn't log on its own, our Python worker utilized this logging config to prevent disk exhaustion:
@@ -125,7 +125,7 @@ logging:
   rotation:
     max_bytes: 10485760
     backup_count: 5
-```
+```bash
 
 ### Step 5: Start and Monitor the Custom Service
 We wrapped our Python orchestrator in a systemd service called `deepseek-worker`:
@@ -133,7 +133,7 @@ We wrapped our Python orchestrator in a systemd service called `deepseek-worker`
 sudo systemctl start deepseek-worker
 sudo systemctl status deepseek-worker
 tail -f /var/log/deepseek-worker.log
-```
+```bash
 
 ---
 ## 5. Troubleshooting the Unsupervised Loop
@@ -180,7 +180,7 @@ def process_task(task):
     except Exception as e:
         task_counter.labels(status='failure').inc()
         raise
-```
+```bash
 
 With Grafana dashboards tracking `deepseek_tasks_total` by status, we could spot failure spikes within minutes rather than discovering them in the morning logs.
 
@@ -196,7 +196,7 @@ if [ "$STATUS" != "200" ]; then
     --data '{"text":"⚠️ DeepSeek worker unreachable! Check LM Studio."}' \
     $SLACK_WEBHOOK_URL
 fi
-```
+```python
 
 This single script caught 3 silent failures during our 30-day run that would otherwise have left the orchestrator running with no backend, hallucinating responses with empty context.
 
@@ -234,4 +234,6 @@ The main argument for running DeepSeek locally is **data privacy and cost contro
 
 The tradeoff is operational complexity. If your team doesn't have someone comfortable building and maintaining the worker daemon, key vault integration, and monitoring stack described above, you're better off using a managed cloud API with a cost cap configured at the account level rather than in-code.
 
-For IT ops teams who already manage Linux infrastructure and want full data sovereignty, the local DeepSeek stack is excellent. For individual developers or small teams, start with the cloud APIs and migrate to local when scale justifies the overhead.
+For IT ops teams who already manage Linux infrastructure and want full data sovereignty, the local DeepSeek stack is excellent. For individual developers or small teams, start with the cloud APIs and migrate to local when scale justifies the overhead.
+
+For production triage scripts, see our [DeepSeek PowerShell Log Triage Toolkit](/blog/deepseek-powershell-log-triage-windows-server).

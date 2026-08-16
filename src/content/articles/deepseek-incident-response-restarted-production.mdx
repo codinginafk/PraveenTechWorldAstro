@@ -65,7 +65,7 @@ The script should:
 8. Handle common errors like service not found or permission denied.
 
 Please provide the complete script with comments.
-```
+```bash
 
 The AI churned out the code in about 11 seconds. It looked neat, and I was excited to test it out. I quickly ran: `python3 incident_responder.py  - service postgresql`. And then... things got a bit wild.
 
@@ -91,7 +91,7 @@ def rotate_logs(service):
     if os.path.exists(log_path):
         os.rename(log_path, f"{log_path}.{int(time.time())}")
         print(f"Rotated {log_path}")
-```
+```bash
 
 It renamed the active log file, including all the crucial crash logs from the last 2 hours. The very logs I would need for debugging were just gone. Linux has `logrotate` for a reason, and the AI completely missed that point.
 
@@ -106,7 +106,7 @@ The AI included try-except blocks, but they were quite generic:
 ```python
 except Exception as e:
     print(f"Error: {e}")
-```
+```bash
 
 This meant that errors were only printed and not logged or sent to Slack. If there was an issue with the Slack webhook (which, spoiler alert, there was during my first test), the script just exited without a clue. If this had run from a cron job, I would have missed the error entirely.
 
@@ -131,7 +131,7 @@ def safe_rotate(service):
         subprocess.run(["truncate", "-s", "0", log_path], check=True)
     except subprocess.CalledProcessError as e:
         log_error(f"Log rotation failed for {service}: {e}")
-```
+```bash
 
 This keeps the crash logs intact while clearing the active file - much better for debugging!
 
@@ -151,7 +151,7 @@ The first thing the script does now is check for ` - dry-run`. If set, it prints
 
 After making those fixes, running the script looks a lot clearer:
 
-```
+```powershell
 $ python3 incident_responder.py  - service postgresql  - dry-run
 [DRY RUN] Would check status of postgresql
 [DRY RUN] Status: active
@@ -166,7 +166,7 @@ $ python3 incident_responder.py  - service redis  - slack-webhook https://hooks.
 2026-06-28 03:12:03 [HEALTH] Connecting to redis on port 6379... PONG
 2026-06-28 03:12:03 [INFO] redis restarted successfully (downtime: ~2 seconds)
 2026-06-28 03:12:04 [NOTIFY] Slack notification sent (channel: #ops-alerts)
-```
+```bash
 
 The script now runs smoothly in about 3 seconds per service. The Slack messages include downtime duration and whether the restart happened inside or outside the maintenance window. It's now scheduled to run every night at 3 AM via a cron job, and in the last week, it has automatically recovered Redis twice and Nginx once, all without any false restarts or log loss. Pretty neat, right?
 ## 6. What I learned about prompting AI for ops automation

@@ -37,7 +37,7 @@ So, here's the thing: our team really needed a database audit [Python script](/b
 
 For my first try, I crafted a straightforward prompt that outlined the business logic and requested a CLI tool. I saved this prompt in a markdown file, threw it into DeepSeek's web interface, and received a 30-line Python script. It looked beautiful, but it just wouldn't run. Here's the exact prompt I used (I kept it to 312 tokens, which DeepSeek said would cost me 0.004 USD):
 
-```
+```bash
 Prompt:
 I need a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreSQL). For each DB:
 1. Connect using credentials from a config file (format: db_type:host:port:user:password).
@@ -53,7 +53,7 @@ I need a Python CLI tool that audits a list of databases (Oracle, MySQL, Postgre
 8. Keep the script under 25 lines of functional code.
 
 Please provide the complete script with inline comments.
-```
+```python
 
 The response came back in about 12.3 seconds, and the file size was 1.8 KB. I saved it as `db_audit.py` and ran `python db_audit.py  - help`. The help text displayed nicely, but when I tried to run it against a dummy config, the script crashed with `ModuleNotFoundError: No module named 'cx_Oracle'`. The prompt had said to "assume the required DB drivers are installed," but clearly, that assumption didn't hold up. That was my first failure.
 
@@ -62,19 +62,19 @@ The response came back in about 12.3 seconds, and the file size was 1.8 KB. I sa
 **Failure #1 - Missing Drivers**  
 DeepSeek's script assumed a perfect environment. Unfortunately, my test VM only had `mysql‑connector‑python` and `psycopg2` installed. The `cx_Oracle` import blew up. I tried to install it via `pip install cx_Oracle`, but it turns out that this package requires Oracle Instant Client libraries, which I didn't have set up on this Linux container. Here's what the error log looked like:
 
-```
+```powershell
 $ pip install cx_Oracle
 Collecting cx_Oracle
   ...
 ERROR: Could not find a valid Oracle Instant Client package. Install manually.
-```
+```bash
 
 **Failure #2 - Hallucinated Schema Queries**  
 After removing the Oracle check to make the script runnable, I asked DeepSeek for a "quick fix" to substitute the Oracle block with a placeholder. The new script came back with queries like `SELECT * FROM dba_tables WHERE bytes > 100*1024*1024`. The issue? That table doesn't exist in MySQL! The AI mistakenly dropped Oracle-specific queries into the MySQL script. When I ran it, I got this delightful error:
 
-```
+```bash
 OperationalError: Unknown table 'dba_tables' in engine.
-```
+```powershell
 
 **Failure #3 - Incorrect JSON Structure**  
 On my third attempt, I asked DeepSeek to "just give me a working script that outputs the findings as a CSV instead of JSON." The AI obliged, but the 28-line script it generated used `pandas` to write CSV without importing it first. So, of course, it crashed with `NameError: name 'pandas' is not defined`. Plus, the CSV header I received was `db_name,timestamp,findings_type,object_name,details`, which didn't match my team's requirements for a nested JSON array. They flat-out rejected the output because they needed the exact JSON format for their downstream reporting pipeline.
@@ -87,7 +87,7 @@ For my fourth attempt, I switched up my strategy. I asked DeepSeek to create sma
 
 Here's the revised prompt I used (token count 378, cost $0.0051):
 
-```
+```python
 Prompt:
 Write a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreSQL). Requirements:
 - Read a config file (JSON) with entries: db_type, host, port, user, password.
@@ -102,7 +102,7 @@ Write a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreS
 - Include a __main__ block that prints a sample report (just for verification).
 
 Please provide the full script with inline comments.
-```
+```bash
 
 DeepSeek returned a 22-line script (file size 1.2 KB). When I first ran it, it printed a warning for Oracle and proceeded with MySQL and PostgreSQL. The JSON output looked correct, but then I noticed the timestamp was a naive string instead of ISO‑8601. My team's downstream parser expected `2024‑09‑12T14:35:00Z`. I edited the script to use `datetime.utcnow().isoformat() + 'Z'`. I also added a ` - quiet` flag to suppress warnings if users wanted cleaner output. The final script ran in **2.3 seconds** on my test VM, processing three databases, and produced a clean JSON file of 3.4 KB.
 
@@ -114,7 +114,7 @@ import cx_Oracle, mysql.connector, psycopg2
 def audit_db(...):
 ## hallucinated Oracle query
     cur.execute("SELECT * FROM dba_tables WHERE bytes > 100*1024*1024")
-```
+```bash
 
 **After (my fix) - working snippet:**
 ```python
@@ -142,7 +142,7 @@ def audit_db(db_type, config):
     findings = []
 ## append findings...
     return {"db_name": config.get('name'), "timestamp": datetime.utcnow().isoformat()+'Z', "findings": findings}
-```
+```bash
 
 The script now runs as needed, handling missing drivers and producing the correct JSON output.
 
@@ -150,14 +150,14 @@ The script now runs as needed, handling missing drivers and producing the correc
 
 When I ran `./db_audit.py  - config config.json` in my lab environment (Ubuntu 22.04, Python 3.10), here's what popped up in **2.3 seconds**:
 
-```
+```powershell
 $ python db_audit.py  - config config.json  - output report.json
 [INFO] Loaded 3 database configs.
 [INFO] Oracle driver not installed, skipping.
 [INFO] MySQL driver installed, auditing.
 [INFO] PostgreSQL driver installed, auditing.
 [INFO] Audit complete. Report written to report.json
-```
+```bash
 
 The `report.json` file (size 3.4 KB) contained:
 
@@ -187,7 +187,7 @@ The `report.json` file (size 3.4 KB) contained:
     }
   ]
 }
-```
+```powershell
 
 Oh, and there's a ` - quiet` flag to suppress the informational logs, which is super handy for cron jobs. I added it after my team complained about the noise in their CI pipelines. Now, this final CLI tool is part of our weekly automation pipeline, running every Monday at 02:00 UTC and feeding the JSON into our Slack bot for immediate alerts.
 
@@ -203,7 +203,7 @@ Overall, this experience taught me that AI can be a fantastic "code junior," esp
 
 ## 8. The Exact Prompt You Can Copy‑Paste
 
-```
+```python
 Prompt:
 Write a Python CLI tool that audits a list of databases (Oracle, MySQL, PostgreSQL). Requirements:
 - Read a config file (JSON) with entries: db_type, host, port, user, password.

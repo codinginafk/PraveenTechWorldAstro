@@ -54,7 +54,7 @@ Rootless containers cannot bind to privileged ports below 1024 on Linux. If a lo
 *   **Workaround:** We modified the host machine kernel parameters to lower the minimum unprivileged port threshold to 80:
     ```bash
     sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80
-    ```
+    ```bash
 
 ### VPN and Network Virtualization
 Developers working remotely using corporate VPN client profiles (such as Cisco AnyConnect) reported that containers lost external network access. This occurred because Podman’s default rootless network driver, `slirp4netns`, did not dynamically update its DNS routing table when the host tunnel interface initialized.
@@ -69,7 +69,7 @@ In rootless mode, the user inside the container is mapped to the host user UID i
       --userns=keep-id \
       -v ./data:/app/data:Z \
       node-service:latest
-    ```
+    ```bash
     *(The `:Z` flag ensures SELinux labels are updated correctly on systems running Fedora or RHEL).*
 
 ---
@@ -93,7 +93,7 @@ Volume=postgres-data:/var/lib/postgresql/data:Z
 
 [Install]
 WantedBy=default.target
-```
+```bash
 
 ### CI/CD Runner Configuration
 To avoid the security risks and license requirements of running Docker-in-Docker (`dind`) in our GitLab CI runner infrastructure, we configured the runner helper to mount the local Podman socket path:
@@ -119,3 +119,6 @@ build_image:
 Following the complete rollout to all 120 users, we tracked development velocity metrics over a 30-day period:
 - **Startup Latency:** Startup times for multi-container development environments decreased by 12% compared to Docker Desktop, due to Podman's daemon-less execution model eliminating the overhead of a persistent background coordinator daemon.
 - **Resource Footprint:** Idle memory consumption on developer machines dropped from an average of 4.2 GB (Docker Desktop VM baseline) to 1.8 GB (Podman machine VM baseline), freeing up system resources for local IDEs and compilation tasks.
+
+
+For alternative Windows container runtimes, explore our [WSL2 and Podman Setup Guide](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2).

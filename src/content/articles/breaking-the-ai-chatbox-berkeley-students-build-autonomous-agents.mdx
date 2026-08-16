@@ -38,13 +38,13 @@ The ACI insight: human-friendly interfaces (bash, CSS selectors, XPath) are brit
 
 An autonomous agent system has three layers:
 
-```
+```bash
 [LLM (GPT-4, Claude, DeepSeek)] 
         ↕ structured commands + feedback
 [Agent-Computer Interface (ACI)]
         ↕ executable actions  
 [Environment (browser, shell, API)]
-```
+```bash
 
 SWE-agent's ACI provides specialized commands that replace the raw Linux shell:
 
@@ -68,12 +68,12 @@ There are three approaches, in order of robustness:
 ```python
 ## 2.
 await page.click("#submit-button-7f3a")
-```
+```bash
 
 ### Approach B: Semantic DOM (better, needs good identifiers)
 ```python
 ## 3. await page.get_by_role("button", name="Submit Order").click()
-```
+```bash
 
 ### Approach C: Visual grounding (most robust, most expensive)
 ```python
@@ -99,7 +99,7 @@ async def click_visual_target(page, target_description: str, screenshot_path: st
 ## Parse "x,y" from response
     x, y = map(int, resp.choices[0].message.content.strip().split(","))
     await page.mouse.click(x, y)
-```
+```powershell
 
 **Cost trade-off**: Each screenshot-based action costs ~$0.01-0.03 in GPT-4o vision tokens. A 20-step workflow runs $0.20-0.60 just for grounding. The GroundingAgent paper (Luo et al., AAAI 2026) achieved 65.1% zero-shot accuracy on RefCOCO using iterative visual reasoning without fine-tuning, but at 3-5x latency of DOM-based methods.
 
@@ -123,14 +123,14 @@ with sync_playwright() as p:
     page = browser.new_page()
     stealth_sync(page)  # Patches ~25 browser detection signals
 ## 85% reduction in bot flags per EV-000007
-```
+```bash
 
 ### Residential proxy rotation
-```
+```powershell
 Cost: $3-10/GB for residential proxies vs $0.50/GB for datacenter
 Latency: +200-800ms per request due to multi-hop routing
 Effectiveness: Avoids IP reputation blacklists entirely
-```
+```bash
 
 ### Cookie injection
 ```python
@@ -138,7 +138,7 @@ Effectiveness: Avoids IP reputation blacklists entirely
     {"name": "session", "value": "eyJ...", "domain": ".target.com", "path": "/"}
 ]
 await page.context.add_cookies(cookies)
-```
+```bash
 
 **The hard truth**: Anti-detection is a maintenance burden, not a one-time fix. Security vendors update signatures weekly. Expect 5-10% of your agent engineering time to go to keeping evasion working.
 
@@ -186,7 +186,7 @@ class CheckpointManager:
         """Check checkpoint integrity before resuming"""
         required = ["step", "payload", "token_budget_remaining"]
         return all(getattr(cp, f, None) is not None for f in required)
-```
+```powershell
 
 ### Token cost comparison
 
@@ -276,3 +276,6 @@ The jump from 12.5% to 74%+ comes mostly from better models and improved ACI des
 - SWE-agent: github.com/SWE-agent/SWE-agent
 - mini-swe-agent 2.0: 74% on SWE-bench Verified (Feb 2026)
 - WebArena: webarena.dev
+
+
+To see how we optimize agent memory windows, check out our guide on [Why AI Coding Agents Truncate Context](/blog/why-ai-coding-agents-truncate-context-memory-token-optimization).
