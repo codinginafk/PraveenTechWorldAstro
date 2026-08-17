@@ -1,0 +1,156 @@
+---
+title: "Fix Windows 11 KB5121003 inpoutx64.sys Crash"
+description: "Fix Windows 11 KB5121003 crashes caused by inpoutx64.sys. Complete IT runbook to remove legacy port I/O drivers, resolve game crashes, and block updates."
+coverImage: "/images/articles/how-to-fix-windows-11-kb5121003-inpoutx64-crash.jpg"
+imageAlt: "Minimal flat editorial illustration of a motherboard PCIe bus and I/O controller chip with an alert warning symbol"
+publishDate: "2026-08-17"
+author: "praveen"
+category: "windows-fixes"
+pillarId: "windows-fixes"
+tags:
+  - "windows-fixes"
+  - "windows-update"
+  - "bsod"
+  - "driver-issues"
+  - "troubleshooting"
+draft: false
+seoTitle: "Fix Windows 11 KB5121003 inpoutx64.sys Crash"
+socialHook: "Did the August 2026 Windows 11 mandatory update KB5121003 break your gaming rigs or crash on inpoutx64.sys? Here is our bench runbook to resolve it."
+faq:
+  - question: "Why does KB5121003 cause crashes with inpoutx64.sys?"
+    answer: "Windows 11 update KB5121003 enforced strict kernel-mode memory paging and blocked direct x86 I/O port instructions under Hypervisor-Protected Code Integrity (HVCI). Legacy peripheral utilities (such as older RGB controllers, fan software, and anti-cheat hooks) relying on the unmaintained inpoutx64.sys driver trigger an immediate SYSTEM_SERVICE_EXCEPTION (0x3B) or PAGE_FAULT_IN_NONPAGED_AREA (0x50)."
+  - question: "How do I identify which application installed inpoutx64.sys?"
+    answer: "Run PowerShell as Administrator and execute: Get-CimInstance Win32_SystemDriver | Where-Object { $_.PathName -like '*inpoutx64.sys*' } | Select-Object Name, DisplayName, PathName. Common culprits include legacy versions of Asus Aura Sync, OpenRGB, NZXT CAM, and old hardware monitoring tools."
+  - question: "Can I safely uninstall inpoutx64.sys without breaking Windows?"
+    answer: "Yes. inpoutx64.sys is a third-party open-source I/O port thunk driver, not a core Windows system component. Deleting it with 'pnputil /delete-driver' removes the driver cleanly while Windows 11 switches to native Dynamic Lighting APIs."
+  - question: "How do I uninstall and block KB5121003 if my enterprise software requires it?"
+    answer: "Uninstall the update via 'wusa /uninstall /kb:5121003 /quiet /promptrestart', then run the Microsoft Show or Hide Updates tool (wushowhide.diagcab) to prevent Windows Update from automatically reinstalling it."
+---
+
+Following the release of Microsoft's **August 11, 2026 mandatory cumulative update (KB5121003)** for Windows 11 24H2, our workbench began receiving reports of sudden blue screens, desktop freezes, and game crashes in titles like *ARC Raiders* and *The Finals*.
+
+When we analyzed the crash minidumps in WinDbg, the offending module was identical across all machines:
+
+```text
+BugCheck 3B, {c0000005, fffff8038b2410a0, fffff8039210e480, 0}
+Probably caused by : inpoutx64.sys ( inpoutx64+10a0 )
+IMAGE_NAME: inpoutx64.sys
+FAILURE_BUCKET_ID: 0x3B_inpoutx64!unknown_function
+```
+
+Here is the exact technical breakdown of why **`KB5121003`** clashes with **`inpoutx64.sys`**, and our step-by-step IT sysadmin runbook to resolve the crashes permanently.
+
+---
+
+## 🔍 The Root Cause: HVCI Kernel Hardening vs. Direct Port I/O
+
+For over a decade, third-party motherboard utilities, RGB lighting controllers, and anti-cheat wrappers relied on a legacy open-source driver called **`inpoutx64.sys`** (*InpOut32 / InpOut64*) to directly read and write to hardware I/O ports without going through standardized Windows Driver Framework (WDF) abstractions.
+
+```
+┌────────────────────────────────────────────────────────┐
+│  KB5121003 Kernel Memory Isolation Conflict           │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  [ Legacy App / Anti-Cheat Wrapper / RGB Tool ]        │
+│                         │                              │
+│                         ▼ (Direct I/O Port Read/Write) │
+│  [ inpoutx64.sys (Legacy Kernel Driver) ]              │
+│                         │                              │
+│  ❌ [KB5121003 HVCI Block ➔ Crash 0x3B / 0x50]        │
+│                         │                              │
+│                         ▼                              │
+│  [ Windows 11 24H2 Kernel (Paging Protection) ]        │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+```
+
+With update **KB5121003**, Microsoft enforced strict kernel memory paging protections under Hypervisor-Protected Code Integrity (HVCI). When `inpoutx64.sys` attempts an unmapped direct port access, Windows instantly terminates the thread with **`0x3B` (`SYSTEM_SERVICE_EXCEPTION`)** or **`0x50` (`PAGE_FAULT_IN_NONPAGED_AREA`)**.
+
+---
+
+## 🛠️ Step 1: Locate the Application Hosting inpoutx64.sys
+
+Before removing the driver, find which vendor software installed it on your system.
+
+Open **PowerShell as Administrator** and execute:
+
+```powershell
+# Query all active kernel drivers for inpoutx64
+Get-CimInstance Win32_SystemDriver | Where-Object { 
+    $_.PathName -like "*inpoutx64.sys*" -or $_.Name -like "*inpout*" 
+} | Select-Object Name, DisplayName, PathName, State
+```
+
+Common applications bundling this driver include:
+- Legacy motherboard RGB suites (older Asus Aura Sync, Gigabyte RGB Fusion)
+- OpenRGB versions released prior to native Windows Dynamic Lighting support
+- Outdated peripheral monitoring utilities (NZXT CAM legacy plugins, EVGA Precision X1)
+- Custom game launchers and anti-cheat compatibility thunks
+
+---
+
+## 🛠️ Step 2: Remove the inpoutx64.sys Driver via PnPUtil
+
+Because `inpoutx64.sys` is a third-party non-essential driver, you can safely remove it from the Windows Driver Store without breaking Windows.
+
+Run the following commands in an elevated PowerShell terminal:
+
+```powershell
+# 1. Stop any active service associated with the driver
+Stop-Service -Name "inpoutx64" -ErrorAction SilentlyContinue
+
+# 2. Enumerate published OEM driver packages to find the matching INF
+$Driver = Get-WindowsDriver -Online -All | Where-Object { $_.OriginalFileName -like "*inpout*" }
+
+if ($Driver) {
+    # 3. Delete the driver package from the driver store
+    pnputil /delete-driver $Driver.Driver /uninstall /force
+    Write-Host "✅ Driver package $($Driver.Driver) successfully removed." -ForegroundColor Green
+} else {
+    # 4. Remove standalone binary if not installed via INF
+    Remove-Item -Path "$env:SystemRoot\System32\drivers\inpoutx64.sys" -Force -ErrorAction SilentlyContinue
+    Write-Host "✅ Standalone driver binary deleted from System32\drivers." -ForegroundColor Green
+}
+```
+
+Restart your PC after executing these commands.
+
+---
+
+## 🛠️ Step 3: Switch to Windows 11 Native Dynamic Lighting
+
+If you were using legacy RGB software, update to versions that support Microsoft's native **Windows 11 Dynamic Lighting**:
+
+1. Open **Settings > Personalization > Dynamic Lighting**.
+2. Toggle **Use Dynamic Lighting on my devices** to **On**.
+3. Modern peripheral suites (including updated OpenRGB and vendor apps) now route lighting commands through standard HID interfaces rather than raw kernel port I/O.
+
+---
+
+## 🛠️ Step 4: Enterprise Rollback (wushowhide & wusa)
+
+If you manage industrial workstations or legacy test benches where proprietary software strictly depends on direct port I/O, you can temporarily roll back **KB5121003** while planning driver migration:
+
+```powershell
+# Uninstall KB5121003 silently and prompt for restart
+wusa /uninstall /kb:5121003 /quiet /promptrestart
+```
+
+To prevent Windows Update from automatically reinstalling the update overnight:
+1. Download Microsoft's **Show or Hide Updates** troubleshooter (`wushowhide.diagcab`).
+2. Click **Hide updates** and check **KB5121003**.
+
+> 💡 **Related Windows Update Guide:** If your computer experiences repeated reboot loops after servicing updates, read our comprehensive bench guide on [Why Your PC Reboots 3 Times After Windows Update](/blog/why-pc-reboots-3x-after-windows-update-secure-boot-cert-fix).
+
+---
+
+## 📋 Triage Summary
+
+| Step | Action | Workbench Command / Tool |
+|:---|:---|:---|
+| **1. Find Driver** | Identify host application | `Get-CimInstance Win32_SystemDriver ...` |
+| **2. Delete Driver** | Remove unmaintained binary | `pnputil /delete-driver <oem#.inf> /force` |
+| **3. Modernize RGB** | Enable native HID lighting | Settings ➔ Personalization ➔ Dynamic Lighting |
+| **4. Block Update** | Enterprise rollback | `wusa /uninstall /kb:5121003` + `wushowhide` |
+
+By purging the legacy `inpoutx64.sys` driver from your system, you eliminate the kernel memory paging violation introduced in KB5121003 and restore full stability across your gaming and productivity workloads.
