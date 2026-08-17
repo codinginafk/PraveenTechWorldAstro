@@ -118,6 +118,20 @@ podman run -d \
   node:20-alpine
 ```bash
 
+If you are running in rootless mode (common when using Podman), you must manage namespace sub-UIDs. 
+
+In rootless containers, the host OS maps your host user to the root user inside the container namespace, and maps other host users to secondary container users.
+
+You can tell the container to map your current host user to the exact UID needed by the container processes using the `--userns` flag:
+
+```bash
+podman run -d \
+  --name web-app \
+  --userns=keep-id \
+  -v /home/praveen/app:/app:Z \
+  node:20-alpine
+```
+
 The `--userns=keep-id` flag tells the engine to map your host user ID to the same numeric user ID inside the container namespace. Also, appending the `:Z` flag to the volume declaration automatically handles SELinux labeling on distributions like Fedora, CentOS, and Red Hat.
 
 ---
@@ -127,13 +141,15 @@ The `--userns=keep-id` flag tells the engine to map your host user ID to the sam
 Use this workflow the next time a container throws a permission lockout:
 
 ```bash
-## 7. id -u
+# 1. Check your host user ID
+id -u
 
-## 8. ls -nd /path/to/host/folder
+# 2. Check the numeric owner of the mounted directory
+ls -nd /path/to/host/folder
 
-## 9. docker exec -it <container_id> whoami
-
-## 10. ```bash
+# 3. Check what user the container is running as
+docker exec -it <container_name_or_id> whoami
+```
 
 ## 7. 🛠️ Fix 4: The Dockerfile Entrypoint Chown (For CI/CD Pipelines)
 

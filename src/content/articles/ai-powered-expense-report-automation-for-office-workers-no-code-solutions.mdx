@@ -89,18 +89,18 @@ Unfortunately, things weren't all smooth sailing. Here are a few hiccups I ran i
 
 **1. The OCR Pipeline**  
 I had to switch to EasyOCR since pytesseract struggled with thermal receipts. Here's how I adjusted the code:  
-```python  
-## 
-text = pytesseract.image_to_string(image)  
+```python
+# Before: pytesseract
+# text = pytesseract.image_to_string(image)  
 
-## 
+# After: EasyOCR
 reader = easyocr.Reader(['en'])  
 results = reader.readtext(image, detail=0)  
-```bash
+```
 
 **2. Date Validation**  
 I added a function to reject impossible dates (like February 30th):  
-```python  
+```python
 from datetime import datetime  
 def validate_date(date_str):  
     try:  
@@ -108,11 +108,11 @@ def validate_date(date_str):
         return True  
     except ValueError:  
         return False  
-```bash
+```
 
 **3. Vendor Cleanup**  
 To improve vendor detection, I used a predefined vendor list with fuzzy matching:  
-```python  
+```python
 KNOWN_VENDORS = ['Starbucks', 'Uber', 'Amazon Web Services']  
 
 def match_vendor(raw_text):  
@@ -120,7 +120,7 @@ def match_vendor(raw_text):
         if vendor.lower() in raw_text.lower():  
             return vendor  
     return "Unknown"  
-```bash
+```
 
 ### The Working Result  
 
@@ -130,15 +130,16 @@ In the end, my script turned out to be pretty handy and included these features:
 - **Audit trail**: It logs all actions in `processing.log`  
 
 **Sample Output CSV:**  
-```  
+
+```csv
 Date,Vendor,Amount,Category  
 2024-03-15,Starbucks,12.50,Meals  
 2024-03-16,Uber,24.30,Travel  
-```bash
+```
 
 **Execution Time:**  
 - It takes about 0.8 seconds per image (I tested it on 20 receipts)  
-- I noticed a 95% accuracy on typed receipts and about 70% on handwritten ones  
+- I noticed a 95% accuracy on typed receipts and about 70% on handwritten ones
 
 ### Key Takeaways  
 
@@ -155,7 +156,7 @@ Date,Vendor,Amount,Category
 
 Here's the refined prompt that led to the final working version:  
 
-```  
+```text
 "Build a Python 3 script that:  
 1. Uses EasyOCR instead of pytesseract for better receipt readability  
 2. Watches a folder for new JPG/PNG files with watchdog  

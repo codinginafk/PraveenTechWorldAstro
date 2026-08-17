@@ -78,19 +78,20 @@ Here's what I changed:
 #!/usr/bin/env python3
 """
 Weekly Student Grade Report Generator
-Usage: ./generate_report.py  - input student_grades.csv  - output weekly_report.csv
+Usage: ./generate_report.py --input student_grades.csv --output weekly_report.csv
 """
 import pandas as pd
 
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument(' - input', default='student_grades.csv')
-    parser.add_argument(' - output', default='weekly_report.csv')
+    parser.add_argument('--input', default='student_grades.csv')
+    parser.add_argument('--output', default='weekly_report.csv')
     args = parser.parse_args()
 
     df = pd.read_csv(args.input)
-## Wrong grouping
+
+    # Wrong grouping
     report = df.groupby(['student_id', 'name']).agg(
         total_score=('score', 'sum'),
         average_score=('score', 'mean')
@@ -100,47 +101,47 @@ def main():
 
 if __name__ == '__main__':
     main()
-```bash
+```
 
 **After (my working version):**
 ```python
 #!/usr/bin/env python3
 """
 Weekly Student Grade Report Generator
-Usage: ./generate_report.py  - input student_grades.csv  - output weekly_report.csv
+Usage: ./generate_report.py --input student_grades.csv --output weekly_report.csv
 """
 import argparse
 import pandas as pd
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(' - input', default='student_grades.csv')
-    parser.add_argument(' - output', default='weekly_report.csv')
+    parser.add_argument('--input', default='student_grades.csv')
+    parser.add_argument('--output', default='weekly_report.csv')
     args = parser.parse_args()
 
-## Load data
+    # Load data
     df = pd.read_csv(args.input)
 
-## Ensure correct data types
+    # Ensure correct data types
     df['score'] = pd.to_numeric(df['score'], errors='coerce')
 
-## Group by student only (unique per student)
+    # Group by student only (unique per student)
     report = df.groupby(['student_id', 'name'], as_index=False).agg(
         total_score=('score', 'sum'),
         average_score=('score', 'mean')
     )
 
-## Round to 2 decimal places for cleanliness
+    # Round to 2 decimal places for cleanliness
     report['total_score'] = report['total_score'].round(2)
     report['average_score'] = report['average_score'].round(2)
 
-## Save report
+    # Save report
     report.to_csv(args.output, index=False)
     print(f"Processed {len(df)} rows, report saved to {args.output}")
 
 if __name__ == '__main__':
     main()
-```bash
+```
 
 Some key improvements I made:
 - Proper pandas import
@@ -166,13 +167,15 @@ So, how does it all run every Friday? Here's the setup:
    END=$(date +%s)
    DURATION=$((END-START))
    echo "Script finished in ${DURATION}s" >> /var/log/grade_reports.log
+```
+
 ## Upload to Dropbox (simplified)
    curl -X POST "https://content.dropboxapi.com/2/files/upload" \
       - header "Authorization: Bearer $DROPBOX_TOKEN" \
       - header "Dropbox-API-Result: json" \
       - header "Content-Type: application/octet-stream" \
       - data-binary /tmp/weekly_report.csv
-   ```powershell
+   powershell
 
 The total runtime? Just about 2 seconds.  
 Cost per run? Roughly $0.006.  
