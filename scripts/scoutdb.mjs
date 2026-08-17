@@ -1,5 +1,4 @@
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -7,23 +6,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DB_PATH = path.resolve(__dirname, 'scoutdb.sqlite');
 
-export async function getDb() {
-    const db = await open({
-        filename: DB_PATH,
-        driver: sqlite3.Database
-    });
+export function getDb() {
+    const db = new Database(DB_PATH);
+    db.pragma('journal_mode = WAL');
     return db;
 }
 
-export async function initDb() {
-    const db = await getDb();
+export function initDb() {
+    const db = getDb();
     
     // Topics: The core hypotheses or clustered subjects
-    await db.exec(`
+    db.exec(`
         CREATE TABLE IF NOT EXISTS topics (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
-            status TEXT DEFAULT 'pending', -- pending, researching, evaluated, drafted, published
+            status TEXT DEFAULT 'pending',
             confidence_score REAL DEFAULT 0,
             coverage_score REAL DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -32,18 +29,18 @@ export async function initDb() {
     `);
 
     // Sources: The dynamic source reliability matrix
-    await db.exec(`
+    db.exec(`
         CREATE TABLE IF NOT EXISTS sources (
             domain TEXT PRIMARY KEY,
-            type TEXT NOT NULL, -- official_docs, github, reddit, news, etc.
+            type TEXT NOT NULL,
             base_weight REAL DEFAULT 50,
-            reliability_score REAL DEFAULT 1.0, -- learns over time
+            reliability_score REAL DEFAULT 1.0,
             last_polled DATETIME
         );
     `);
 
     // Evidence: The raw artifacts linked to a topic (The Evidence Graph)
-    await db.exec(`
+    db.exec(`
         CREATE TABLE IF NOT EXISTS evidence (
             id TEXT PRIMARY KEY,
             topic_id TEXT NOT NULL,
@@ -51,7 +48,7 @@ export async function initDb() {
             url TEXT NOT NULL,
             title TEXT,
             summary TEXT,
-            extracted_entities TEXT, -- JSON array
+            extracted_entities TEXT,
             weight REAL DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(topic_id) REFERENCES topics(id),
@@ -60,7 +57,7 @@ export async function initDb() {
     `);
 
     // Search Metrics: Tracks performance of searches for Cost Awareness and Learning
-    await db.exec(`
+    db.exec(`
         CREATE TABLE IF NOT EXISTS search_metrics (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             query TEXT NOT NULL,
@@ -81,18 +78,24 @@ export async function initDb() {
         { domain: 'freenewsapi.com', type: 'news', weight: 60 }
     ];
 
-    for (const source of seedSources) {
-        await db.run(
-            `INSERT OR IGNORE INTO sources (domain, type, base_weight) VALUES (?, ?, ?)`,
-            [source.domain, source.type, source.weight]
-        );
-    }
+    const insertStmt = db.prepare(`INSERT OR IGNORE INTO sources (domain, type, base_weight) VALUES (?, ?, ?)`);
+    const insertMany = db.transaction((sources) => {
+        for (const source of sources) {
+            insertStmt.run(source.domain, source.type, source.weight);
+        }
+    });
 
-    console.log("ScoutDB initialized successfully.");
+    insertMany(seedSources);
+
+    console.log("ScoutDB initialized successfully (better-sqlite3).");
     return db;
 }
 
 // Allow running standalone to init
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    initDb().catch(console.error);
+    try {
+        initDb();
+    } catch (err) {
+        console.error(err);
+    }
 }

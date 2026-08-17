@@ -11,10 +11,17 @@ export interface SEOMetadata {
 const SUFFIX = " | PTW";
 
 export function buildPageTitle(title: string): string {
-  const homepageTitle = "PraveenTechWorld — Practical AI Workflows & IT Guides";
-  if (title === "Home" || title.includes("PraveenTechWorld")) return title;
-  if (title.length > 52) return title;
-  return `${title} | PTW`;
+  if (!title) return "PraveenTechWorld";
+  let clean = title.trim();
+  if (clean === "Home" || clean.includes("PraveenTechWorld")) {
+    return clean.length > 58 ? clean.slice(0, 58) : clean;
+  }
+  clean = clean.replace(/\s*\|\s*PTW$/i, "").trim();
+  if (clean.length <= 50) {
+    const withSuffix = `${clean} | PTW`;
+    return withSuffix.length <= 58 ? withSuffix : clean;
+  }
+  return clean.length > 58 ? clean.slice(0, 58) : clean;
 }
 
 export function buildCanonical(site: string, path: string): string {
