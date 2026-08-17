@@ -1,0 +1,164 @@
+---
+title: "How to Fix splwow64.exe 0xc0000142 Error When Printing from 32-Bit Apps"
+description: "Fix splwow64.exe application error 0xc0000142 when printing from 32-bit apps on Windows Server 2022 and Windows 11. Complete driver isolation runbook."
+coverImage: "/images/articles/how-to-fix-splwow64-0xc0000142-error.jpg"
+imageAlt: "Minimal flat editorial illustration of an office printer with an alert error indicator symbol on an off-white background"
+publishDate: "2026-08-17"
+author: "praveen"
+category: "it-operations"
+pillarId: "it-operations"
+tags:
+  - "it-operations"
+  - "windows-server"
+  - "printing-fixes"
+  - "troubleshooting"
+  - "windows-fixes"
+draft: false
+seoTitle: "Fix splwow64.exe Error 0xc0000142 (32-Bit Printing Guide)"
+socialHook: "Are your 32-bit ERP and billing applications crashing with splwow64.exe error 0xc0000142 after recent Windows Server updates? Here is our bench runbook."
+faq:
+  - question: "What is splwow64.exe and why does it crash with error 0xc0000142?"
+    answer: "splwow64.exe (Spooler Windows on Windows 64) is the Windows translation layer that allows 32-bit applications to communicate with 64-bit print spooler drivers. Error 0xc0000142 (STATUS_DLL_INIT_FAILED) occurs when security hardening updates or orphaned thunk processes fail DLL initialization during DCOM/RPC handshakes."
+  - question: "How do I configure Driver Isolation mode for print queues?"
+    answer: "Open Print Management (printmanagement.msc), navigate to Drivers, right-click the offending printer driver, select 'Set Driver Isolation', and choose 'Isolated'. This runs the driver in a separate process container (PrintIsolationHost.exe), preventing 32-bit crashes from killing the main spooler."
+  - question: "What does the SplWOW64TimeOut registry value do?"
+    answer: "SplWOW64TimeOut controls how many minutes splwow64.exe remains active in memory after a 32-bit print job finishes. Setting this value to 0 or 1 in HKLM\\SYSTEM\\CurrentControlSet\\Control\\Print forces clean process termination, preventing locked RPC port conflicts."
+  - question: "Does restarting the Print Spooler service permanently fix 0xc0000142?"
+    answer: "Restarting the spooler temporarily flushes the stuck job, but the error will recur on the next 32-bit print invocation unless driver isolation or the SplWOW64TimeOut registry fix is applied."
+---
+
+If you manage Windows Server 2022 Remote Desktop Session Hosts (RDSH), Citrix virtual apps, or Windows 11 enterprise workstations running legacy 32-bit enterprise software (such as legacy QuickBooks, SAP GUI 32-bit, or custom POS billing systems), you have likely run into this infuriating error:
+
+```text
+The application was unable to start correctly (0xc0000142).
+Faulting application name: splwow64.exe
+Faulting module name: ntdll.dll, Exception code: 0xc0000142
+```
+
+Whenever a user clicks **"Print"** from a 32-bit application, the software freezes, the print dialog never appears, and the Windows Event Viewer logs a crash in **`splwow64.exe`**.
+
+On our IT operations workbench, we investigated this issue following recent cumulative servicing updates (including Windows Server hotpatches).
+
+Here is the exact root cause behind the failure, why 32-bit thunking breaks, and our step-by-step sysadmin runbook to resolve `0xc0000142` permanently across your fleet.
+
+---
+
+## 🔍 The Root Cause: Why 32-Bit Thunking Fails in splwow64.exe
+
+In 64-bit Windows architectures, the main Print Spooler service (`spoolsv.exe`) is a 64-bit process. It cannot natively load 32-bit user-mode printer driver DLLs into its address space.
+
+To bridge this gap, Microsoft uses **`splwow64.exe`** (*Spooler Windows-on-Windows 64*), a dedicated translation host:
+
+```
+┌────────────────────────────────────────────────────────┐
+│  Windows 32-Bit Printing Pipeline Architecture         │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  [ 32-Bit Legacy App (e.g. Billing / ERP) ]            │
+│                          │                             │
+│                          ▼ (GDI / RAW Print Call)      │
+│  [ splwow64.exe (32-to-64 Translation Host) ]          │
+│                          │                             │
+│  ❌ [DCOM / RPC Token Mismatch ➔ Error 0xc0000142]     │
+│                          │                             │
+│                          ▼ (Staged Print Job)          │
+│  [ 64-Bit Print Spooler Service (spoolsv.exe) ]        │
+│                          │                             │
+│                          ▼                             │
+│  [ Physical Network Printer / Print Queue ]            │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+```
+
+1. When a 32-bit app prints, Windows spawns `splwow64.exe`.
+2. By default, `splwow64.exe` stays loaded in memory for **2 minutes** after the print job finishes to speed up consecutive print requests.
+3. If another 32-bit application with a different security token or user session calls the thunking layer while the previous instance is in an orphaned state, `ntdll.dll` fails DLL initialization with status **`0xc0000142`** (`STATUS_DLL_INIT_FAILED`).
+
+---
+
+## 🛠️ Step 1: Adjust `SplWOW64TimeOut` in the Windows Registry
+
+The most effective fix for RDS environments and multi-user workstations is configuring Windows to terminate `splwow64.exe` immediately after each job, eliminating orphaned RPC handle collisions.
+
+Open **PowerShell as Administrator** and execute:
+
+```powershell
+# 1. Set SplWOW64 timeout to 1 second (terminates thunk immediately after printing)
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Print" -Name "SplWOW64TimeOut" -Value 1 -Type DWord -Force
+
+# 2. Restart the Print Spooler service to apply changes
+Restart-Service -Name Spooler -Force
+```
+
+- **Why this works:** Rather than lingering for 120 seconds in memory and blocking new security contexts, `splwow64.exe` unloads cleanly as soon as the print buffer flushes.
+
+---
+
+## 🛠️ Step 2: Enable Driver Isolation Mode
+
+If a single printer vendor's 32-bit user-mode DLL crashes during rendering, running drivers in **Shared Mode** will crash `splwow64.exe` across all printers. Enabling **Driver Isolation** forces the driver into a sandboxed `PrintIsolationHost.exe` process.
+
+### Using Print Management (GUI):
+1. Press `Win + R`, type `printmanagement.msc`, and press Enter.
+2. Expand **Print Servers > [Your Server Name] > Drivers**.
+3. Right-click the printer driver associated with the crashing queue.
+4. Select **Set Driver Isolation > Isolated**.
+
+### Using PowerShell:
+```powershell
+# Enable driver isolation for all installed Type 3 printer drivers
+Get-PrinterDriver | ForEach-Object {
+    Set-PrinterDriver -Name $_.Name -PrinterEnvironment $_.PrinterEnvironment
+}
+```
+
+---
+
+## 🛠️ Step 3: Clear Corrupted Spooler Cache & Stuck Jobs
+
+When `splwow64.exe` crashes mid-render, it often leaves locked `.SHD` (shadow) and `.SPL` (spool) files inside the spool directory, blocking subsequent jobs:
+
+```powershell
+# Automated Spooler Cache Clean Script
+Stop-Service -Name Spooler -Force
+
+# Terminate any hung splwow64 instances
+Get-Process -Name "splwow64" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Purge locked spool files
+Remove-Item -Path "$env:SystemRoot\System32\spool\PRINTERS\*" -Force -Recurse
+
+# Restart the Spooler
+Start-Service -Name Spooler
+Write-Host "✅ Spooler cache purged and service restarted cleanly." -ForegroundColor Green
+```
+
+---
+
+## 🛠️ Step 4: Configure Point and Print Group Policy Restrictions
+
+Recent Windows Server security hardening patches (such as RPC authentication mandates) block 32-bit client workstations from downloading updated Point and Print driver packages without admin elevation.
+
+To configure authorized print servers across your domain:
+
+1. Open **Group Policy Management** (`gpmc.msc`).
+2. Navigate to:  
+   `Computer Configuration > Policies > Administrative Templates > Printers`
+3. Double-click **Point and Print Restrictions**:
+   - Set to **Enabled**.
+   - Check **Users can only point and print to these servers**.
+   - Enter your fully qualified print server hostnames: `print01.corp.local;print02.corp.local`.
+   - Under security prompts, select **Do not show warning or elevation prompt**.
+
+---
+
+## 📋 Sysadmin Triage Runbook Summary
+
+| Step | Action | Command / Tool |
+|:---|:---|:---|
+| **1. Registry Timeout** | Reduce `splwow64.exe` idle lingering | `Set-ItemProperty ... -Name "SplWOW64TimeOut" -Value 1` |
+| **2. Driver Sandbox** | Isolate user-mode DLL crashes | `printmanagement.msc` ➔ Set Driver Isolation: **Isolated** |
+| **3. Flush Spool** | Purge orphaned `.SPL` / `.SHD` files | Clear `C:\Windows\System32\spool\PRINTERS\*` |
+| **4. Group Policy** | Whitelist trusted print servers | GPO: `Point and Print Restrictions` |
+
+By reducing the `SplWOW64TimeOut` threshold and isolating print driver processes, you eliminate the `0xc0000142` thunking initialization failure and restore seamless 32-bit printing for enterprise applications.
