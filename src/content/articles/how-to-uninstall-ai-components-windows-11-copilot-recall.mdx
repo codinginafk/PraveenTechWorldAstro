@@ -1,0 +1,174 @@
+---
+title: "How to Completely Uninstall AI Components in Windows 11 (Copilot, Recall & NPU Features)"
+description: "Learn how to completely uninstall AI components in Windows 11. Remove Copilot, Windows Recall, and NPU background features via Settings, DISM, and GPO."
+coverImage: "/images/articles/how-to-uninstall-ai-components-windows-11.jpg"
+imageAlt: "Minimal flat editorial illustration of a computer screen with a single toggle switch turned off on an off-white background"
+publishDate: "2026-08-17"
+author: "praveen"
+category: "privacy"
+pillarId: "privacy"
+tags:
+  - "windows-fixes"
+  - "privacy"
+  - "copilot"
+  - "windows-11"
+  - "debloat"
+draft: false
+seoTitle: "How to Uninstall AI Components in Windows 11 (2026)"
+socialHook: "Tired of Windows 11 forcing Copilot, Recall, and background NPU indexing onto your PC? Here is our bench guide to completely uninstall AI components via Settings, DISM, and Group Policy."
+faq:
+  - question: "Can you completely remove AI components from Windows 11?"
+    answer: "Yes. In the latest Windows 11 builds, Microsoft introduced dedicated controls under Settings > System > AI Components. Additionally, enterprise administrators can permanently purge Windows Recall and Copilot binaries using DISM optional feature switches and AppX package removal commands."
+  - question: "Does uninstalling AI components disable my NPU hardware?"
+    answer: "No. Your Neural Processing Unit (NPU) remains fully accessible for third-party local AI workflows (such as Ollama, LM Studio, or local whisper models). Uninstalling Windows AI components simply removes Microsoft's background screen capture and cloud telemetry daemons."
+  - question: "What DISM command removes Windows Recall permanently?"
+    answer: "Open PowerShell as Administrator and run: dism /online /disable-feature /featurename:Recall /norestart. This uninstalls the Recall snapshot engine from the Windows servicing image."
+  - question: "How do I block Windows Update from reinstalling Copilot?"
+    answer: "Enable the Group Policy setting under Computer Configuration > Administrative Templates > Windows Components > Windows Copilot > 'Turn off Windows Copilot', or set the corresponding DWORD value in the Windows Registry."
+---
+
+If you open Task Manager on a modern Windows 11 PC, you might notice a collection of background processes you never asked for: `Copilot.exe`, `RecallSnapshotHost.exe`, and continuous neural processing co-processor polling.
+
+Whether you are an IT administrator securing enterprise workstations against unauthorized screen telemetry, or an enthusiast who wants every ounce of CPU and memory bandwidth dedicated strictly to your dev workflows, Microsoft has finally added native controls to manage these features.
+
+Under **Settings > System > AI Components**, users can now manage modular system AI packages.
+
+Here is our team's workbench runbook to completely uninstall Copilot, permanently disable Windows Recall, purge background NPU indexing, and lock down your operating system against automatic reinstallation.
+
+---
+
+## 🛑 Why Remove Windows 11 Native AI Components?
+
+Before jumping into the uninstallation commands, here is why our dev team strips native AI binaries from our production systems:
+
+```
+┌────────────────────────────────────────────────────────┐
+│  Windows 11 Native AI Overhead Breakdown               │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  [1. Privacy & Telemetry Exposure]                     │
+│  - Windows Recall captures desktop snapshots every 5s │
+│  - SQLite snapshot database unencrypted in user profile│
+│                          │                             │
+│                          ▼                             │
+│  [2. Memory & Disk Overhead]                           │
+│  - AI model weights consume 4GB - 12GB NVMe storage    │
+│  - Background daemons reserve 450MB+ RAM continuously  │
+│                          │                             │
+│                          ▼                             │
+│  [3. Unpredictable Cloud Sync]                         │
+│  - Copilot sidebar queries external Microsoft endpoints│
+│  - Potential exposure of local API keys and source code│
+│                                                        │
+└────────────────────────────────────────────────────────┘
+```
+
+1. **Snapshot Telemetry:** Windows Recall continuously captures encrypted bitmap frames of your active desktop, indexing sensitive API keys, terminal outputs, and client communications into local vector stores.
+2. **Resource Reservation:** On Copilot+ and NPU-equipped hardware, Windows reserves dedicated memory pools and disk partitions (up to 12GB) for offline generative models.
+3. **Enterprise Compliance:** In healthcare, financial, and client-sensitive development environments, unapproved AI background capture violates zero-trust compliance standards.
+
+---
+
+## 🛠️ Method 1: Uninstall AI Components via the New Windows 11 GUI
+
+In the latest Windows 11 feature update, Microsoft organized native generative features under a unified modular settings hub:
+
+1. Press `Win + I` to open **Settings**.
+2. Navigate to **System > AI Components** (or **Apps > Installed Apps**).
+3. Under the **System AI Features** section, locate:
+   - **Microsoft Copilot**
+   - **Windows Recall**
+   - **Click to Do / AI Actions**
+   - **Live Captions AI Model**
+4. Click the three horizontal dots `...` next to each component and select **Uninstall**.
+5. Restart your PC to allow the servicing stack to unbind the components.
+
+---
+
+## 🛠️ Method 2: Purge Windows Recall & Copilot via PowerShell & DISM
+
+For clean IT deployments and power users, GUI toggles often leave background service stubs intact. Use elevated **PowerShell** to permanently unregister the packages:
+
+### 1. Disable Windows Recall Feature
+Open PowerShell as Administrator and run:
+
+```powershell
+# Disable Windows Recall snapshot engine in the active OS image
+dism.exe /Online /Disable-Feature /FeatureName:Recall /NoRestart
+```
+
+### 2. Remove Copilot AppX Packages for All Users
+Execute the following pipeline to remove Copilot across all user profiles:
+
+```powershell
+# Remove provisioned Copilot package from new user accounts
+Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -match "Copilot" } | Remove-AppxProvisionedPackage -Online
+
+# Remove Copilot application from all existing local user profiles
+Get-AppxPackage -AllUsers *Microsoft.Copilot* | Remove-AppxPackage -AllUsers
+```
+
+---
+
+## 🛠️ Method 3: Lock Down Group Policy to Prevent Reinstallation
+
+Whenever Windows installs a cumulative monthly update, it checks whether system packages are present. To prevent Windows Update from re-provisioning AI components:
+
+### 1. Open Group Policy Editor
+Press `Win + R`, type `gpedit.msc`, and press Enter (available on Windows 11 Pro, Enterprise, and Education).
+
+### 2. Configure Windows Copilot Policy
+1. Navigate to:  
+   `Computer Configuration > Administrative Templates > Windows Components > Windows Copilot`
+2. Double-click **Turn off Windows Copilot**.
+3. Set the policy to **Enabled**.
+4. Click **Apply** and **OK**.
+
+### 3. Configure Windows Recall Policy
+1. Navigate to:  
+   `Computer Configuration > Administrative Templates > Windows Components > Windows Recall`
+2. Double-click **Turn off saving snapshots for Windows**.
+3. Set the policy to **Enabled**.
+4. Click **Apply** and **OK**.
+
+---
+
+## 🛠️ Method 4: Registry Hardening for Windows 11 Home Users
+
+If you run Windows 11 Home (which lacks `gpedit.msc`), enforce the lockdown directly via the Windows Registry:
+
+Run the following commands in an elevated PowerShell terminal:
+
+```powershell
+# 1. Disable Windows Copilot system-wide
+New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" -Force | Out-Null
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" -Name "TurnOffWindowsCopilot" -Value 1 -Type DWord
+
+# 2. Disable Windows Recall snapshot collection
+New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsRecall" -Force | Out-Null
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsRecall" -Name "DisableRecall" -Value 1 -Type DWord
+```
+
+---
+
+## 📋 Verification: Checking Task Manager & NPU Activity
+
+After restarting your computer:
+
+1. Press `Ctrl + Shift + Esc` to open **Task Manager**.
+2. Click the **Performance** tab.
+3. Check your **NPU (Neural Processing Unit)** and **CPU** baseline metrics.
+4. With Microsoft background AI components removed, NPU activity will remain at a clean **0%** at idle, and no `Recall` or `Copilot` processes will appear in the background process tree.
+
+---
+
+## 📋 Uninstallation Summary Cheat Sheet
+
+| Component | Removal Method | Status |
+|:---|:---|:---|
+| **Windows Recall** | `dism /online /disable-feature /featurename:Recall` | Binary uninstalled from OS image. |
+| **Microsoft Copilot**| `Remove-AppxPackage -AllUsers *Copilot*` | Application package purged. |
+| **Re-install Block** | Group Policy: `Turn off Windows Copilot` | Locked against future update staging. |
+| **Registry Guard** | `HKLM\...\WindowsCopilot\TurnOffWindowsCopilot = 1` | System-wide registry policy enforced. |
+
+By following this runbook, you regain complete control over your operating system's privacy, memory footprint, and background processing power.
