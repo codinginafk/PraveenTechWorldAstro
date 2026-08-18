@@ -89,28 +89,22 @@ Common applications bundling this driver include:
 
 ---
 
-## 🛠️ Step 2: Remove the inpoutx64.sys Driver via PnPUtil
+## 🛠️ Step 2: Unload & Delete the Driver via Service Controller (`sc`)
 
-Because `inpoutx64.sys` is a third-party non-essential driver, you can safely remove it from the Windows Driver Store without breaking Windows.
+Because `inpoutx64.sys` is dropped directly into `System32\drivers` as a kernel service rather than a standard PnP INF package, use Windows Service Controller (`sc.exe`) to unload and unregister it:
 
-Run the following commands in an elevated PowerShell terminal:
+Run the following commands in an elevated PowerShell or Command Prompt terminal:
 
 ```powershell
-# 1. Stop any active service associated with the driver
-Stop-Service -Name "inpoutx64" -ErrorAction SilentlyContinue
+# 1. Stop the running kernel driver service
+sc.exe stop inpoutx64
 
-# 2. Enumerate published OEM driver packages to find the matching INF
-$Driver = Get-WindowsDriver -Online -All | Where-Object { $_.OriginalFileName -like "*inpout*" }
+# 2. Delete the driver service registration from the Service Control Manager
+sc.exe delete inpoutx64
 
-if ($Driver) {
-    # 3. Delete the driver package from the driver store
-    pnputil /delete-driver $Driver.Driver /uninstall /force
-    Write-Host "✅ Driver package $($Driver.Driver) successfully removed." -ForegroundColor Green
-} else {
-    # 4. Remove standalone binary if not installed via INF
-    Remove-Item -Path "$env:SystemRoot\System32\drivers\inpoutx64.sys" -Force -ErrorAction SilentlyContinue
-    Write-Host "✅ Standalone driver binary deleted from System32\drivers." -ForegroundColor Green
-}
+# 3. Permanently remove the physical binary from the drivers directory
+Remove-Item -Path "$env:SystemRoot\System32\drivers\inpoutx64.sys" -Force -ErrorAction SilentlyContinue
+Write-Host "✅ inpoutx64.sys service unregistered and binary removed." -ForegroundColor Green
 ```
 
 Restart your PC after executing these commands.
