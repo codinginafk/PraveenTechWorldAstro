@@ -1,0 +1,175 @@
+---
+title: "Fix DISM 0x800f0915 & EFI Partition Errors"
+description: "Fix DISM error 0x800f0915 and Windows Update failures caused by corrupted CBS components and small EFI System Partitions. Step-by-step repair guide."
+coverImage: "/images/articles/fix-dism-0x800f0915-efi-system-partition-too-small.jpg"
+imageAlt: "Minimal flat editorial illustration of a hard drive partition bar graphic with a narrow crimson highlighted EFI partition segment"
+publishDate: "2026-08-19"
+author: "praveen"
+category: "windows-fixes"
+pillarId: "windows-fixes"
+tags:
+  - "windows-fixes"
+  - "windows-repair"
+  - "windows-update"
+  - "troubleshooting"
+  - "registry-fix"
+draft: false
+seoTitle: "Fix DISM 0x800f0915 & EFI Partition Errors"
+socialHook: "Hitting DISM error 0x800f0915 or Windows Update rollback at 96%? Here is why your EFI System Partition is out of room and how to heal the CBS store."
+faq:
+  - question: "What is DISM error 0x800f0915 in Windows 11?"
+    answer: "Error 0x800f0915 translates to 'DISM_ERROR_INSTALLATION_PACKAGE_NOT_FOUND' or 'CBS_E_SOURCE_NOT_IN_LIST'. It occurs when the Component-Based Servicing store has corrupted delta manifests or when the EFI System Partition (ESP) lacks at least 100 MB of free space to stage bootloader binaries."
+  - question: "Should I run DISM or SFC first?"
+    answer: "Always run DISM first ('dism /online /cleanup-image /restorehealth') to repair the central component store (WinSxS) from Microsoft Update, and then run SFC second ('sfc /scannow') to replace corrupted operating system files using the newly healed store."
+  - question: "How do I check free space on the EFI System Partition?"
+    answer: "Open elevated Command Prompt, run 'mountvol y: /s' to map the hidden ESP volume to drive letter Y:, and run 'dir y:\\EFI' to inspect available free disk space."
+  - question: "How much free space does Windows Update require on the EFI partition?"
+    answer: "Cumulative updates and Secure Boot DBX revocation updates require a minimum of 100 MB to 150 MB of contiguous free space on the EFI System Partition during staging."
+---
+
+When troubleshooting failing cumulative updates or running maintenance against Windows 11 workstations, our engineering team repeatedly encountered a frustrating roadblock:
+
+```text
+Error: 0x800f0915
+DISM failed. No operation was performed.
+For more information, review the log file: C:\Windows\Logs\DISM\dism.log
+```
+
+Even after running standard troubleshooting wizards, Windows Update would download patches, progress to 96% during restart, and then abruptly fail with *"Something went wrong. Undoing changes made to your computer."*
+
+If you are stuck in an update rollback loop or DISM health checks fail with error `0x800f0915`, here is the exact dual root cause—**Component-Based Servicing (CBS) store corruption** and **EFI System Partition (ESP) capacity exhaustion**—and the step-by-step recovery runbook.
+
+---
+
+## 🔍 Understanding Error `0x800f0915`: The Dual Bottleneck
+
+When DISM executes `/RestoreHealth`, it checks two critical storage locations:
+
+```
++-------------------------------------------------------------+
+| DISM RestoreHealth Execution                                |
++-------------------------------------------------------------+
+               |                               |
+               v                               v
+[ Path A: WinSxS Component Store ]   [ Path B: EFI System Partition (ESP) ]
+  Manifest hashes & payload files      Bootloader binaries (bootmgfw.efi)
+  Online Windows Update delta          Secure Boot DBX revocation lists
+               |                               |
+               | (If files corrupt/missing)    | (If free space < 100 MB)
+               v                               v
++-------------------------------------------------------------+
+|              Trigger: DISM Error 0x800f0915                 |
++-------------------------------------------------------------+
+```
+
+1. **WinSxS Store Delta Mismatch:** If the local component store contains damaged manifests, DISM cannot verify the replacement payloads against Microsoft's update servers without explicit source mounting.
+2. **EFI Partition Staging Exhaustion:** Cumulative updates deploy updated Secure Boot revocation lists (DBX) and new boot manager binaries (`bootmgfw.efi`). If your drive’s EFI partition was formatted at the legacy 100 MB default size and has less than 15 MB of free headroom, the servicing stack aborts.
+
+---
+
+## 🛠️ Step 1: Execute DISM and SFC in the Correct Sequential Order
+
+Many technicians run `sfc /scannow` first. **This is fundamentally backward.** SFC relies on the WinSxS component store as its known-good reference. If the component store itself is corrupt, SFC will simply report *"Windows Resource Protection found corrupt files but was unable to fix some of them."*
+
+Always follow this exact two-phase sequence in **PowerShell as Administrator**:
+
+```powershell
+# Phase 1: Repair the Component Store (DISM First)
+dism.exe /Online /Cleanup-Image /StartComponentCleanup
+dism.exe /Online /Cleanup-Image /RestoreHealth
+
+# Phase 2: Repair Operating System Files (SFC Second)
+sfc.exe /scannow
+```
+
+### If DISM Fails to Find Online Sources
+If DISM fails with error `0x800f0915` while contacting Windows Update servers, point DISM directly to a clean Windows 11 ISO:
+
+1. Double-click your downloaded Windows 11 ISO to mount it (assume drive letter `D:`).
+2. Check the index of your installed Windows edition:
+   ```cmd
+   dism /Get-WimInfo /WimFile:D:\sources\install.wim
+   ```
+3. Run the targeted offline restoration:
+   ```cmd
+   dism /Online /Cleanup-Image /RestoreHealth /Source:WIM:D:\sources\install.wim:1 /LimitAccess
+   ```
+
+---
+
+## 💾 Step 2: Mount and Inspect the EFI System Partition (ESP)
+
+To verify whether insufficient EFI partition space is choking DISM and Windows Update, mount the hidden partition:
+
+```cmd
+:: 1. Open Command Prompt as Administrator and mount the ESP to drive Y:
+mountvol y: /s
+
+:: 2. Check the volume space
+y:
+dir /s
+
+:: 3. Inspect the EFI directory
+cd EFI
+dir
+```
+
+Look at the total free space reported at the bottom of the `dir` command. If free space is **less than 100 MB**, servicing operations will fail.
+
+---
+
+## 🧹 Step 3: Safely Clean Obsolete EFI Logs & Font Caches
+
+Often, legacy OEM diagnostic tools (such as HP, Dell, or Lenovo recovery hooks) and obsolete multilingual boot fonts clog the EFI partition.
+
+Run these cleanup commands inside the mounted `Y:` drive:
+
+```cmd
+:: Delete obsolete boot fonts to free ~20-30 MB
+del Y:\EFI\Microsoft\Boot\Fonts\* /q
+
+:: Delete temporary EFI rollout logs
+del Y:\EFI\Microsoft\Boot\*.log /q
+
+:: Unmount the ESP volume when complete
+mountvol y: /d
+```
+
+---
+
+## 📐 Step 4: Safely Grow the EFI System Partition
+
+If your disk’s EFI partition is physically capped at 100 MB, you should expand it to **300 MB or 500 MB** to ensure long-term update compatibility.
+
+```
+Disk Layout Adjustment:
+[ 100MB EFI ] [ 16MB MSR ] [ C: Windows Partition (500GB) ]
+                       |
+                       v  (Shrink C: by 400MB from left)
+[ 500MB EFI ] [ 16MB MSR ] [ C: Windows Partition (499.6GB) ]
+```
+
+### Resizing Runbook:
+1. Because Windows Disk Management cannot extend a partition backward to the left, use a reliable partition utility (such as Minitool Partition Wizard or GParted Live USB).
+2. Shrink the start of the `C:` drive by **400 MB**.
+3. Extend the **EFI System Partition** into the unallocated space.
+4. Apply the operations and reboot.
+
+---
+
+## 📋 Diagnostic Matrix & Error Triage
+
+| Symptom | Root Cause | Immediate Remediation |
+|:---|:---|:---|
+| **DISM `0x800f0915`** | Corrupt WinSxS delta manifest | `dism /RestoreHealth /Source:WIM:...` |
+| **SFC Fails to Repair** | WinSxS store is unhealthy | Run DISM **before** running SFC |
+| **Update Rollback at 96%** | ESP partition free space < 15 MB | `mountvol y: /s` -> Delete `\Fonts\*` |
+| **CBS Log: `0x80070070`** | Disk is full on boot volume | Extend ESP to 500 MB via GParted |
+
+---
+
+## 🏁 Summary
+
+Error `0x800f0915` is easily conquered once you recognize the dependency between the WinSxS component store and the EFI boot partition. By executing DISM health restorations before SFC and ensuring your EFI System Partition maintains at least 100 MB of free staging headroom, your Windows 11 installation will update smoothly without rollbacks or installation halts.
+
+*For more enterprise Windows repair guides, PowerShell system diagnostics, and workstation tuning runbooks, visit [PraveenTechWorld](https://www.praveentechworld.com).*
