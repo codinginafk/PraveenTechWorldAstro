@@ -4,7 +4,7 @@ description: "Hit CUDA out-of-memory errors on DeepSeek R1? Here is how we confi
 coverImage: "/images/articles/how-to-run-local-ai-models-on-windows-11-phi-4-deepseek.jpg"
 imageAlt: "Minimal flat illustration of GPU VRAM memory allocation nodes and AI model quantization"
 publishDate: "2026-07-21"
-updatedDate: "2026-08-14"
+updatedDate: "2026-08-26"
 author: "praveen"
 category: "ai-automation"
 tags:
@@ -15,7 +15,7 @@ tags:
   - "gpu"
   - "troubleshooting"
 seoTitle: "How to Run DeepSeek-R1 Locally on 8GB VRAM (Ollama)"
-socialHook: "Tired of CUDA Out of Memory errors when running DeepSeek R1 locally? Here is how our team got it running fast on a standard 8GB RTX card without upgrading hardware."
+socialHook: "Tired of CUDA out-of-memory errors when running DeepSeek R1 locally? Start with quantization, context limits, and one-model-at-a-time settings on an 8GB GPU."
 faq:
   - question: "Can you run DeepSeek R1 on an 8GB GPU?"
     answer: "Yes. By using the DeepSeek-R1-Distill-Llama-8B model with 4-bit quantization (Q4_K_M) via Ollama and capping context length to 4096 tokens, it fits within 6.2 GB of VRAM."
@@ -36,24 +36,26 @@ references:
     publisher: "Ollama"
 ---
 
-When DeepSeek released the open-weights R1 reasoning model series, my friends and I immediately fired up our dev workbench to run it locally. Like millions of developers operating on mid-range workstations equipped with an NVIDIA RTX 3060, RTX 4060, or laptop GPU (8GB VRAM), our initial launch attempts hit an instant CUDA memory wall:
+When an R1 model is loaded onto an 8GB GPU, the first failure is often a CUDA memory error. The exact limit depends on the model file, context length, driver, display workload, and whether Ollama offloads layers to system RAM:
 
 ```text
 CUDA error: out of memory
   current allocation: 7.85 GB
   requested allocation: 1.20 GB
   device total capacity: 7.99 GB
-```powershell
+```
 
 If you attempt to load the full 671B MoE base model or run 8-bit unquantized builds, an 8GB graphics card simply chokes. However, spending $1,200 on an enterprise GPU upgrade is entirely unnecessary.
 
-By fine-tuning Ollama's runtime parameters, locking context window caps, and selecting the optimal GGUF quantization format, our team successfully got **DeepSeek-R1-Distill-Llama-8B** streaming locally at **34 tokens per second** on a standard 8GB graphics card, and **DeepSeek-R1-Distill-Qwen-14B** running via hybrid GPU/RAM layer offloading.
+With a 4-bit GGUF build, a capped context window, and one loaded model, an 8B variant can fit on some 8GB cards. A 14B variant may require hybrid GPU/RAM layer offloading. Treat speed and memory figures as hardware-dependent examples rather than guarantees.
 
-Here is the complete, practitioner-grade blueprint we built and tested on our workbench.
+Here is a practical configuration sequence you can measure on your own hardware.
 
 ---
 
 ## 📊 VRAM Memory Footprint & Token Speed Matrix
+
+The figures below are planning estimates, not universal benchmarks. Model files, Ollama versions, GPU drivers, display use, context length, and CPU offloading can change both peak VRAM and tokens per second.
 
 | Model Variant | Base Architecture | Quantization | Model Weight VRAM | Recommended Context (`num_ctx`) | Total Peak VRAM | Status on 8GB GPU | Inference Speed |
 |:---|:---|:---|:---:|:---:|:---:|:---:|:---:|
@@ -71,7 +73,7 @@ Before tweaking model parameters, verify that your CUDA environment recognizes y
 ```bash
 # Verify NVIDIA GPU recognition and VRAM allocation
 nvidia-smi
-```bash
+```
 
 Ensure `nvidia-smi` displays your graphics card (e.g. `NVIDIA GeForce RTX 3060`) and confirms CUDA 12.x driver compatibility.
 
@@ -94,13 +96,13 @@ PARAMETER temperature 0.2
 PARAMETER top_p 0.9
 
 SYSTEM """You are a senior IT operations engineer and software architect. Provide concise, production-ready code blocks and shell commands without conversational preamble."""
-```bash
+```
 
 2. Compile your lightweight custom model instance:
 
-```bash
+```
 ollama create deepseek-r1-8gb -f ./Modelfile-R1-8GB
-```bash
+```
 
 ---
 
@@ -114,7 +116,7 @@ $env:OLLAMA_NUM_PARALLEL = "1"
 $env:OLLAMA_MAX_LOADED_MODELS = "1"
 $env:CUDA_VISIBLE_DEVICES = "0"
 $env:OLLAMA_FLASH_ATTENTION = "1"
-```bash
+```
 
 ### On Linux / Bash:
 ```bash
@@ -122,7 +124,7 @@ export OLLAMA_NUM_PARALLEL=1
 export OLLAMA_MAX_LOADED_MODELS=1
 export CUDA_VISIBLE_DEVICES=0
 export OLLAMA_FLASH_ATTENTION=1
-```bash
+```
 
 ---
 
@@ -138,14 +140,14 @@ FROM deepseek-r1:14b
 PARAMETER num_gpu 32
 PARAMETER num_ctx 2048
 PARAMETER temperature 0.2
-```bash
+```
 
 Compile and run the 14B hybrid instance:
 
 ```bash
 ollama create deepseek-r1-14b-hybrid -f ./Modelfile-R1-14B
 ollama run deepseek-r1-14b-hybrid
-```bash
+```
 
 ---
 
@@ -185,6 +187,7 @@ if __name__ == "__main__":
 Running DeepSeek R1 on an 8GB GPU requires `Q4_K_M` 4-bit quantization, hard-capping `num_ctx` to 4096, and disabling parallel worker allocation.
 
 For related AI and local LLM deployment guides, check out:
+- [DeepSeek R1 Quantization: FP8 vs Q4 and Local VRAM Planning](/blog/deepseek-r1-quantization-fp8-q4-local-vram-guide)
 - [Set Up a Local RAG Pipeline with Open-WebUI & Ollama](/blog/rag-pipeline-open-webui-ollama-local-network-setup)
 - [Why AI Coding Agents Truncate Context Memory](/blog/why-ai-coding-agents-truncate-context-memory-token-optimization)
 - [How to Run Local AI Models on Windows 11 (Phi-4 & DeepSeek)](/blog/how-to-run-local-ai-models-on-windows-11-phi-4-deepseek)

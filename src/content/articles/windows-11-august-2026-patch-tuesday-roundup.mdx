@@ -4,6 +4,7 @@ description: "August 2026 Patch Tuesday breakdown: 421 vulnerabilities, 236 Wind
 coverImage: "/images/articles/windows-11-august-2026-patch-tuesday-roundup.jpg"
 imageAlt: "Minimal flat editorial illustration of a desk calendar page with a security shield and highlighted amber patch date"
 publishDate: "2026-08-19"
+updatedDate: "2026-08-26"
 author: "praveen"
 category: "windows-fixes"
 pillarId: "windows-fixes"
@@ -124,6 +125,8 @@ Ensure your deployment rings target the correct August 11, 2026 cumulative relea
 | **Windows Server 2022** | **KB5041578** | `20348.2655` |
 | **Windows Server 2019** | **KB5041578** | `17763.6189` |
 
+For the game and RGB regression Microsoft lists for KB5121003, use [the detailed inpoutx64 troubleshooting guide](/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash). It explains the reversible `Start=4` test; do not remove a kernel driver automatically just because it appears in a forum checklist.
+
 ---
 
 ## 🛠️ Sysadmin Triage Sequence & Fleet Verification
@@ -133,7 +136,7 @@ When rolling out the August 2026 patches, follow this three-phase staging strate
 ```
 [ Phase 1: Pre-Flight Audit ]
   - Enumerate legacy kernel services (sc query / Get-CimInstance Win32_SystemDriver)
-  - Purge unmaintained drivers (inpoutx64.sys) to prevent HVCI 0x3B bugchecks
+  - Inventory legacy drivers (including inpoutx64.sys) and record the owning application before changing them
   - Verify EFI System Partition has >= 100 MB free space (avoids 0x800f0915 failure)
                |
                v
@@ -174,7 +177,7 @@ if ($matched) {
 
 ## ⚠️ Known Deployment Traps to Avoid
 
-1. **`inpoutx64.sys` Kernel Panic:** Updating to KB5121003 on workstations running older RGB software (Aura Sync, OpenRGB) or anti-cheat wrappers triggers `0x3B` / `0x50` blue screens. Purge `inpoutx64.sys` using `sc stop inpoutx64` and `sc delete inpoutx64` before patching.
+1. **`inpoutx64.sys` Known Issue:** Microsoft lists a KB5121003 compatibility issue affecting certain games and RGB or peripheral software. Do not purge the driver with `sc delete`; identify the service, back up the registry, and use the documented reversible workaround in the detailed guide above.
 2. **UEFI DBX Variable Commit Fails:** Motherboards with constrained NVRAM tables may halt on "Secure Boot Fail" due to the new revocation database. Update motherboard BIOS microcode prior to fleet-wide rollout.
 3. **EFI Partition Full (Error `0x800f0915`):** If the ESP partition lacks free space, servicing operations fail silently. Ensure at least 100 MB is free on the EFI volume.
 
