@@ -1,0 +1,273 @@
+---
+title: "WSL2 No Internet on Windows 11? Fix DNS and VPN Issues"
+description: "WSL2 internet not working on Windows 11? Test DNS, VPN, NAT, mirrored networking, proxy variables, and the Windows host safely."
+publishDate: "2026-08-26"
+author: "praveen"
+category: "windows-fixes"
+tags: ["wsl2", "windows-11", "dns", "networking", "vpn", "troubleshooting"]
+coverImage: "/images/generated/wsl2-internet-not-working-windows-11-dns-vpn-fixes.png"
+imageAlt: "Network bridge configuration showing a broken link for WSL2 troubleshooting"
+draft: false
+seoTitle: "WSL2 No Internet? Fix DNS and VPN Issues"
+socialHook: "WSL2 has no internet? Test Windows, DNS tunneling, VPN proxy variables, and mirrored networking before changing resolv.conf."
+faq:
+  - question: "Why does WSL2 say temporary failure in name resolution?"
+    answer: "The WSL virtual network may be unable to reach the Windows DNS proxy. Firewall policy, VPN software, stale HNS rules, and a broken generated resolv.conf can all cause the same message. Test DNS separately from general network connectivity before changing configuration."
+  - question: "Should I use mirrored networking to fix WSL2 internet?"
+    answer: "Not automatically. Mirrored mode is a Windows 11 option that can help with VPN and local-network compatibility, but it changes how traffic reaches the host and can introduce port conflicts. Try DNS tunneling and a clean WSL restart first."
+  - question: "Will changing resolv.conf permanently fix WSL2 DNS?"
+    answer: "Usually not. WSL can regenerate resolv.conf when the distribution starts. A permanent manual edit can also conflict with DNS tunneling. Use the supported .wslconfig and wsl.conf settings unless you have a specific reason to manage DNS yourself."
+  - question: "Can a VPN break WSL2 networking?"
+    answer: "Yes. Some VPNs apply Windows DNS and NRPT policies that WSL cannot use through the normal NAT path. Microsoft recommends DNS tunneling for VPN scenarios because WSL can then use Windows DNS behavior directly."
+references:
+  - title: "Troubleshooting Windows Subsystem for Linux"
+    url: "https://learn.microsoft.com/en-us/windows/wsl/troubleshooting"
+    publisher: "Microsoft Learn"
+  - title: "WSL configuration settings"
+    url: "https://github.com/MicrosoftDocs/WSL/blob/main/WSL/wsl-config.md?plain=1"
+    publisher: "MicrosoftDocs"
+  - title: "WSL localhost networking"
+    url: "https://github.com/microsoft/WSL/blob/master/doc/docs/technical-documentation/localhost.md"
+    publisher: "Microsoft WSL"
+---
+
+WSL2 internet not working? Test Windows, IP routing, and DNS separately before changing Linux configuration. That tells you whether the failure is on the Windows host, the WSL virtual network, or name resolution.
+
+Microsoft’s [WSL troubleshooting documentation](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting) is the reference point for this order because a working shell does not prove that the WSL virtual network or DNS path is healthy. According to Microsoft, DNS tunneling is especially relevant when VPN behavior differs between Windows and WSL2.
+
+The safest way to fix it is to separate three things that are often mixed together:
+
+1. Does Windows itself have internet access?
+2. Can WSL reach an IP address?
+3. Can WSL resolve a hostname?
+
+Do these checks in order. Do not start by deleting your Linux distribution or replacing `/etc/resolv.conf` with a random public DNS server.
+
+## 1. Check whether Windows is the problem
+
+**Test the Windows host first; WSL cannot repair a host connection, VPN, or firewall that is already failing.**
+
+Open **Settings > Network & internet** in Windows and confirm the host can browse before testing the Linux side.
+
+Open a normal PowerShell window in Windows and run:
+
+```powershell
+# PowerShell: test the Windows host before opening WSL2
+Test-NetConnection 1.1.1.1 -Port 443
+Resolve-DnsName archive.ubuntu.com
+```
+
+If both commands fail, WSL is not the first thing to repair. Fix the Windows connection, captive portal, VPN, firewall, or Wi-Fi connection first.
+
+If Windows works, open your WSL distribution and test the Linux side:
+
+```bash
+# WSL2 shell: separate IP reachability, DNS, and HTTPS
+ip route
+getent hosts archive.ubuntu.com
+curl -I --max-time 10 https://archive.ubuntu.com
+```
+
+The results tell you where to focus:
+
+| Result | Likely boundary | Next step |
+| --- | --- | --- |
+| Windows and WSL both fail | Host connection, VPN, or firewall | Repair Windows networking first |
+| IP traffic works but hostnames fail | DNS path | Try DNS tunneling and restart WSL |
+| DNS works but HTTPS fails | Proxy, firewall, certificate, or VPN | Check proxy and security software |
+| Only one distribution fails | Distro configuration | Inspect its `wsl.conf` and resolver behavior |
+
+## 2. Restart WSL cleanly and update it
+
+**Use `wsl --shutdown` to reset the lightweight VM and virtual-network state without deleting the distribution.**
+
+WSL keeps a lightweight virtual machine and a Windows networking layer alive between shells. A normal `exit` does not reset either one.
+
+From PowerShell, run:
+
+```powershell
+# PowerShell: restart the WSL2 runtime without unregistering a distro
+wsl --shutdown
+wsl --update
+wsl --status
+```
+
+Start the distribution again and repeat the `getent` and `curl` tests. This clears stale virtual-network state without changing your Linux files.
+
+## 3. Turn on DNS tunneling for VPN and managed networks
+
+**DNS tunneling is the first supported configuration change to test when Windows resolves names but WSL2 does not.**
+
+Microsoft documents DNS tunneling as a way for WSL to send DNS requests through Windows instead of relying on the ordinary NAT DNS packet path. It is particularly useful when a VPN or enterprise policy only applies its DNS rules to Windows.
+
+Create or edit this file in your Windows user profile:
+
+The file is `%UserProfile%\.wslconfig` in your Windows user profile.
+
+Use this small configuration first:
+
+```ini
+# %UserProfile%\.wslconfig
+[wsl2]
+dnsTunneling=true
+autoProxy=true
+```
+
+Save the file, then restart WSL:
+
+```powershell
+# PowerShell: reload .wslconfig settings
+wsl --shutdown
+```
+
+Open WSL and check the resolver again:
+
+```bash
+# WSL2 shell: confirm the resolver path after restart
+cat /etc/resolv.conf
+getent hosts packages.microsoft.com
+sudo apt update
+```
+
+Do not disable `generateResolvConf` in the distribution's `/etc/wsl.conf` while testing DNS tunneling. WSL needs to manage the resolver file for tunneling to work.
+
+## 4. Check proxy variables inside Linux
+
+**A stale proxy can make WSL2 look offline even when DNS and routing are working.**
+
+WSL can inherit Windows proxy information. That is helpful on a managed network, but a stale proxy can make every HTTPS request fail after you disconnect from work or a VPN.
+
+Inspect the current values:
+
+```bash
+# WSL2 shell: inspect inherited proxy settings
+env | grep -iE '^(http|https|no)_proxy='
+```
+
+If the values point to an old host or port, temporarily clear them for the current shell and test again:
+
+```bash
+# WSL2 shell: test one request without inherited proxy variables
+unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy ALL_PROXY all_proxy
+curl -I --max-time 10 https://github.com
+```
+
+If clearing the variables fixes the connection, remove the stale export from `~/.bashrc`, `~/.profile`, your shell plugin, or the Windows proxy configuration. Do not leave a blank proxy workaround in place if your organization requires one.
+
+If the failing command runs inside a container rather than directly in WSL, compare the result with our [Podman on Windows and WSL2 migration guide](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2), because the container network may be a second boundary.
+
+## 5. Try mirrored networking only when NAT is the problem
+
+**Keep NAT as the baseline and test mirrored networking only after host connectivity, DNS tunneling, and proxy state are understood.**
+
+NAT is the normal WSL2 mode. Mirrored mode is available on supported Windows 11 and WSL versions and can improve compatibility with VPNs, local network discovery, and services that need to see the host more directly. It is not a universal speed switch.
+
+If DNS tunneling and a clean restart did not help, test this in `%UserProfile%\.wslconfig`:
+
+```ini
+# %UserProfile%\.wslconfig
+[wsl2]
+networkingMode=mirrored
+dnsTunneling=true
+```
+
+Restart WSL and test again. If a development server or container stops binding because Windows is already using its port, remove the mirrored setting and return to NAT. Mirrored mode can change how firewall rules and localhost traffic behave.
+
+For a local development server, start with this simple test inside WSL:
+
+```bash
+# WSL2 shell: test localhost forwarding after a network-mode change
+python3 -m http.server 8000 --bind 0.0.0.0
+```
+
+Then open `http://localhost:8000` in Windows. WSL's localhost forwarding and mirrored networking are related, but they are not the same setting.
+
+## 6. Inspect the distribution-specific settings
+
+**Restore supported resolver defaults when one distribution behaves differently from the others.**
+
+If one distribution fails while another works, check its configuration:
+
+```bash
+# WSL2 shell: inspect per-distribution networking settings
+cat /etc/wsl.conf
+cat /etc/resolv.conf
+```
+
+The supported defaults are usually safest:
+
+```ini
+# /etc/wsl.conf
+[network]
+generateHosts=true
+generateResolvConf=true
+```
+
+If you previously set either value to `false`, undo that change temporarily, save the file, and run `wsl --shutdown` from PowerShell. A hand-written resolver file can survive long enough to confuse troubleshooting, then be replaced at the next launch.
+
+## 7. Last-resort Windows networking checks
+
+**Treat HNS, firewall, and enterprise policy changes as last-resort work because Docker and other virtualized tools may share them.**
+
+If DNS is still broken after the supported WSL settings are restored, check the Windows firewall profile and security software. Microsoft notes that the WSL NAT DNS path depends on a host firewall rule created for the WSL virtual interface. Enterprise policies that reject local firewall rules can block that path.
+
+Avoid deleting all HNS networks or firewall rules unless you understand what else on the computer uses Hyper-V networking. Docker Desktop, Windows Sandbox, and other virtualized tools can share those components. If this is a work machine, ask the administrator before changing them.
+
+## What not to do
+
+- Do not unregister the distribution as a first fix. `wsl --unregister` deletes its Linux filesystem.
+- Do not copy a nameserver from a random forum post into `resolv.conf` before testing DNS tunneling.
+- Do not disable the firewall globally to prove a point.
+- Do not mix mirrored mode, manual DNS, and multiple VPN clients while testing. Change one variable at a time.
+
+## Summary: the safe WSL2 networking order
+
+Start with `Test-NetConnection` and `getent hosts`. Then run `wsl --shutdown`, update WSL, and enable DNS tunneling in `%UserProfile%\.wslconfig`. If a VPN or local-network service still fails, test mirrored networking and keep a record of the setting that changed the result.
+
+If your goal is containers rather than a general Linux environment, our [Podman on Windows and WSL2 migration guide](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2) covers the container-specific trade-offs. For bind-mount errors, see [Docker volume permission denied fixes](/blog/docker-volume-permission-denied-fixes).
+
+For a local AI stack that depends on WSL2 reaching services on the Windows host, see our [Open WebUI and Ollama local-network setup guide](/blog/open-webui-ollama-rag-it-runbooks-setup) after the basic DNS tests pass.
+
+## How to identify the failing boundary
+
+**The first command that fails tells you where to stop changing configuration.**
+
+If `Test-NetConnection 1.1.1.1 -Port 443` fails in Windows, repair the host connection, VPN, captive portal, or firewall first. Do not edit `/etc/resolv.conf`; WSL2 is downstream of that failure.
+
+If Windows passes but `curl` to an IP fails inside WSL2, the issue is routing, NAT, firewall policy, or the virtual adapter. Restart WSL with `wsl --shutdown` and repeat the test before changing DNS. A name server cannot fix a route that never reaches the network.
+
+For the first pass, record each boundary as a **100% binary result**: Windows host reachable or not, WSL2 IP route working or not, and hostname resolution working or not. This keeps a VPN or proxy change from hiding the original failure.
+
+If IP traffic works but `getent hosts archive.ubuntu.com` fails, the problem is DNS. This is the branch where DNS tunneling, a VPN’s split-DNS behavior, or a stale generated resolver file matters. Keep the resolver test separate from HTTPS so you do not mistake a certificate or proxy failure for DNS.
+
+If name resolution works but HTTPS fails, inspect proxy variables, certificate interception, and security software. A successful `getent` call proves only that DNS answered; it does not prove that TCP 443 or the proxy path is usable.
+
+If one distribution fails while another works, compare `/etc/wsl.conf`, `/etc/resolv.conf`, proxy exports, and the package manager configuration. Do not unregister the failing distribution as a test. `wsl --unregister` removes its Linux filesystem and destroys the easiest evidence of what changed.
+
+## VPN and firewall checks that do not destroy the evidence
+
+**Change one network variable at a time and keep a before-and-after record.**
+
+Disconnect the VPN once, run the same Windows and WSL2 tests, and reconnect it. If DNS works only when the VPN is disconnected, the VPN’s DNS or firewall policy is part of the path. Turn DNS tunneling on before experimenting with mirrored networking. If the VPN requires a proxy, preserve the correct proxy rather than permanently unsetting it.
+
+Check whether Windows Security or an enterprise endpoint tool has recently changed the firewall profile. WSL2 uses a virtual network boundary, and a policy can block that interface while ordinary browser traffic still works. Do not disable the firewall globally to prove this theory. Ask the administrator for a rule review or test on a machine where you are authorized to inspect the policy.
+
+When Docker Desktop, Podman, Windows Sandbox, or another Hyper-V feature is running, record that fact before resetting HNS networks. Several tools can use the same virtualization components. If the failure began after a container-tool update, compare it with our [Podman on Windows and WSL2 migration guide](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2) and keep container-specific tests separate from plain WSL2 commands.
+
+## FAQ: WSL2 networking questions we check most often
+
+### Why does WSL2 report temporary failure in name resolution?
+
+The WSL2 resolver cannot reach or use the Windows DNS path. VPN policy, firewall rules, stale generated settings, and a broken virtual-network state can produce the same message. Test an IP address and a hostname separately, then try DNS tunneling.
+
+### Should I replace `/etc/resolv.conf` with 8.8.8.8?
+
+Not as the first fix. WSL2 can regenerate the file, and a manual nameserver can bypass the DNS rules required by a VPN or managed network. Restore supported defaults and test DNS tunneling before managing the resolver manually.
+
+### Does mirrored networking always fix WSL2 internet?
+
+No. It can improve compatibility for some VPN, localhost, and local-network cases, but it changes the network path and can create port or firewall differences. Use it as a controlled comparison, not as a universal performance setting.
+
+### Why does `apt update` fail while a browser works?
+
+The browser may use Windows DNS, a system proxy, or a security exception that the WSL2 process does not have. Compare the Windows `Resolve-DnsName` result with WSL2 `getent`, then inspect proxy variables before changing package sources.
