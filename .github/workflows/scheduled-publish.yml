@@ -1,15 +1,15 @@
-name: Scheduled Article Publisher
+name: Scheduled Article Review
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # Every 30 minutes - checks publish_schedule.json and flips draft: true → false
-  workflow_dispatch:          # Manual trigger from GitHub Actions UI
+    - cron: '*/30 * * * *'  # Every 30 minutes - reports due drafts without mutating production
+  workflow_dispatch:          # Manual read-only review from GitHub Actions UI
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish:
+  review:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,22 +27,8 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Scheduled Publisher
-        run: node src/scripts/run-scheduled-publish.mjs
+      - name: Review Scheduled Articles
+        run: node src/scripts/run-scheduled-publish.mjs --dry-run
 
       - name: Validate Published Content
         run: npm run validate-content
-
-      - name: Check for Changes
-        id: changes
-        run: |
-          git diff --quiet src/content/articles/ src/scripts/publish_schedule.json || echo "changed=true" >> $GITHUB_OUTPUT
-
-      - name: Commit and Push Published Articles
-        if: steps.changes.outputs.changed == 'true'
-        run: |
-          git config --global user.name "PraveenTechWorld Publisher"
-          git config --global user.email "hello@praveentechworld.com"
-          git add src/content/articles/ src/scripts/publish_schedule.json
-          git commit -m "publish: Auto-release scheduled draft(s) [$(date -u '+%Y-%m-%d %H:%M UTC')]"
-          git push origin main

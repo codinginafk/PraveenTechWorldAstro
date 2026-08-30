@@ -121,7 +121,7 @@ The site exposes the following WebMCP tools for agentic browsing:
 ## Navigation
 - [Home](${SITE_URL}/)
 - [All Articles](${SITE_URL}/blog)
-- [Sitemap](${SITE_URL}/sitemap-index.xml)
+- [Sitemap](${SITE_URL}/sitemap-0.xml)
 - [RSS Feed](${SITE_URL}/rss.xml)
 
 `;

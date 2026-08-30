@@ -15,12 +15,15 @@ const articles = defineCollection({
     featured: z.boolean().default(false),
     draft: z.boolean().default(false),
     noindex: z.boolean().default(false),
+    pillarId: z.string().optional(),
+    problem_id: z.string().optional(),
+    target_query: z.string().optional(),
     coverImage: z.string().optional(),
     imageAlt: z.string().optional(),
     imageCredit: z.string().optional(),
     seoTitle: z.string().optional(),
     seoDescription: z.string().optional(),
-    canonical: z.string().url().optional(),
+    canonical: z.url().optional(),
     socialHook: z.string().optional(),
     readingTime: z.number().optional(),
     faq: z
@@ -35,7 +38,7 @@ const articles = defineCollection({
       .array(
         z.object({
           title: z.string(),
-          url: z.string().url(),
+          url: z.url(),
           author: z.string().optional(),
           publisher: z.string().optional(),
         })
@@ -52,7 +55,7 @@ const authors = defineCollection({
     avatar: z.string().optional(),
     twitter: z.string().optional(),
     linkedin: z.string().optional(),
-    website: z.string().url().optional(),
+    website: z.url().optional(),
   }),
 });
 
@@ -63,6 +66,7 @@ const categories = defineCollection({
     description: z.string(),
     icon: z.string().optional(),
     order: z.number().default(0),
+    intro: z.string().optional(),
   }),
 });
 

@@ -98,7 +98,7 @@ export async function getBingBacklinks(limit = 100) {
 
 export async function submitSitemapToBing() {
   log("[Bing Client] Submitting sitemap to Bing...");
-  const feedUrl = "https://www.praveentechworld.com/sitemap-index.xml";
+  const feedUrl = "https://www.praveentechworld.com/sitemap-0.xml";
   const data = await bingApiCall("SubmitFeed", { feedUrl }, "POST");
   if (data) {
     log(`[Bing Client] Sitemap submitted: ${JSON.stringify(data).slice(0, 100)}`);
@@ -119,30 +119,23 @@ export async function submitUrlToBing(url) {
   return data;
 }
 
-export async function submitUrlBatchToBing(urls, quota = 39) {
-  const normalizedUrls = urls.map(u => u.startsWith("http") ? u : `https://www.praveentechworld.com${u.startsWith("/") ? u : `/${u}`}`);
-  log(`[Bing Client] Submitting ${Math.min(urls.length, quota)}/${urls.length} URLs (quota: ${quota})...`);
-
-  // Try batch first
-  const data = await bingApiCall("SubmitUrlBatch", { urlList: normalizedUrls.slice(0, quota) }, "POST");
-  if (data) {
-    log(`[Bing Client] Batch submitted: ${JSON.stringify(data).slice(0, 100)}`);
-    const state = loadState();
-    state.lastBingUrlBatchSubmit = new Date().toISOString();
-    state.lastBingUrlBatchCount = Math.min(urls.length, quota);
-    saveState(state);
-    return data;
-  }
-
-  // Fallback: submit individually
-  log(`[Bing Client] Batch failed, submitting individually (max ${quota})...`);
+export async function submitUrlBatchToBing(urls, quota = 10) {
+  const normalizedUrls = [...new Set(urls.map(u => u.startsWith("http") ? u : `https://www.praveentechworld.com${u.startsWith("/") ? u : `/${u}`}`))];
+  const limit = Math.min(normalizedUrls.length, quota, 10);
+  log(`[Bing Client] Submitting ${limit}/${normalizedUrls.length} changed URLs individually (safe cap: 10)...`);
   let successCount = 0;
-  for (const url of normalizedUrls.slice(0, quota)) {
+  for (const url of normalizedUrls.slice(0, limit)) {
     const r = await submitUrlToBing(url);
     if (r) successCount++;
   }
-  log(`[Bing Client] Individually submitted ${successCount}/${Math.min(urls.length, quota)} URLs`);
-  return null;
+  log(`[Bing Client] Individually submitted ${successCount}/${limit} URLs`);
+  if (successCount > 0) {
+    const state = loadState();
+    state.lastBingUrlIndividualSubmit = new Date().toISOString();
+    state.lastBingUrlIndividualCount = successCount;
+    saveState(state);
+  }
+  return { submitted: successCount, attempted: limit, mode: "individual" };
 }
 
 export async function fetchUrlOnBing(url) {
@@ -193,7 +186,7 @@ export async function fetchAllBingData() {
   return Object.keys(results).length > 1 ? results : null;
 }
 
-export async function submitEverything() {
+export async function submitEverything(changedUrls = []) {
   log("[Bing Client] ========== SUBMITTING EVERYTHING TO BING ==========");
   const results = {};
 
@@ -201,11 +194,12 @@ export async function submitEverything() {
   log("\n--- Step 1: Submit sitemap ---");
   results.sitemap = await submitSitemapToBing();
 
-  // 2. Get all article URLs from sitemap
+  // 2. Read the sitemap for optional crawl checks. Do not treat it as a bulk
+  // submission queue: Bing recommends targeted notifications for changed URLs.
   log("\n--- Step 2: Collect article URLs ---");
   let articleUrls = [];
   try {
-    // sitemap-index.xml points to sub-sitemaps, so fetch sitemap-0.xml directly
+    // Use the same canonical sitemap declared in robots.txt.
     const sitemapRes = await fetch("https://www.praveentechworld.com/sitemap-0.xml", { signal: AbortSignal.timeout(10000) });
     const sitemapText = await sitemapRes.text();
     const urlMatches = sitemapText.match(/<loc>([^<]+)<\/loc>/g);
@@ -222,20 +216,20 @@ export async function submitEverything() {
     log(`[Bing Client] Could not fetch sitemap: ${err.message}`);
   }
 
-  // 3. Submit article URLs (batch first, fallback to individual)
-  const DAILY_QUOTA = 39; // Bing's daily URL submission quota
-  if (articleUrls.length > 0) {
-    log(`\n--- Step 3: Submit ${Math.min(articleUrls.length, DAILY_QUOTA)}/${articleUrls.length} article URLs ---`);
-    results.urls = await submitUrlBatchToBing(articleUrls, DAILY_QUOTA);
+  // 3. Submit only URLs explicitly supplied by the release/change set.
+  if (changedUrls.length > 0) {
+    log(`\n--- Step 3: Submit ${Math.min(changedUrls.length, 10)}/${changedUrls.length} changed URLs individually ---`);
+    results.urls = await submitUrlBatchToBing(changedUrls, 10);
   } else {
-    log("\n--- Step 3: No article URLs to submit ---");
+    log("\n--- Step 3: No changed URLs supplied; skipping page submissions ---");
   }
 
   // 4. Fetch top articles for immediate crawl (only 3/day)
   log("\n--- Step 4: Request immediate crawl for top 3 articles ---");
-  if (articleUrls.length > 0) {
+  const crawlTargets = changedUrls.length > 0 ? changedUrls : articleUrls;
+  if (crawlTargets.length > 0) {
     results.fetches = [];
-    for (const url of articleUrls.slice(0, 3)) {
+    for (const url of crawlTargets.slice(0, 3)) {
       const r = await fetchUrlOnBing(url);
       results.fetches.push(r);
     }
@@ -276,7 +270,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     submiturl: () => submitUrlToBing(process.argv[3] || "/"),
     submitbatch: () => submitUrlBatchToBing((process.argv[3] || "").split(",").filter(Boolean)),
     fetch: () => fetchUrlOnBing(process.argv[3] || "/"),
-    submitall: submitEverything,
+    submitall: () => submitEverything((process.argv[3] || "").split(",").filter(Boolean)),
   };
   const action = actions[cmd];
   if (action) {

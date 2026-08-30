@@ -9,7 +9,7 @@ const STATE_FILE = path.join(__dirname, "..", "state.json");
 
 const SITE_URL = "https://www.praveentechworld.com";
 const GSC_SITE_URL = "sc-domain:praveentechworld.com";
-const SITEMAP_URL = `${SITE_URL}/sitemap-index.xml`;
+const SITEMAP_URL = `${SITE_URL}/sitemap-0.xml`;
 
 const INDEXNOW_KEY = "b5ccb860-ee82-4baa-9416-61b965ff55d7";
 
@@ -30,35 +30,42 @@ function getServiceAccountPath() {
 }
 
 export async function pingIndexNow(extraUrls = []) {
-  log("[GSC Client] Pinging IndexNow (Bing + partners)...");
-  const urls = [SITE_URL, SITEMAP_URL, ...extraUrls.slice(0, 100)];
-
-  try {
-    const res = await fetch("https://api.indexnow.org/indexnow", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        host: "www.praveentechworld.com",
-        key: INDEXNOW_KEY,
-        keyLocation: `${SITE_URL}/${INDEXNOW_KEY}.txt`,
-        urlList: urls,
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (res.ok) {
-      log(`[GSC Client] IndexNow ping successful (HTTP ${res.status})`);
-      const state = loadState();
-      state.lastIndexNowPing = new Date().toISOString();
-      saveState(state);
-      return true;
-    }
-    log(`[GSC Client] IndexNow ping returned HTTP ${res.status}: ${await res.text().catch(() => "")}`);
-    return false;
-  } catch (err) {
-    log(`[GSC Client] IndexNow ping failed: ${err.message}`);
+  log("[GSC Client] Pinging IndexNow for changed Bing URLs...");
+  const urls = [...new Set(extraUrls.map(u => u.startsWith("http") ? u : `${SITE_URL}${u.startsWith("/") ? u : `/${u}`}`))].slice(0, 10);
+  if (urls.length === 0) {
+    log("[GSC Client] No changed URLs supplied; skipping IndexNow notification.");
     return false;
   }
+
+  let successCount = 0;
+  for (const url of urls) {
+    try {
+      const res = await fetch("https://api.indexnow.org/indexnow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          host: "www.praveentechworld.com",
+          key: INDEXNOW_KEY,
+          keyLocation: `${SITE_URL}/${INDEXNOW_KEY}.txt`,
+          urlList: [url],
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) successCount++;
+      else log(`[GSC Client] IndexNow rejected ${url}: HTTP ${res.status}`);
+    } catch (err) {
+      log(`[GSC Client] IndexNow failed for ${url}: ${err.message}`);
+    }
+  }
+
+  log(`[GSC Client] IndexNow notified ${successCount}/${urls.length} changed URLs individually.`);
+  if (successCount > 0) {
+    const state = loadState();
+    state.lastIndexNowPing = new Date().toISOString();
+    state.lastIndexNowCount = successCount;
+    saveState(state);
+  }
+  return successCount > 0;
 }
 
 export async function pingPingomatic() {

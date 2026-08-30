@@ -6,20 +6,20 @@ async function generateDashboard() {
     const db = await getDb();
     
     // Fetch evaluated topics that scored highly
-    const evaluatedTopics = await db.all(`
+    const evaluatedTopics = db.prepare(`
         SELECT t.id, t.title, t.confidence_score, e.source_domain, e.summary
         FROM topics t
         LEFT JOIN evidence e ON t.id = e.topic_id
         WHERE t.status = 'evaluated' AND t.confidence_score >= 80
         ORDER BY t.confidence_score DESC
-    `);
+    `).all();
 
     // Fetch topics that are stuck in research loop
-    const researchingTopics = await db.all(`
+    const researchingTopics = db.prepare(`
         SELECT id, title, confidence_score
         FROM topics
         WHERE status = 'researching'
-    `);
+    `).all();
 
     let md = `# Research Intelligence Engine: DRAFT QUEUE\n\n`;
     md += `*Generated automatically on: ${new Date().toISOString()}*\n\n`;

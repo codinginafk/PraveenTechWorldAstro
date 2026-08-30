@@ -269,6 +269,7 @@ export function validateHomepage(homepagePath = path.join(ROOT_DIR, "src/pages/i
 
 export function validateArticle(filePath, existingArticlePaths = []) {
   const article = parseArticle(filePath);
+  const rawContent = fs.readFileSync(filePath, "utf-8");
   if (!article) {
     return { passed: false, failures: [{ gate: "Parse", rule: "Frontmatter parse", message: `Could not parse article frontmatter — check YAML syntax: ${filePath}` }], score: 0, rules: RULES };
   }

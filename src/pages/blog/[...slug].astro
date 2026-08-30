@@ -2,7 +2,7 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 import SchemaOrg from "@components/seo/SchemaOrg.astro";
 import { getCollection, getEntry, render } from "astro:content";
-import { getRelatedArticles, getAllCategories } from "@lib/content/posts";
+import { getRelatedArticles } from "@lib/content/posts";
 import { formatDate } from "@lib/utils/dateFormat";
 import { calculateReadingTime } from "@lib/utils/readingTime";
 import { buildCanonical } from "@lib/seo/metadata";
@@ -41,14 +41,17 @@ const breadcrumbItems = [
 ];
 
 // Extract HowTo steps from headings containing "Step" or numbered steps
-function extractHowToSteps(body, baseUrl) {
+function extractHowToSteps(
+  body: string | undefined,
+  baseUrl: string
+): Array<{ name: string; text: string; url: string }> | null {
   const stepRegex = /^#{2,3}\s+(Step\s+\d+[:.]?\s*.+)$/gm;
-  const steps = [];
-  let match;
+  const steps: Array<{ name: string; text: string; url: string }> = [];
+  let match: RegExpExecArray | null;
   while ((match = stepRegex.exec(body || "")) !== null) {
     const name = match[1].trim();
     const stepNum = name.match(/Step\s+(\d+)/i);
-    const index = stepNum ? parseInt(stepNum[1]) : steps.length + 1;
+    const index: number = stepNum ? parseInt(stepNum[1], 10) : steps.length + 1;
     steps.push({ name, text: name, url: `${baseUrl}#step-${index}` });
   }
   return steps.length > 0 ? steps : null;
@@ -315,8 +318,9 @@ const howToData = howToSteps ? {
 
   <script>
     // Reading progress bar — cache docHeight to avoid forced reflow on scroll
-    const progressBar = document.getElementById('reading-progress');
+    const progressBar = document.getElementById('reading-progress') as HTMLElement | null;
     if (progressBar) {
+      const progressBarElement = progressBar;
       let docHeight = 0;
       function measureHeight() {
         docHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -324,7 +328,7 @@ const howToData = howToSteps ? {
       function updateProgress() {
         const scrollTop = window.scrollY;
         const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-        progressBar.style.width = Math.min(progress, 100) + '%';
+        progressBarElement.style.width = Math.min(progress, 100) + '%';
       }
       measureHeight();
       window.addEventListener('scroll', updateProgress, { passive: true });

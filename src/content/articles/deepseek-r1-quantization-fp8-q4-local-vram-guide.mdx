@@ -1,4 +1,4 @@
-﻿---
+---
 title: "DeepSeek R1 FP8 vs Q4 Quantization: VRAM & Speed Guide"
 description: "DeepSeek R1 FP8 vs Q4: VRAM, speed, quality tradeoffs, and exact Ollama/llama.cpp commands for local inference on consumer GPUs."
 coverImage: "/images/generated/deepseek-r1-quantization-fp8-q4-local-vram-guide.jpg"
@@ -15,8 +15,8 @@ tags:
   - "gpu"
   - "quantization"
 draft: false
-seoTitle: "DeepSeek R1 FP8 vs Q4 Quantization: VRAM & Speed Guide"
-socialHook: "Running DeepSeek R1 locally? Q4_K_M, Q8_0, and FP8 each have very different VRAM costs and quality tradeoffs. Here is our verified table so you pick the right one first time."
+seoTitle: "DeepSeek R1 FP8 vs Q4 VRAM and Speed Guide"
+socialHook: "Running DeepSeek R1 locally? Compare Q4_K_M, Q8_0, and FP8 by memory cost, quality tradeoffs, and the commands that fit your GPU."
 faq:
   - question: "What is the difference between Q4_K_M and Q8_0 quantization?"
     answer: "Q4_K_M stores each weight in approximately 4 bits using k-means clustering, reducing VRAM by roughly half compared to Q8_0 (8-bit). Q4_K_M is faster and fits on smaller GPUs, but the heavier compression introduces more rounding error. Q8_0 is closer to FP16 quality and is the preferred choice when you have the VRAM headroom."
@@ -29,15 +29,16 @@ faq:
 references:
   - title: "Ollama DeepSeek R1 model card"
     url: "https://ollama.com/library/deepseek-r1"
+    publisher: "Ollama"
   - title: "llama.cpp quantization documentation"
     url: "https://github.com/ggml-org/llama.cpp/blob/master/docs/quantization.md"
+    publisher: "llama.cpp"
   - title: "HuggingFace GGUF model cards — bartowski/DeepSeek-R1-Distill"
     url: "https://huggingface.co/bartowski"
+    publisher: "Hugging Face"
 ---
 
-When our team first tried to run DeepSeek R1 locally, we spent two hours downloading a model that refused to load — the GGUF file was the wrong quantization for the VRAM we had available.
-
-Getting the quantization choice right before you download saves gigabytes of wasted bandwidth and hours of frustration. In this guide, we break down what FP8, Q4_K_M, and Q8_0 each mean, give you a verified VRAM table per model size, and share the exact commands we use with Ollama and llama.cpp.
+Choosing a DeepSeek R1 quantization before you download it prevents a common local-inference failure: the model fits on disk but not in GPU memory once the runtime allocates the KV cache. In this guide, I separate model-weight estimates from runtime memory, explain what FP8, Q4_K_M, and Q8_0 mean, and show the Ollama and llama.cpp settings that control the tradeoff.
 
 > **Note on scope:** DeepSeek R1 comes in two forms: the full **671B MoE model** (requires a multi-GPU server) and the **Distill models** (1.5B to 70B, designed for local consumer hardware). This guide focuses on the distill models since those are what most people actually run locally.
 
@@ -61,11 +62,13 @@ The GGUF format (used by llama.cpp and Ollama) supports many quantization levels
 
 > **Q4_K_M vs Q4_0:** The `_K_M` suffix means k-means quantization with a medium calibration dataset. It is meaningfully better quality than the older `Q4_0` at the same VRAM cost. Always prefer `Q4_K_M` over `Q4_0`.
 
+> ⚡ **Try the Interactive Tool:** Don't want to calculate KV cache and weight memory by hand? Use our free [Local AI VRAM & Quantization Calculator](/tools/vram-calculator) to select your exact GPU (RTX 4060, 4090, Apple Silicon M-series) and get real-time memory headroom plus copy-paste `ollama` commands.
+
 ---
 
-## Verified VRAM Table: DeepSeek R1 Distill Models
+## Estimated VRAM Table: DeepSeek R1 Distill Models
 
-Figures derived from the [Ollama DeepSeek R1 model card](https://ollama.com/library/deepseek-r1) and community-measured GGUF sizes. **Model weights only** — add 1–3 GB for KV cache at typical context lengths.
+These are planning estimates based on parameter count and common GGUF weight sizes, cross-checked against the [Ollama DeepSeek R1 model card](https://ollama.com/library/deepseek-r1). They are **model weights only**. Add runtime overhead and KV-cache memory; a 1–3 GB allowance is a starting estimate, not a guarantee for every context length or backend.
 
 | Model | Q4_K_M VRAM | Q8_0 VRAM | Recommended GPU |
 |-------|------------|----------|----------------|
@@ -80,13 +83,16 @@ Figures derived from the [Ollama DeepSeek R1 model card](https://ollama.com/libr
 
 ---
 
-## Quality vs Speed Tradeoffs: What We Observed
+## Quality vs Speed Tradeoffs: What the Numbers Predict
 
-When our team ran the **8B distill model** on an RTX 4060 (8 GB) with different quantizations:
+Quantization changes memory traffic and the amount of rounding error, but it does not produce one universal tokens-per-second result. Backend, GPU architecture, context length, batch size, offload layers, and thermal limits all change the measured speed. Treat any benchmark that omits those conditions as a rough comparison rather than a promise.
 
-- **Q4_K_M** — loaded in roughly 12 seconds, generated at around 28 tokens per second. Reasoning quality was solid for coding and math tasks.
-- **Q5_K_M** — required the 12 GB card variant. Roughly 5–8% slower than Q4_K_M. Noticeably more precise on multi-step mathematical proofs.
-- **Q8_0** — required the full 12 GB card. Closest to the reference output. Around 18 tokens per second due to higher memory bandwidth cost.
+- **Q4_K_M** usually gives the smallest weight footprint and leaves the most room for KV cache. It is the practical starting point for an 8 GB card, but long contexts can still spill to system RAM.
+- **Q5_K_M** trades some of that headroom for a smaller precision loss. Use it when the model fits with comfortable memory margin and you care about preserving more detail.
+- **Q8_0** keeps more information per weight but can consume almost twice the weight memory of Q4. It is useful when the GPU has the capacity or when a quality comparison justifies the cost.
+- **FP8** uses floating-point scaling and needs a backend with compatible CUDA support. It is not automatically faster than Q8_0 on consumer hardware.
+
+For a reproducible local comparison, record the GPU model, driver, backend version, model file hash, context length, prompt, generated token count, and peak VRAM. Run the same prompt three times after the model is warm, then report the median tokens per second. Without those details, a claimed “28 tokens per second” is not portable evidence.
 
 **Bottom line:** For coding, summarization, and general Q&A, **Q4_K_M is the right default**. Move to Q5_K_M or Q8_0 only if you need tighter math/reasoning accuracy and have the VRAM.
 
@@ -100,25 +106,25 @@ Ollama selects the best GGUF quantization it can fit in your available VRAM auto
 
 ```bash
 # 7B distill, default (Ollama picks best fit)
-ollama pull deepseek-r1:7b
+ollama pull deepseek-r1:7b-qwen-distill-q4_K_M
 
 # 8B distill, explicit Q4_K_M
-ollama pull deepseek-r1:8b-distill-q4_K_M
+ollama pull deepseek-r1:8b-0528-qwen3-q4_K_M
 
 # 14B distill, Q8_0 (requires ~17 GB VRAM)
-ollama pull deepseek-r1:14b-distill-q8_0
+ollama pull deepseek-r1:14b-qwen-distill-q8_0
 ```
 
 ### Run interactively
 
 ```bash
-ollama run deepseek-r1:8b-distill-q4_K_M
+ollama run deepseek-r1:8b-0528-qwen3-q4_K_M
 ```
 
 ### Cap context to reduce KV cache pressure on 8 GB cards
 
 ```bash
-ollama run deepseek-r1:7b --num-ctx 4096
+ollama run deepseek-r1:7b-qwen-distill-q4_K_M --num-ctx 4096
 ```
 
 Ollama's default context for DeepSeek R1 can be very large. On 8 GB cards, setting `--num-ctx 4096` or `--num-ctx 8192` prevents out-of-memory crashes during long conversations. See our full guide on [running DeepSeek R1 on 8GB VRAM](/blog/how-to-run-deepseek-r1-locally-on-8gb-vram) for Modelfile tuning options.
@@ -168,6 +174,8 @@ If you see `offloaded 0/32 layers`, your llama.cpp build was not compiled with C
 ## Fixing Tool Calling Issues
 
 If you are using the distill models for agentic tasks, the thinking tokens (`<think>...</think>`) in DeepSeek R1 outputs can break JSON tool-call parsers. We have a dedicated guide: [Fix DeepSeek R1 Tool Calling in Ollama (Thinking Budget)](/blog/fix-deepseek-r1-tool-calling-ollama-thinking-budget).
+
+For a second local-inference comparison, see [the Ollama GPU-offload and context-size guide](/blog/ollama-gpu-offload-num-ctx-slowdown-fix). It covers the same failure mode from the runtime side: a model can load successfully, then exhaust VRAM when the context grows.
 
 ---
 

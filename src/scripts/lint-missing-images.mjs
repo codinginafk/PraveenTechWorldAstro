@@ -20,7 +20,15 @@ files.forEach(file => {
   if (!imgPath) {
     errors.push(`❌ ${file}: Missing 'coverImage' frontmatter tag`);
   } else {
-    const relativePath = imgPath.startsWith("/") ? imgPath.slice(1) : imgPath;
+    let relativePath = imgPath;
+    try {
+      if (/^https?:\/\//i.test(imgPath)) {
+        relativePath = new URL(imgPath).pathname;
+      }
+    } catch {
+      relativePath = imgPath;
+    }
+    relativePath = relativePath.startsWith("/") ? relativePath.slice(1) : relativePath;
     const fullPath = path.join(PUBLIC_DIR, relativePath);
     if (!fs.existsSync(fullPath)) {
       errors.push(`❌ ${file}: coverImage file '${imgPath}' does not exist in public/`);

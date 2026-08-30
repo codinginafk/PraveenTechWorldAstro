@@ -11,6 +11,14 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'missing_token' });
   }
 
+  if (typeof token !== 'string' || token.length > 4096) {
+    return res.status(400).json({ success: false, error: 'invalid_token' });
+  }
+
+  if (!process.env.TURNSTILE_SECRET) {
+    return res.status(503).json({ success: false, error: 'verification_unavailable' });
+  }
+
   try {
     const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
@@ -29,11 +37,11 @@ export default async function handler(req, res) {
     const result = await response.json();
 
     if (!result.success) {
-      return res.status(403).json({ success: false, error: 'verification_failed', result });
+      return res.status(403).json({ success: false, error: 'verification_failed' });
     }
 
     return res.status(200).json({ success: true, result });
   } catch (err) {
-    return res.status(500).json({ success: false, error: err.message || 'network_error' });
+    return res.status(502).json({ success: false, error: 'verification_provider_unavailable' });
   }
 }

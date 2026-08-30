@@ -1,7 +1,9 @@
 import { defineConfig } from "astro/config";
 import mdx from "@astrojs/mdx";
+import { unified } from "@astrojs/markdown-remark";
 import sitemap from "@astrojs/sitemap";
 import pagefind from "astro-pagefind";
+import tailwindcss from "@tailwindcss/vite";
 
 function rehypeExternalLinks() {
   return (tree) => {
@@ -101,7 +103,6 @@ export default defineConfig({
     "/blog/website-speed-optimization-why-it-matters-for-seo-and-how-to-fix-it": "/blog/website-speed-upgrades-fix-crawling-delays-and-core-web-vitals",
     "/blog/will-reinstalling-windows-fix-blue-screen-errors": "/blog/will-reinstalling-windows-fix-slow-performance-issues",
     "/blog/will-factory-resetting-windows-fix-corrupted-user-profile": "/blog/will-reinstalling-windows-fix-slow-performance-issues",
-    "/blog/gemini-spark-remote-browser-vs-local-chrome-fix": "/blog/google-gemini-spark-mode-features-guide",
     "/blog/why-you-dont-have-gemini-spark-mode-yet-access-guide": "/blog/google-gemini-spark-mode-features-guide",
     "/blog/understanding-sitemap-indexing-fix-crawling-issues": "/blog/how-to-fix-sitemap-errors-in-google-search-console",
     "/blog/sitemap-urls-blocked-by-robotstxt-clean-and-resubmit": "/blog/how-to-fix-sitemap-errors-in-google-search-console",
@@ -365,6 +366,9 @@ export default defineConfig({
   build: {
     format: "directory",
   },
+  vite: {
+    plugins: [tailwindcss()],
+  },
   integrations: [
     mdx(),
     sitemap({
@@ -392,7 +396,7 @@ export default defineConfig({
     pagefind(),
   ],
   markdown: {
-    rehypePlugins: [rehypeExternalLinks],
+    processor: unified({ rehypePlugins: [rehypeExternalLinks] }),
     shikiConfig: {
       theme: "github-dark",
       wrap: true,

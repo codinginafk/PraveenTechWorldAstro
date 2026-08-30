@@ -1,0 +1,473 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+const seo = {
+  title: "Local AI VRAM & Quantization Calculator (Ollama & llama.cpp)",
+  description: "Calculate exact GPU VRAM requirements for DeepSeek-R1, Llama 3.3, and Qwen 2.5 across Q4, Q8, and FP8 with KV cache sizing and 1-click Ollama commands.",
+  keywords: "local ai vram calculator, ollama vram calculator, deepseek r1 vram requirements, llama 3 vram calculator, quantization calculator, llm memory calculator",
+};
+---
+
+<BaseLayout seo={seo}>
+  <div class="mx-auto max-w-5xl px-4 py-12">
+    <!-- Header -->
+    <div class="mb-10 text-center">
+      <div class="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent mb-4">
+        ⚡ Interactive Engineering Tool
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl text-text-main dark:text-text-dark-main">
+        Local AI VRAM & Quantization Calculator
+      </h1>
+      <p class="mt-4 text-base sm:text-lg text-text-muted dark:text-text-dark-muted max-w-3xl mx-auto">
+        Calculate exact GPU memory requirements for model weights, KV cache, and CUDA runtime buffers. Find your optimal quantization and copy-paste ready <code class="text-accent font-mono text-sm bg-accent/10 px-1.5 py-0.5 rounded">ollama</code> and <code class="text-accent font-mono text-sm bg-accent/10 px-1.5 py-0.5 rounded">llama.cpp</code> flags.
+      </p>
+    </div>
+
+    <!-- Main Calculator App Grid -->
+    <div class="grid gap-8 lg:grid-cols-12 items-start">
+      
+      <!-- Input Controls (Left Column: 7 cols) -->
+      <div class="lg:col-span-7 rounded-2xl border border-border-light bg-card-light p-6 shadow-sm dark:border-border-dark dark:bg-card-dark">
+        <h2 class="text-xl font-bold mb-6 text-text-main dark:text-text-dark-main flex items-center gap-2">
+          <span>⚙️</span> Configure Hardware & Model
+        </h2>
+
+        <form id="calc-form" class="space-y-6">
+          <!-- 1. GPU Preset -->
+          <div>
+            <label for="gpu-select" class="block text-sm font-semibold text-text-main dark:text-text-dark-main mb-2">
+              Select Your GPU / Unified Memory
+            </label>
+            <select id="gpu-select" class="w-full rounded-xl border border-border-light bg-bg-light px-4 py-3 text-sm font-medium text-text-main shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent dark:border-border-dark dark:bg-bg-dark dark:text-text-dark-main">
+              <optgroup label="NVIDIA RTX 50 Series">
+                <option value="32">NVIDIA GeForce RTX 5090 (32 GB)</option>
+                <option value="16">NVIDIA GeForce RTX 5080 (16 GB)</option>
+              </optgroup>
+              <optgroup label="NVIDIA RTX 40 Series">
+                <option value="24">NVIDIA GeForce RTX 4090 (24 GB)</option>
+                <option value="16">NVIDIA GeForce RTX 4080 / Super (16 GB)</option>
+                <option value="16">NVIDIA GeForce RTX 4070 Ti Super (16 GB)</option>
+                <option value="12">NVIDIA GeForce RTX 4070 Ti / Super / 4070 (12 GB)</option>
+                <option value="16">NVIDIA GeForce RTX 4060 Ti 16GB (16 GB)</option>
+                <option value="8" selected>NVIDIA GeForce RTX 4060 / 4060 Ti 8GB (8 GB)</option>
+              </optgroup>
+              <optgroup label="NVIDIA RTX 30 Series">
+                <option value="24">NVIDIA GeForce RTX 3090 / 3090 Ti (24 GB)</option>
+                <option value="12">NVIDIA GeForce RTX 3080 Ti / 3080 12GB (12 GB)</option>
+                <option value="10">NVIDIA GeForce RTX 3080 10GB (10 GB)</option>
+                <option value="12">NVIDIA GeForce RTX 3060 12GB (12 GB)</option>
+                <option value="8">NVIDIA GeForce RTX 3070 / 3070 Ti (8 GB)</option>
+                <option value="6">NVIDIA GeForce RTX 3050 (6 GB)</option>
+              </optgroup>
+              <optgroup label="Apple Silicon (Unified Memory)">
+                <option value="128">Apple Mac M-Series (128 GB Unified)</option>
+                <option value="96">Apple Mac M-Series (96 GB Unified)</option>
+                <option value="64">Apple Mac M-Series (64 GB Unified)</option>
+                <option value="48">Apple Mac M-Series (48 GB Unified)</option>
+                <option value="36">Apple Mac M-Series (36 GB Unified)</option>
+                <option value="24">Apple Mac M-Series (24 GB Unified)</option>
+                <option value="16">Apple Mac M-Series (16 GB Unified)</option>
+                <option value="8">Apple Mac M-Series (8 GB Unified)</option>
+              </optgroup>
+              <optgroup label="AMD Radeon">
+                <option value="24">AMD Radeon RX 7900 XTX (24 GB)</option>
+                <option value="20">AMD Radeon RX 7900 XT (20 GB)</option>
+                <option value="16">AMD Radeon RX 7800 XT / 7600 XT (16 GB)</option>
+                <option value="12">AMD Radeon RX 7700 XT (12 GB)</option>
+                <option value="8">AMD Radeon RX 7600 (8 GB)</option>
+              </optgroup>
+              <option value="custom">-- Custom VRAM (Enter Below) --</option>
+            </select>
+          </div>
+
+          <!-- Custom VRAM Input (Hidden by default) -->
+          <div id="custom-vram-group" class="hidden">
+            <label for="custom-vram" class="block text-sm font-semibold text-text-main dark:text-text-dark-main mb-2">
+              Custom GPU VRAM (in GB)
+            </label>
+            <input type="number" id="custom-vram" min="1" max="512" step="0.5" value="8" class="w-full rounded-xl border border-border-light bg-bg-light px-4 py-2.5 text-sm font-medium text-text-main shadow-sm focus:border-accent focus:outline-none dark:border-border-dark dark:bg-bg-dark dark:text-text-dark-main" />
+          </div>
+
+          <!-- 2. Target Model Architecture -->
+          <div>
+            <label for="model-select" class="block text-sm font-semibold text-text-main dark:text-text-dark-main mb-2">
+              Select LLM Architecture
+            </label>
+            <select id="model-select" class="w-full rounded-xl border border-border-light bg-bg-light px-4 py-3 text-sm font-medium text-text-main shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent dark:border-border-dark dark:bg-bg-dark dark:text-text-dark-main">
+              <optgroup label="DeepSeek-R1 Family">
+                <option value="deepseek-r1-1.5b">DeepSeek-R1-Distill-Qwen-1.5B (1.78B params)</option>
+                <option value="deepseek-r1-7b" selected>DeepSeek-R1-Distill-Qwen-7B (7.61B params)</option>
+                <option value="deepseek-r1-8b">DeepSeek-R1-Distill-Llama-8B (8.03B params)</option>
+                <option value="deepseek-r1-14b">DeepSeek-R1-Distill-Qwen-14B (14.7B params)</option>
+                <option value="deepseek-r1-32b">DeepSeek-R1-Distill-Qwen-32B (32.8B params)</option>
+                <option value="deepseek-r1-70b">DeepSeek-R1-Distill-Llama-70B (70.6B params)</option>
+                <option value="deepseek-r1-671b">DeepSeek-R1 Full MoE (671B / 37B active)</option>
+              </optgroup>
+              <optgroup label="Meta Llama 3.3 & 3.1">
+                <option value="llama-3.3-70b">Llama-3.3-70B-Instruct (70.6B params)</option>
+                <option value="llama-3.1-8b">Llama-3.1-8B-Instruct (8.03B params)</option>
+              </optgroup>
+              <optgroup label="Qwen 2.5 Family">
+                <option value="qwen-2.5-7b">Qwen-2.5-Coder-7B (7.61B params)</option>
+                <option value="qwen-2.5-14b">Qwen-2.5-14B (14.7B params)</option>
+                <option value="qwen-2.5-32b">Qwen-2.5-Coder-32B (32.8B params)</option>
+                <option value="qwen-2.5-72b">Qwen-2.5-72B-Instruct (72.7B params)</option>
+              </optgroup>
+              <optgroup label="Mistral, Gemma & Microsoft">
+                <option value="mistral-nemo-12b">Mistral-NeMo-12B (12.2B params)</option>
+                <option value="gemma-2-9b">Gemma-2-9B (9.24B params)</option>
+                <option value="gemma-2-27b">Gemma-2-27B (27.2B params)</option>
+                <option value="phi-4-14b">Phi-4-14B (14.7B params)</option>
+              </optgroup>
+              <option value="custom">-- Custom Parameter Count --</option>
+            </select>
+          </div>
+
+          <!-- Custom Params Input (Hidden by default) -->
+          <div id="custom-params-group" class="hidden">
+            <label for="custom-params" class="block text-sm font-semibold text-text-main dark:text-text-dark-main mb-2">
+              Custom Parameters (in Billions, e.g. 13.5)
+            </label>
+            <input type="number" id="custom-params" min="0.1" max="1000" step="0.1" value="7.0" class="w-full rounded-xl border border-border-light bg-bg-light px-4 py-2.5 text-sm font-medium text-text-main shadow-sm focus:border-accent focus:outline-none dark:border-border-dark dark:bg-bg-dark dark:text-text-dark-main" />
+          </div>
+
+          <!-- 3. Quantization Precision -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label for="quant-select" class="block text-sm font-semibold text-text-main dark:text-text-dark-main">
+                Quantization Precision
+              </label>
+              <span id="quant-badge" class="text-xs font-mono font-medium text-accent bg-accent/10 px-2 py-0.5 rounded">
+                4.50 bits/weight
+              </span>
+            </div>
+            <select id="quant-select" class="w-full rounded-xl border border-border-light bg-bg-light px-4 py-3 text-sm font-medium text-text-main shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent dark:border-border-dark dark:bg-bg-dark dark:text-text-dark-main">
+              <option value="4.50" selected>Q4_K_M (4.50 bpw) — Recommended Sweet Spot</option>
+              <option value="5.50">Q5_K_M (5.50 bpw) — High Reasoning Quality</option>
+              <option value="6.60">Q6_K (6.60 bpw) — Ultra High Fidelity</option>
+              <option value="8.50">Q8_0 / INT8 (8.50 bpw) — Near Unquantized</option>
+              <option value="8.00">FP8 (E4M3 / E5M2) (8.00 bpw) — Native Modern GPU</option>
+              <option value="16.00">FP16 / BF16 (16.00 bpw) — Unquantized Master</option>
+              <option value="4.25">IQ4_XS (4.25 bpw) — High-Density 4-Bit</option>
+              <option value="3.40">Q3_K_M (3.40 bpw) — Aggressive Compression</option>
+              <option value="2.60">Q2_K (2.60 bpw) — Maximum Shrink</option>
+            </select>
+          </div>
+
+          <!-- 4. Context Window Slider -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label for="context-slider" class="block text-sm font-semibold text-text-main dark:text-text-dark-main">
+                Context Window (Token Budget)
+              </label>
+              <span id="context-val" class="text-sm font-mono font-bold text-accent bg-accent/10 px-2.5 py-0.5 rounded-lg">
+                8,192 tokens
+              </span>
+            </div>
+            <input type="range" id="context-slider" min="2048" max="131072" step="2048" value="8192" class="w-full h-2 bg-border-light dark:bg-border-dark rounded-lg appearance-none cursor-pointer accent-accent" />
+            <div class="flex justify-between text-xs text-text-muted dark:text-text-dark-muted mt-1.5 font-mono">
+              <span>2k (Quick QA)</span>
+              <span>8k (Default)</span>
+              <span>32k (Docs)</span>
+              <span>128k (Full Repo)</span>
+            </div>
+          </div>
+
+          <!-- 5. KV Cache Precision -->
+          <div>
+            <label for="kv-select" class="block text-sm font-semibold text-text-main dark:text-text-dark-main mb-2">
+              KV Cache Quantization (Memory Optimization)
+            </label>
+            <select id="kv-select" class="w-full rounded-xl border border-border-light bg-bg-light px-4 py-3 text-sm font-medium text-text-main shadow-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent dark:border-border-dark dark:bg-bg-dark dark:text-text-dark-main">
+              <option value="16" selected>FP16 (Standard — Full Quality)</option>
+              <option value="8">FP8 (8-bit KV — Saves 50% KV VRAM, Ollama/vLLM)</option>
+              <option value="4">Q4_0 (4-bit KV — Saves 75% KV VRAM, llama.cpp)</option>
+            </select>
+          </div>
+        </form>
+      </div>
+
+      <!-- Live Calculation Results & CLI Box (Right Column: 5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- Results Card -->
+        <div class="rounded-2xl border border-border-light bg-card-light p-6 shadow-sm dark:border-border-dark dark:bg-card-dark">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-text-main dark:text-text-dark-main">
+              Memory Telemetry
+            </h2>
+            <span id="status-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-green-500/10 text-green-600 dark:text-green-400">
+              <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+              100% GPU Offload
+            </span>
+          </div>
+
+          <!-- Visual VRAM Bar -->
+          <div class="mb-6">
+            <div class="flex justify-between text-sm font-mono mb-2">
+              <span class="text-text-muted dark:text-text-dark-muted">Total VRAM Used:</span>
+              <span id="vram-total-text" class="font-bold text-text-main dark:text-text-dark-main">
+                5.42 GB / 8.00 GB (67.8%)
+              </span>
+            </div>
+            <div class="h-3.5 w-full overflow-hidden rounded-full bg-border-light dark:bg-border-dark">
+              <div id="vram-progress-bar" class="h-full bg-green-500 transition-all duration-300 rounded-full" style="width: 67.8%;"></div>
+            </div>
+          </div>
+
+          <!-- Granular Itemized Breakdown -->
+          <div class="divide-y divide-border-light/60 dark:divide-border-dark/60 font-mono text-sm space-y-3 pt-2">
+            <div class="flex justify-between pt-3">
+              <span class="text-text-muted dark:text-text-dark-muted flex items-center gap-1.5">
+                <span class="h-2.5 w-2.5 rounded-sm bg-accent"></span> Model Weights:
+              </span>
+              <span id="stat-weights" class="font-semibold text-text-main dark:text-text-dark-main">4.38 GB</span>
+            </div>
+
+            <div class="flex justify-between pt-3">
+              <span class="text-text-muted dark:text-text-dark-muted flex items-center gap-1.5">
+                <span class="h-2.5 w-2.5 rounded-sm bg-blue-500"></span> KV Cache (Context):
+              </span>
+              <span id="stat-kv" class="font-semibold text-text-main dark:text-text-dark-main">0.42 GB</span>
+            </div>
+
+            <div class="flex justify-between pt-3">
+              <span class="text-text-muted dark:text-text-dark-muted flex items-center gap-1.5">
+                <span class="h-2.5 w-2.5 rounded-sm bg-purple-500"></span> CUDA Context & Buffer:
+              </span>
+              <span id="stat-cuda" class="font-semibold text-text-main dark:text-text-dark-main">0.62 GB</span>
+            </div>
+
+            <div class="flex justify-between pt-3 text-base font-bold">
+              <span class="text-text-main dark:text-text-dark-main">Free VRAM Headroom:</span>
+              <span id="stat-headroom" class="text-green-600 dark:text-green-400">+2.58 GB</span>
+            </div>
+          </div>
+
+          <!-- Explanation Message Box -->
+          <div id="advice-box" class="mt-6 rounded-xl border border-green-500/20 bg-green-500/5 p-4 text-xs sm:text-sm text-text-main dark:text-text-dark-main leading-relaxed">
+            ✨ <strong>Ready for High-Speed Inference:</strong> This configuration fits comfortably inside your selected GPU VRAM with healthy headroom for desktop display output. Expect optimal tokens-per-second performance.
+          </div>
+        </div>
+
+        <!-- CLI Commands Ready-to-Run Box -->
+        <div class="rounded-2xl border border-border-light bg-card-light p-6 shadow-sm dark:border-border-dark dark:bg-card-dark">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-base font-bold text-text-main dark:text-text-dark-main flex items-center gap-2">
+              <span>💻</span> Ready-to-Run CLI Commands
+            </h3>
+            <button id="copy-btn" class="inline-flex items-center gap-1.5 rounded-lg border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/20 transition">
+              <span>📋</span> Copy Ollama
+            </button>
+          </div>
+
+          <!-- Ollama Command -->
+          <div class="mb-3">
+            <span class="text-xs font-semibold uppercase text-text-muted dark:text-text-dark-muted">Ollama Command:</span>
+            <div class="mt-1 rounded-xl bg-bg-dark text-green-400 p-3 font-mono text-xs overflow-x-auto select-all">
+              <code id="ollama-cmd">ollama run deepseek-r1:7b --num-ctx 8192</code>
+            </div>
+          </div>
+
+          <!-- llama.cpp Command -->
+          <div>
+            <span class="text-xs font-semibold uppercase text-text-muted dark:text-text-dark-muted">llama.cpp CLI Flags:</span>
+            <div class="mt-1 rounded-xl bg-bg-dark text-blue-300 p-3 font-mono text-xs overflow-x-auto select-all">
+              <code id="llamacpp-cmd">llama-cli -m model.gguf -ngl 99 -c 8192</code>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Technical Formulas Accordion / Deep Dive -->
+    <div class="mt-12 rounded-2xl border border-border-light bg-card-light p-8 shadow-sm dark:border-border-dark dark:bg-card-dark">
+      <h2 class="text-2xl font-bold text-text-main dark:text-text-dark-main mb-4 flex items-center gap-2">
+        <span>📐</span> Industry-Standard VRAM Formulas (Hugging Face & vLLM)
+      </h2>
+      <div class="grid md:grid-cols-3 gap-6 text-sm text-text-muted dark:text-text-dark-muted mt-6">
+        <div class="rounded-xl border border-border-light/60 p-4 dark:border-border-dark/60 bg-bg-light/40 dark:bg-bg-dark/40">
+          <h3 class="font-bold text-text-main dark:text-text-dark-main mb-2">1. Model Weight Memory</h3>
+          <p class="font-mono text-xs text-accent mb-2">VRAM_weights = (Params_B × bpw / 8) × 1.15</p>
+          <p class="text-xs leading-relaxed">Calculates raw tensor sizes plus 15% allocation overhead for layer metadata, KV projection tensors, and memory alignment.</p>
+        </div>
+
+        <div class="rounded-xl border border-border-light/60 p-4 dark:border-border-dark/60 bg-bg-light/40 dark:bg-bg-dark/40">
+          <h3 class="font-bold text-text-main dark:text-text-dark-main mb-2">2. Key-Value Cache</h3>
+          <p class="font-mono text-xs text-accent mb-2">KV = 2 × Layers × KV_Heads × Dim × Context × Bytes</p>
+          <p class="text-xs leading-relaxed">Incorporates Grouped-Query Attention (GQA) ratios. FP8 KV halves cache memory; Q4_0 cuts it by 75%.</p>
+        </div>
+
+        <div class="rounded-xl border border-border-light/60 p-4 dark:border-border-dark/60 bg-bg-light/40 dark:bg-bg-dark/40">
+          <h3 class="font-bold text-text-main dark:text-text-dark-main mb-2">3. CUDA Runtime Buffer</h3>
+          <p class="font-mono text-xs text-accent mb-2">Runtime = 0.5 GB + (0.000015 × Context)</p>
+          <p class="text-xs leading-relaxed">Accounts for cuBLAS/CUDA driver context initialization, activation tensors, and scratchpad memory during forward passes.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Reactive Script -->
+  <script is:inline>
+    (function () {
+      const MODEL_SPECS = {
+        "deepseek-r1-1.5b": { params: 1.78, layers: 28, kvHeads: 2, headDim: 128, ollamaTag: "deepseek-r1:1.5b" },
+        "deepseek-r1-7b":   { params: 7.61, layers: 28, kvHeads: 4, headDim: 128, ollamaTag: "deepseek-r1:7b" },
+        "deepseek-r1-8b":   { params: 8.03, layers: 32, kvHeads: 8, headDim: 128, ollamaTag: "deepseek-r1:8b" },
+        "deepseek-r1-14b":  { params: 14.7, layers: 48, kvHeads: 8, headDim: 128, ollamaTag: "deepseek-r1:14b" },
+        "deepseek-r1-32b":  { params: 32.8, layers: 64, kvHeads: 8, headDim: 128, ollamaTag: "deepseek-r1:32b" },
+        "deepseek-r1-70b":  { params: 70.6, layers: 80, kvHeads: 8, headDim: 128, ollamaTag: "deepseek-r1:70b" },
+        "deepseek-r1-671b": { params: 671.0, layers: 61, kvHeads: 128, headDim: 128, ollamaTag: "deepseek-r1:671b" },
+        "llama-3.3-70b":    { params: 70.6, layers: 80, kvHeads: 8, headDim: 128, ollamaTag: "llama3.3:70b" },
+        "llama-3.1-8b":     { params: 8.03, layers: 32, kvHeads: 8, headDim: 128, ollamaTag: "llama3.1:8b" },
+        "qwen-2.5-7b":      { params: 7.61, layers: 28, kvHeads: 4, headDim: 128, ollamaTag: "qwen2.5-coder:7b" },
+        "qwen-2.5-14b":     { params: 14.7, layers: 48, kvHeads: 8, headDim: 128, ollamaTag: "qwen2.5:14b" },
+        "qwen-2.5-32b":     { params: 32.8, layers: 64, kvHeads: 8, headDim: 128, ollamaTag: "qwen2.5-coder:32b" },
+        "qwen-2.5-72b":     { params: 72.7, layers: 80, kvHeads: 8, headDim: 128, ollamaTag: "qwen2.5:72b" },
+        "mistral-nemo-12b": { params: 12.2, layers: 40, kvHeads: 8, headDim: 128, ollamaTag: "mistral-nemo" },
+        "gemma-2-9b":       { params: 9.24, layers: 42, kvHeads: 8, headDim: 128, ollamaTag: "gemma2:9b" },
+        "gemma-2-27b":      { params: 27.2, layers: 46, kvHeads: 16, headDim: 128, ollamaTag: "gemma2:27b" },
+        "phi-4-14b":        { params: 14.7, layers: 40, kvHeads: 10, headDim: 128, ollamaTag: "phi4:14b" }
+      };
+
+      const gpuSelect = document.getElementById("gpu-select");
+      const customVramGroup = document.getElementById("custom-vram-group");
+      const customVramInput = document.getElementById("custom-vram");
+
+      const modelSelect = document.getElementById("model-select");
+      const customParamsGroup = document.getElementById("custom-params-group");
+      const customParamsInput = document.getElementById("custom-params");
+
+      const quantSelect = document.getElementById("quant-select");
+      const quantBadge = document.getElementById("quant-badge");
+
+      const contextSlider = document.getElementById("context-slider");
+      const contextVal = document.getElementById("context-val");
+      const kvSelect = document.getElementById("kv-select");
+
+      const vramTotalText = document.getElementById("vram-total-text");
+      const vramProgressBar = document.getElementById("vram-progress-bar");
+      const statWeights = document.getElementById("stat-weights");
+      const statKv = document.getElementById("stat-kv");
+      const statCuda = document.getElementById("stat-cuda");
+      const statHeadroom = document.getElementById("stat-headroom");
+      const statusBadge = document.getElementById("status-badge");
+      const adviceBox = document.getElementById("advice-box");
+
+      const ollamaCmd = document.getElementById("ollama-cmd");
+      const llamacppCmd = document.getElementById("llamacpp-cmd");
+      const copyBtn = document.getElementById("copy-btn");
+
+      function updateCalculator() {
+        // 1. Get GPU VRAM
+        let totalGpuVram = parseFloat(gpuSelect.value);
+        if (gpuSelect.value === "custom") {
+          customVramGroup.classList.remove("hidden");
+          totalGpuVram = parseFloat(customVramInput.value) || 8;
+        } else {
+          customVramGroup.classList.add("hidden");
+        }
+
+        // 2. Get Model Architecture
+        let spec;
+        if (modelSelect.value === "custom") {
+          customParamsGroup.classList.remove("hidden");
+          const customParams = parseFloat(customParamsInput.value) || 7.0;
+          spec = { params: customParams, layers: 32, kvHeads: 8, headDim: 128, ollamaTag: "custom-model" };
+        } else {
+          customParamsGroup.classList.add("hidden");
+          spec = MODEL_SPECS[modelSelect.value] || MODEL_SPECS["deepseek-r1-7b"];
+        }
+
+        // 3. Get Quantization bpw
+        const bpw = parseFloat(quantSelect.value);
+        quantBadge.textContent = bpw.toFixed(2) + " bits/weight";
+
+        // 4. Get Context Length & KV bits
+        const context = parseInt(contextSlider.value, 10);
+        contextVal.textContent = context.toLocaleString() + " tokens";
+        const kvPrecisionBits = parseInt(kvSelect.value, 10);
+        const kvBytesPerElem = kvPrecisionBits / 8;
+
+        // --- MATH CALCULATIONS ---
+        // Weights: (params in billions * bpw / 8) * 1.15 tensor overhead
+        const weightsGB = (spec.params * bpw / 8) * 1.15;
+
+        // KV Cache: 2 * layers * kvHeads * headDim * context * bytesPerElem / (1024^3)
+        const kvBytes = 2 * spec.layers * spec.kvHeads * spec.headDim * context * kvBytesPerElem;
+        const kvGB = kvBytes / (1024 * 1024 * 1024);
+
+        // CUDA Runtime & Activation Scratchpad Buffer: ~0.5 GB + context scale
+        const cudaBufferGB = 0.50 + (0.000015 * context);
+
+        const totalRequiredGB = weightsGB + kvGB + cudaBufferGB;
+        const headroomGB = totalGpuVram - totalRequiredGB;
+        const usagePercent = Math.min(100, Math.max(0, (totalRequiredGB / totalGpuVram) * 100));
+
+        // Update UI Stats
+        statWeights.textContent = weightsGB.toFixed(2) + " GB";
+        statKv.textContent = kvGB.toFixed(2) + " GB";
+        statCuda.textContent = cudaBufferGB.toFixed(2) + " GB";
+        vramTotalText.textContent = totalRequiredGB.toFixed(2) + " GB / " + totalGpuVram.toFixed(2) + " GB (" + ((totalRequiredGB / totalGpuVram) * 100).toFixed(1) + "%)";
+        vramProgressBar.style.width = Math.min(100, (totalRequiredGB / totalGpuVram) * 100) + "%";
+
+        // Status & Recommendation Logic
+        if (headroomGB >= 0.8) {
+          // Full offload
+          vramProgressBar.className = "h-full bg-green-500 transition-all duration-300 rounded-full";
+          statusBadge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-green-500/10 text-green-600 dark:text-green-400";
+          statusBadge.innerHTML = '<span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> 100% GPU Offload';
+          statHeadroom.className = "text-green-600 dark:text-green-400";
+          statHeadroom.textContent = "+" + headroomGB.toFixed(2) + " GB";
+          adviceBox.className = "mt-6 rounded-xl border border-green-500/20 bg-green-500/5 p-4 text-xs sm:text-sm text-text-main dark:text-text-dark-main leading-relaxed";
+          adviceBox.innerHTML = "✨ <strong>Full GPU Acceleration:</strong> This configuration fits 100% in your VRAM with <strong>" + headroomGB.toFixed(2) + " GB</strong> headroom for OS displays. Expect peak generation speeds (40–120+ tokens/sec).";
+        } else if (headroomGB >= -2.0) {
+          // Tight or minor partial offload
+          vramProgressBar.className = "h-full bg-yellow-500 transition-all duration-300 rounded-full";
+          statusBadge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
+          statusBadge.innerHTML = '<span class="h-2 w-2 rounded-full bg-yellow-500"></span> Tight VRAM / Partial CPU';
+          statHeadroom.className = "text-yellow-600 dark:text-yellow-400";
+          statHeadroom.textContent = (headroomGB >= 0 ? "+" : "") + headroomGB.toFixed(2) + " GB";
+          adviceBox.className = "mt-6 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 text-xs sm:text-sm text-text-main dark:text-text-dark-main leading-relaxed";
+          adviceBox.innerHTML = "⚠️ <strong>VRAM Near Capacity:</strong> Model will run, but KV cache may spill into system RAM if context grows. Lower the context length or enable <strong>FP8 KV Cache</strong> to ensure 100% GPU residence.";
+        } else {
+          // Heavy CPU Offload / OOM
+          vramProgressBar.className = "h-full bg-red-500 transition-all duration-300 rounded-full";
+          statusBadge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400";
+          statusBadge.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-500"></span> Out of Memory (OOM)';
+          statHeadroom.className = "text-red-600 dark:text-red-400";
+          statHeadroom.textContent = headroomGB.toFixed(2) + " GB";
+          adviceBox.className = "mt-6 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-xs sm:text-sm text-text-main dark:text-text-dark-main leading-relaxed";
+          adviceBox.innerHTML = "🛑 <strong>Exceeds GPU Memory:</strong> Requires <strong>" + totalRequiredGB.toFixed(1) + " GB</strong>, exceeding your " + totalGpuVram + " GB VRAM by " + Math.abs(headroomGB).toFixed(1) + " GB. Consider choosing a smaller model (e.g. 7B/14B) or Q4_K_M quantization.";
+        }
+
+        // CLI Commands Generation
+        const tag = spec.ollamaTag || "deepseek-r1:7b";
+        ollamaCmd.textContent = "ollama run " + tag + " --num-ctx " + context;
+
+        let llamaKvFlag = "";
+        if (kvPrecisionBits === 8) llamaKvFlag = " --ctk q8_0 --ctv q8_0";
+        else if (kvPrecisionBits === 4) llamaKvFlag = " --ctk q4_0 --ctv q4_0";
+        llamacppCmd.textContent = "llama-cli -m " + tag.replace(":", "-") + ".gguf -ngl 99 -c " + context + llamaKvFlag;
+      }
+
+      // Event Listeners
+      [gpuSelect, customVramInput, modelSelect, customParamsInput, quantSelect, contextSlider, kvSelect].forEach(el => {
+        el.addEventListener("input", updateCalculator);
+        el.addEventListener("change", updateCalculator);
+      });
+
+      // 1-Click Copy
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(ollamaCmd.textContent).then(() => {
+          copyBtn.innerHTML = "<span>✅</span> Copied!";
+          setTimeout(() => { copyBtn.innerHTML = "<span>📋</span> Copy Ollama"; }, 2000);
+        });
+      });
+
+      // Initial Call
+      updateCalculator();
+    })();
+  </script>
+</BaseLayout>

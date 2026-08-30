@@ -38,23 +38,32 @@ export async function getRelatedArticles(
   limit = 3
 ): Promise<Article[]> {
   const all = await getPublishedArticles();
-  const sameCategory = all.filter(
-    (a) =>
-      a.data.category === article.data.category && a.id !== article.id
-  );
-  const sameTags = all.filter(
-    (a) =>
-      a.id !== article.id &&
-      a.data.tags.some((t) => article.data.tags.includes(t))
-  );
-  const related = [...sameCategory, ...sameTags];
-  const seen = new Set<string>();
-  const unique = related.filter((a) => {
-    if (seen.has(a.id)) return false;
-    seen.add(a.id);
-    return true;
-  });
-  return unique.slice(0, limit);
+  return all
+    .filter((candidate) => candidate.id !== article.id)
+    .map((candidate) => {
+      const sharedTags = candidate.data.tags.filter((tag) =>
+        article.data.tags.includes(tag)
+      ).length;
+      const sameCategory = candidate.data.category === article.data.category;
+      const candidateDate = new Date(candidate.data.publishDate).getTime();
+      const ageInDays = Math.max(
+        0,
+        (Date.now() - candidateDate) / (1000 * 60 * 60 * 24)
+      );
+      const recencyBonus = Math.max(0, 1 - ageInDays / 365);
+
+      return {
+        candidate,
+        score: sharedTags * 10 + (sameCategory ? 4 : 0) + recencyBonus,
+        candidateDate,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.score - a.score || b.candidateDate - a.candidateDate
+    )
+    .slice(0, limit)
+    .map(({ candidate }) => candidate);
 }
 
 export async function getLatestArticles(limit = 6): Promise<Article[]> {

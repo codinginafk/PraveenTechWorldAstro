@@ -24,6 +24,10 @@ The following permissions are active for the workspace environment:
 }
 ```
 
+## Durable project memory
+
+Before starting work, read `docs/project-memory/current.json`. At the end of a completed or paused task, record a short handoff with `node scripts/project-memory.mjs handoff ...`. Use `research/agents/state.json` for content-pipeline state and Git for code/content history; project memory records the cross-harness summary, next action, files, and verification so a different model or harness can resume safely.
+
 ## Safety Constraints (CRITICAL OVERRIDES)
 Regardless of the `autoApprove` and `suppressPrompts` configurations above, the following constraints must be strictly adhered to:
 1. **No Silent Deletions or Replacements:** You are strictly prohibited from deleting any file, or replacing/overwriting any file, without asking the user for explicit permission first.
