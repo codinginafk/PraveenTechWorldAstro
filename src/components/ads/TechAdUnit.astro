@@ -1,0 +1,110 @@
+---
+interface Props {
+  category?: string;
+  tags?: string[];
+  slotType?: "in-article" | "sidebar" | "tool-footer";
+  adClient?: string; // Optional Google AdSense client ID
+  adSlot?: string;   // Optional Google AdSense slot ID
+}
+
+const { category = "tech", tags = [], slotType = "in-article", adClient, adSlot } = Astro.props;
+
+// Contextual High-Converting Tech Offers based on Topic
+const catLower = (category || "").toLowerCase();
+const tagsJoined = (tags || []).join(" ").toLowerCase();
+
+let sponsorData = {
+  title: "Cloud GPU Compute for Local LLMs & DeepSeek",
+  description: "Hit the VRAM wall? Deploy RTX 4090s, A100s, and H100s on-demand starting at $0.20/hour with 1-click Ollama and vLLM templates.",
+  badge: "Cloud Compute",
+  ctaText: "Deploy Cloud GPU ⚡",
+  ctaUrl: "https://www.runpod.io/?ref=ptw",
+  icon: "⚡",
+  tagline: "Sponsored Developer Tool"
+};
+
+if (catLower === "windows-fixes" || catLower === "hardware-troubleshooting" || tagsJoined.includes("ram") || tagsJoined.includes("cpu") || tagsJoined.includes("blue-screen")) {
+  sponsorData = {
+    title: "Pro Hardware Diagnostics & Memory Upgrades",
+    description: "Troubleshooting blue screens or memory corruption? Verify hardware stability with industry-standard diagnostics and high-speed DDR5 upgrades.",
+    badge: "Hardware & Repair",
+    ctaText: "Test Hardware Stability 🛠️",
+    ctaUrl: "https://www.passmark.com/products/memtest86.htm",
+    icon: "🔧",
+    tagline: "Sponsored Diagnostic Tools"
+  };
+} else if (catLower === "privacy" || catLower === "security" || tagsJoined.includes("vpn") || tagsJoined.includes("password")) {
+  sponsorData = {
+    title: "Enterprise Credential & Network Security",
+    description: "Protect developer infrastructure, API credentials, and remote sysadmin connections with zero-knowledge encryption and dedicated IP routing.",
+    badge: "Security & Privacy",
+    ctaText: "Secure Your Workstations 🔒",
+    ctaUrl: "https://nordvpn.com/",
+    icon: "🛡️",
+    tagline: "Sponsored Security Software"
+  };
+} else if (catLower === "website-setup" || catLower === "seo" || tagsJoined.includes("analytics") || tagsJoined.includes("google")) {
+  sponsorData = {
+    title: "High-Speed Global Edge Hosting & Analytics",
+    description: "Achieve 100/100 Core Web Vitals and sub-50ms TTFB worldwide with developer-first edge deployment platforms and search rank tracking.",
+    badge: "Web Infrastructure",
+    ctaText: "Accelerate Web Performance 🚀",
+    ctaUrl: "https://www.cloudflare.com/",
+    icon: "🌐",
+    tagline: "Sponsored Web Platform"
+  };
+}
+---
+
+<div class={`tech-ad-container my-8 overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-all hover:border-brand-500/50 hover:shadow-md dark:border-border-dark dark:bg-surface-dark ${slotType === "sidebar" ? "p-4 text-xs" : "p-6"}`}>
+  <!-- Ad Header with FTC Compliance Tag -->
+  <div class="mb-3 flex items-center justify-between">
+    <span class="inline-flex items-center gap-1.5 rounded-md bg-brand-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand-600 dark:bg-brand-400/10 dark:text-brand-400">
+      <span>{sponsorData.icon}</span> {sponsorData.badge}
+    </span>
+    <span class="text-[10px] font-bold uppercase tracking-wider text-text-muted dark:text-text-dark-muted">
+      {sponsorData.tagline}
+    </span>
+  </div>
+
+  <!-- Dynamic Ad Content or Ad Network Slot -->
+  {adClient && adSlot ? (
+    <div class="ad-network-slot min-h-[90px] text-center">
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client={adClient}
+           data-ad-slot={adSlot}
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script is:inline>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  ) : (
+    <div class="sponsor-card">
+      <h4 class="mb-2 text-base font-bold text-text dark:text-text-dark sm:text-lg">
+        <a href={sponsorData.ctaUrl} target="_blank" rel="sponsored noopener noreferrer" class="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+          {sponsorData.title}
+        </a>
+      </h4>
+      <p class="mb-4 text-xs sm:text-sm leading-relaxed text-text-muted dark:text-text-dark-muted">
+        {sponsorData.description}
+      </p>
+      <div class="flex items-center justify-between pt-1">
+        <a
+          href={sponsorData.ctaUrl}
+          target="_blank"
+          rel="sponsored noopener noreferrer"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
+        >
+          {sponsorData.ctaText}
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 17 17 7" />
+            <path d="M7 7h10v10" />
+          </svg>
+        </a>
+        <span class="text-[11px] text-text-muted dark:text-text-dark-muted">Verified Dev Partner</span>
+      </div>
+    </div>
+  )}
+</div>
