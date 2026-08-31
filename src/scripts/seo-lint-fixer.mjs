@@ -83,7 +83,7 @@ export function auditArticle(filePath) {
       // Check if line 1 starts with a filepath comment
       const firstLine = code.split("\n")[0] || "";
       const hasPath = firstLine.includes("/") || firstLine.includes("\\") || firstLine.includes(".");
-      const hasComment = firstLine.startsWith("//") || firstLine.startsWith("#") || firstLine.startsWith("/*");
+      const hasComment = firstLine.startsWith("//") || firstLine.startsWith("#") || firstLine.startsWith("/*") || firstLine.startsWith("<!--");
 
       if (!hasPath || !hasComment) {
         audit.codeBlocksWithoutPaths++;
