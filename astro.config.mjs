@@ -380,15 +380,9 @@ export default defineConfig({
         !page.startsWith("https://www.praveentechworld.com/guides") &&
         !page.startsWith("https://www.praveentechworld.com/guide") &&
         !page.startsWith("https://www.praveentechworld.com/services") &&
-        !page.startsWith("https://www.praveentechworld.com/about") &&
-        !page.startsWith("https://www.praveentechworld.com/contact") &&
-        !page.startsWith("https://www.praveentechworld.com/privacy") &&
-        !page.startsWith("https://www.praveentechworld.com/author") &&
         !page.startsWith("https://www.praveentechworld.com/demo") &&
         !page.startsWith("https://www.praveentechworld.com/guest-post") &&
         !page.startsWith("https://www.praveentechworld.com/search") &&
-        !page.startsWith("https://www.praveentechworld.com/terms") &&
-        !page.startsWith("https://www.praveentechworld.com/tools") &&
         !page.endsWith("/rss.xml") &&
         !page.endsWith("/rss") &&
         !page.endsWith("/portfolio"),
