@@ -15,7 +15,7 @@ async function checkEndpoint(item) {
     const response = await fetch(target, {
       redirect: 'follow',
       headers: { 'User-Agent': 'PTW-HealthMonitor/1.1' },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(12000),
     });
     const contentType = response.headers.get('content-type') || '';
     const typeOk = !item.contentType || item.contentType.test(contentType);
@@ -39,12 +39,22 @@ async function checkDNS() {
     // Use an abortable DNS-over-HTTPS request.  dns.resolveNs() cannot be
     // cancelled, so a timed-out local resolver can keep this monitor process
     // alive long after it has reported a result.
-    const response = await fetch('https://cloudflare-dns.com/dns-query?name=praveentechworld.com&type=NS', {
-      headers: { accept: 'application/dns-json' },
-      signal: AbortSignal.timeout(6000),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = await response.json();
+    let payload;
+    try {
+      const response = await fetch('https://cloudflare-dns.com/dns-query?name=praveentechworld.com&type=NS', {
+        headers: { accept: 'application/dns-json' },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (response.ok) payload = await response.json();
+    } catch {
+      // Fallback to Google DoH
+      const fallbackRes = await fetch('https://dns.google/resolve?name=praveentechworld.com&type=NS', {
+        headers: { accept: 'application/dns-json' },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (fallbackRes.ok) payload = await fallbackRes.json();
+    }
+    if (!payload) throw new Error('DoH resolvers unreachable');
     const ns = (payload.Answer || []).map(answer => answer.data).filter(Boolean);
     if (ns.length === 0) throw new Error('No NS records returned');
     const isCloudflare = ns.some(n => n.includes('cloudflare.com'));
