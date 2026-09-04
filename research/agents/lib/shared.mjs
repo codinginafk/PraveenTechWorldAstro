@@ -1,3 +1,8 @@
+import dns from "node:dns";
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch { /* ignore */ }
+
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";

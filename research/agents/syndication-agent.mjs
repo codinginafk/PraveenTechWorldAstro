@@ -12,7 +12,12 @@ const STATE_FILE = path.join(AGENTS_DIR, "state.json");
 const ARTICLES_DIR = path.resolve(__dirname, "../../src/content/articles");
 
 // Only syndicate articles in these pillar categories
-const ALLOWED_CATEGORIES = ["website-setup", "windows-fixes", "hosting-infra", "ai-websites", "ai-automation", "it-operations", "build-in-public"];
+const ALLOWED_CATEGORIES = [
+  "website-setup", "windows-fixes", "hosting-infra", "ai-websites",
+  "ai-automation", "it-operations", "build-in-public", "hardware-troubleshooting",
+  "privacy", "security", "free-software", "seo", "ai-tools", "ai-workflows",
+  "android-fixes", "ai", "business", "automation"
+];
 
 function loadState() {
   try {
@@ -30,8 +35,8 @@ function saveState(state) {
 function getArticleCategory(filePath) {
   try {
     const content = fs.readFileSync(filePath, "utf-8");
-    const match = content.match(/category:\s*(\S+)/);
-    return match ? match[1] : null;
+    const match = content.match(/category:\s*["']?([^"'\r\n]+)["']?/);
+    return match ? match[1].trim() : null;
   } catch {
     return null;
   }
@@ -106,20 +111,45 @@ export async function runSyndication() {
     }
   }
 
-  // Post to Twitter/X via Buffer
-  const bufferToken = process.env.BUFFER_ACCESS_TOKEN || process.env.BUFFER_API_KEY;
-  if (bufferToken) {
+  // Post to Twitter/X (Direct API v2 preferred, Buffer fallback)
+  if (process.env.TWITTER_API_KEY && process.env.TWITTER_ACCESS_TOKEN) {
     try {
-      const { postArticleToTwitter } = await import("./lib/buffer-client.mjs");
-      const post = await postArticleToTwitter(article);
-      if (post) {
-        log(`  Buffer/Twitter: "${article.title}"`);
-        results.push({ platform: "buffer", file, ok: true });
-        await new Promise(r => setTimeout(r, 2000));
+      const { generateTweetPostForArticle, publishTweet } = await import("./lib/syndicate-twitter.mjs");
+      const tweetPost = generateTweetPostForArticle(filePath);
+      if (tweetPost) {
+        // Resolve image path if present
+        const imgRel = (article.coverImage || "").replace(/^\//, "");
+        const localImgPath = path.resolve(__dirname, "../../public", imgRel);
+        const imagePath = fs.existsSync(localImgPath) ? localImgPath : tweetPost.svgFile;
+        const res = await publishTweet(tweetPost, { imagePath, force: true });
+        if (res && res.tweetUrl) {
+          log(`  Twitter/X: "${article.title}" → ${res.tweetUrl}`);
+          results.push({ platform: "twitter", file, ok: true, url: res.tweetUrl });
+          await new Promise(r => setTimeout(r, 2000));
+        } else {
+          log(`  Twitter/X attempt finished without URL`);
+          results.push({ platform: "twitter", file, ok: false, error: "No tweet URL returned" });
+        }
       }
     } catch (err) {
-      log(`  Buffer/Twitter FAILED: ${file} — ${err.message}`);
-      results.push({ platform: "buffer", file, ok: false, error: err.message });
+      log(`  Twitter/X FAILED: ${file} — ${err.message}`);
+      results.push({ platform: "twitter", file, ok: false, error: err.message });
+    }
+  } else {
+    const bufferToken = process.env.BUFFER_ACCESS_TOKEN || process.env.BUFFER_API_KEY;
+    if (bufferToken) {
+      try {
+        const { postArticleToTwitter } = await import("./lib/buffer-client.mjs");
+        const post = await postArticleToTwitter(article);
+        if (post) {
+          log(`  Buffer/Twitter: "${article.title}"`);
+          results.push({ platform: "buffer", file, ok: true });
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      } catch (err) {
+        log(`  Buffer/Twitter FAILED: ${file} — ${err.message}`);
+        results.push({ platform: "buffer", file, ok: false, error: err.message });
+      }
     }
   }
 

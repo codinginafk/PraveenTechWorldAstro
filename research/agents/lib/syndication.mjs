@@ -134,21 +134,48 @@ export async function devtoPost(article, apiKey) {
     },
   };
 
-  const res = await fetch(`${DEVTO_BASE}/articles`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "api-key": apiKey,
-    },
-    body: JSON.stringify(payload),
-  });
+  let resData = null;
+  try {
+    const res = await fetch(`${DEVTO_BASE}/articles`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": apiKey,
+      },
+      body: JSON.stringify(payload),
+    });
 
-  if (!res.ok) {
-    const err = await res.text().catch(() => "");
-    throw new Error(`Dev.to ${res.status}: ${err.slice(0, 200)}`);
+    if (!res.ok) {
+      const err = await res.text().catch(() => "");
+      throw new Error(`Dev.to HTTP ${res.status}: ${err.slice(0, 200)}`);
+    }
+    resData = await res.json();
+  } catch (err) {
+    if (err.message.includes("HTTP")) throw err; // Real HTTP error (validation, duplicate, etc.)
+    // Fall back to curl.exe -4 on network / timeout errors
+    log(`[Dev.to] Fetch network error (${err.message}) - attempting curl.exe -4 fallback...`);
+    const { execSync } = await import("child_process");
+    const tmpFile = path.resolve(import.meta.dirname, `.devto_${Date.now()}.json`);
+    fs.writeFileSync(tmpFile, JSON.stringify(payload), "utf-8");
+    try {
+      const curlOut = execSync(
+        `curl.exe -4 -s --max-time 20 -X POST -H "Content-Type: application/json" -H "api-key: ${apiKey}" -d @"${tmpFile}" ${DEVTO_BASE}/articles`,
+        { encoding: "utf-8" }
+      );
+      if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+      const parsed = JSON.parse(curlOut);
+      if (parsed.id) {
+        resData = parsed;
+      } else {
+        throw new Error(`Dev.to curl returned: ${curlOut.slice(0, 200)}`);
+      }
+    } catch (curlErr) {
+      if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+      throw curlErr;
+    }
   }
 
-  return await res.json();
+  return resData;
 }
 
 export async function devtoUpdateProfile(apiKey, profile) {

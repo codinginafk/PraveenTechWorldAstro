@@ -52,34 +52,35 @@ function generateTweetText(article) {
   const slug = article.slug || "";
   const body = article.body || "";
   const articleUrl = `${SITE_URL}/blog/${slug}`;
-  const lower = title.toLowerCase() + " " + body.toLowerCase().slice(0, 500);
   const tags = (article.tags || []).slice(0, 2).map(t => `#${t.replace(/[^a-zA-Z0-9]/g, "")}`).join(" ");
 
-  const maxText = 237;
-  let tweet = "";
+  let tweet = (article.socialHook || "").trim();
+  if (!tweet) {
+    const lower = title.toLowerCase() + " " + body.toLowerCase().slice(0, 500);
 
-  if (lower.includes("zero") || lower.includes("no data") || lower.includes("not showing")) {
-    tweet = `GSC showing zeros? 90% of the time it is one of three things: (1) wrong property type, (2) verification dropped, or (3) DNS change broke the connection. Check these before touching anything else.`;
-  } else if (lower.includes("sitemap") && lower.includes("error")) {
-    tweet = `Sitemap "Couldn't fetch" error usually means your server blocks Googlebot. Check robots.txt first. If that is clean, your server might be rate-limiting crawlers. A quick .htaccess fix solves it.`;
-  } else if (lower.includes("add.*google") || lower.includes("add your website") || lower.includes("get indexed")) {
-    tweet = `New site not on Google? You do not need to submit to 100 search engines. Two steps: (1) verify in Search Console, (2) submit sitemap.xml. Google indexes you within 24-72h after that.`;
-  } else if (lower.includes("ga4") || lower.includes("analytics") || lower.includes("tracking")) {
-    tweet = `GA4 showing zero users but you know people visit? Your measurement ID might have changed during a site migration. Check your G-XXXXXX code matches what is actually in your site header.`;
-  } else if (lower.includes("windows") || lower.includes("update") || lower.includes("error")) {
-    tweet = `Windows update stuck? Run "sfc /scannow" from an admin command prompt. Catches 80% of update-related corruption. If that fails, DISM /Online /Cleanup-Image /RestoreHealth usually finishes the job.`;
-  } else if (lower.includes("password") || lower.includes("security")) {
-    tweet = `Your password manager is only as secure as your master password. Use a passphrase (4+ random words) instead of a short complex string. Easier to remember, harder to crack.`;
-  } else if (lower.includes("backlink") || lower.includes("link building")) {
-    tweet = `Backlinks from sites your actual customers read matter more than DA 90 spam links. One relevant link from a niche industry blog beats 50 directory submissions. Quality over quantity, always.`;
-  } else if (lower.includes("speed") || lower.includes("performance") || lower.includes("slow")) {
-    tweet = `Site speed tip most people miss: lazy load below-the-fold images AND defer non-critical CSS. Two lines of code can drop your LCP by 40%. Google PageSpeed Insights will show you exactly what to defer.`;
-  } else if (lower.includes("seo") || lower.includes("rank")) {
-    tweet = `Ranking tip: Google prioritizes pages that answer the query immediately. Put your answer in the first 100 words, not buried after 3 paragraphs of intro. Front-load value, back-load context.`;
-  } else {
-    const sentences = body.match(/[A-Z][^.!?]*[.!?]/g) || [];
-    const useful = sentences.filter(s => s.split(" ").length > 8 && s.split(" ").length < 25 && !s.toLowerCase().includes("disclaimer") && !s.toLowerCase().includes("this article") && !s.toLowerCase().includes("click here"));
-    tweet = useful.length > 0 ? useful[0].trim() : title;
+    if (lower.includes("zero") || lower.includes("no data") || lower.includes("not showing")) {
+      tweet = `GSC showing zeros? 90% of the time it is one of three things: (1) wrong property type, (2) verification dropped, or (3) DNS change broke the connection. Check these before touching anything else.`;
+    } else if (lower.includes("sitemap") && lower.includes("error")) {
+      tweet = `Sitemap "Couldn't fetch" error usually means your server blocks Googlebot. Check robots.txt first. If that is clean, your server might be rate-limiting crawlers. A quick .htaccess fix solves it.`;
+    } else if (lower.includes("add.*google") || lower.includes("add your website") || lower.includes("get indexed")) {
+      tweet = `New site not on Google? You do not need to submit to 100 search engines. Two steps: (1) verify in Search Console, (2) submit sitemap.xml. Google indexes you within 24-72h after that.`;
+    } else if (lower.includes("ga4") || lower.includes("analytics") || lower.includes("tracking")) {
+      tweet = `GA4 showing zero users but you know people visit? Your measurement ID might have changed during a site migration. Check your G-XXXXXX code matches what is actually in your site header.`;
+    } else if (lower.includes("windows") || lower.includes("update") || lower.includes("error")) {
+      tweet = `Windows update stuck? Run "sfc /scannow" from an admin command prompt. Catches 80% of update-related corruption. If that fails, DISM /Online /Cleanup-Image /RestoreHealth usually finishes the job.`;
+    } else if (lower.includes("password") || lower.includes("security")) {
+      tweet = `Your password manager is only as secure as your master password. Use a passphrase (4+ random words) instead of a short complex string. Easier to remember, harder to crack.`;
+    } else if (lower.includes("backlink") || lower.includes("link building")) {
+      tweet = `Backlinks from sites your actual customers read matter more than DA 90 spam links. One relevant link from a niche industry blog beats 50 directory submissions. Quality over quantity, always.`;
+    } else if (lower.includes("speed") || lower.includes("performance") || lower.includes("slow")) {
+      tweet = `Site speed tip most people miss: lazy load below-the-fold images AND defer non-critical CSS. Two lines of code can drop your LCP by 40%. Google PageSpeed Insights will show you exactly what to defer.`;
+    } else if (lower.includes("seo") || lower.includes("rank")) {
+      tweet = `Ranking tip: Google prioritizes pages that answer the query immediately. Put your answer in the first 100 words, not buried after 3 paragraphs of intro. Front-load value, back-load context.`;
+    } else {
+      const sentences = body.match(/[A-Z][^.!?]*[.!?]/g) || [];
+      const useful = sentences.filter(s => s.split(" ").length > 8 && s.split(" ").length < 25 && !s.toLowerCase().includes("disclaimer") && !s.toLowerCase().includes("this article") && !s.toLowerCase().includes("click here"));
+      tweet = useful.length > 0 ? useful[0].trim() : title;
+    }
   }
 
   const full = `${tweet} ${articleUrl} ${tags}`.trim();
@@ -279,7 +280,7 @@ export async function publishTweet(post, options = {}) {
   }
   const lastPost = state.twitterLastPost ? new Date(state.twitterLastPost).getTime() : 0;
   const hoursSince = (Date.now() - lastPost) / 3600000;
-  if (lastPost > 0 && hoursSince < MIN_HOURS_BETWEEN) {
+  if (!options.force && lastPost > 0 && hoursSince < MIN_HOURS_BETWEEN) {
     log(`[Twitter] Cooldown: ${hoursSince.toFixed(1)}h since last post (min ${MIN_HOURS_BETWEEN}h)`);
     return null;
   }
@@ -287,14 +288,19 @@ export async function publishTweet(post, options = {}) {
   try {
     // Upload image
     let mediaId = null;
-    if (options.svgPath && fs.existsSync(options.svgPath)) {
+    const imgPath = options.imagePath || options.svgPath;
+    if (imgPath && fs.existsSync(imgPath)) {
       try {
-        const svgBinary = fs.readFileSync(options.svgPath);
-        // Convert SVG to PNG buffer for Twitter (Twitter doesn't support SVG natively)
-        // For now, upload as SVG and let Twitter handle it — if it fails, post without image
-        const mediaBuffer = Buffer.from(svgBinary);
-        mediaId = await client.v1.uploadMedia(mediaBuffer, { type: "image/svg+xml" });
-        log("[Twitter] Image uploaded");
+        const lower = imgPath.toLowerCase();
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp")) {
+          const mimeType = lower.endsWith(".png") ? "image/png" : lower.endsWith(".webp") ? "image/webp" : "image/jpeg";
+          const mediaBuffer = fs.readFileSync(imgPath);
+          mediaId = await client.v1.uploadMedia(mediaBuffer, { mimeType });
+          log(`[Twitter] Image uploaded (${mimeType}, mediaId: ${mediaId})`);
+        } else if (lower.endsWith(".svg")) {
+          // Twitter v1 API does not support SVG media upload natively; post text with URL card
+          log("[Twitter] SVG detected; skipping direct image upload in favor of Twitter Card preview");
+        }
       } catch (imgErr) {
         log(`[Twitter] Image upload failed (posting without image): ${imgErr.message}`);
       }
