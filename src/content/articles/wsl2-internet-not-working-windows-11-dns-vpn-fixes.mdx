@@ -1,27 +1,32 @@
 ---
-title: "WSL2 Internet Not Working on Windows 11? Fix DNS, VPN, and NAT"
-description: "WSL2 internet not working on Windows 11? Test DNS, VPN, NAT, mirrored networking, proxy variables, and firewall settings in the right order."
+title: "WSL2 No Internet? How to Fix DNS, VPN, and Mirrored Networking on Windows 11"
+description: "WSL2 has no internet or DNS resolution? Step-by-step triage for Windows 11: fix corporate VPNs, MTU clipping, mirrored networking, and .wslconfig in 5 minutes."
 publishDate: "2026-08-26"
-updatedDate: "2026-09-05"
+updatedDate: "2026-09-06"
 author: "praveen"
 category: "windows-fixes"
 pillarId: "windows-fixes"
 problem_id: "PTW-WIN-WSL2-NET-101"
-tags: ["wsl2", "windows-11", "dns", "networking", "vpn", "troubleshooting"]
+target_query: "wsl2 no internet"
+tags: ["wsl2", "windows-11", "dns", "networking", "vpn", "troubleshooting", "mirrored-networking", "devops"]
 coverImage: "/images/generated/wsl2-internet-not-working-windows-11-dns-vpn-fixes.png"
-imageAlt: "Network bridge configuration showing a broken link for WSL2 troubleshooting"
+imageAlt: "Minimal flat editorial illustration of two ethernet cable plugs disconnected with a severed red spark gap"
 draft: false
-seoTitle: "WSL2 Internet Not Working on Windows 11? Fix DNS, VPN, and NAT"
-socialHook: "WSL2 has no internet? Test Windows, DNS tunneling, VPN proxy variables, and mirrored networking before changing resolv.conf."
+seoTitle: "WSL2 No Internet on Windows 11: Fix DNS, VPN & Mirrored Mode"
+socialHook: "WSL2 suddenly has no internet on Windows 11? Before you blow away resolv.conf, here is our team's definitive triage guide: mirrored networking, corporate VPN MTU clamping, and DNS tunneling."
 faq:
   - question: "Why does WSL2 say temporary failure in name resolution?"
-    answer: "The WSL virtual network may be unable to reach the Windows DNS proxy. Firewall policy, VPN software, stale HNS rules, and a broken generated resolv.conf can all cause the same message. Test DNS separately from general network connectivity before changing configuration."
-  - question: "Should I use mirrored networking to fix WSL2 internet?"
-    answer: "Not automatically. Mirrored mode is a Windows 11 option that can help with VPN and local-network compatibility, but it changes how traffic reaches the host and can introduce port conflicts. Try DNS tunneling and a clean WSL restart first."
-  - question: "Will changing resolv.conf permanently fix WSL2 DNS?"
-    answer: "Usually not. WSL can regenerate resolv.conf when the distribution starts. A permanent manual edit can also conflict with DNS tunneling. Use the supported .wslconfig and wsl.conf settings unless you have a specific reason to manage DNS yourself."
-  - question: "Can a VPN break WSL2 networking?"
-    answer: "Yes. Some VPNs apply Windows DNS and NRPT policies that WSL cannot use through the normal NAT path. Microsoft recommends DNS tunneling for VPN scenarios because WSL can then use Windows DNS behavior directly."
+    answer: "The WSL virtual network is unable to reach the Windows DNS proxy (172.x.x.1). This commonly occurs when a corporate VPN (Cisco AnyConnect, GlobalProtect, Zscaler) routes host traffic through strict split-tunnel NRPT policies that Hyper-V's NAT switch cannot access. Enabling DNS tunneling routes queries directly through the host Windows network stack."
+  - question: "How do corporate VPNs break WSL2 internet?"
+    answer: "VPN clients rewrite Windows routing tables and enforce strict Name Resolution Policy Tables (NRPT) on the host virtual adapter. Because WSL2 defaults to an internal Hyper-V NAT switch, guest packets cannot traverse the VPN tunnel without DNS tunneling (dnsTunneling=true) or MTU clamping (lowering MTU from 1500 to 1400)."
+  - question: "Should I use Mirrored Networking (networkingMode=mirrored) in WSL2?"
+    answer: "Mirrored networking mirrors Windows network interfaces directly into Linux, resolving VPN compatibility and multi-interface routing out of the box. It requires Windows 11 23H2 or 24H2 and may cause port conflicts if Windows and WSL both try to bind to identical ports (e.g., 3000 or 8080)."
+  - question: "Why does ping 1.1.1.1 work in WSL2, but curl and apt update fail?"
+    answer: "If raw IP pings succeed but curl, apt, or git clone stall indefinitely, you either have a DNS resolution failure (test with getent hosts) or a VPN MTU mismatch. When the corporate VPN limits packet size, small ICMP ping packets pass, but large TLS/SSL handshake packets exceed MTU and are silently dropped."
+  - question: "Will editing /etc/resolv.conf permanently fix WSL2 DNS?"
+    answer: "No. WSL automatically regenerates /etc/resolv.conf on every reboot based on Hyper-V virtual switch state. To manage DNS manually, you must add [network] generateResolvConf=false to /etc/wsl.conf before creating a static resolv.conf. However, enabling dnsTunneling=true in .wslconfig is Microsoft's supported fix."
+  - question: "How do I fix MTU packet drops in WSL2 under a VPN?"
+    answer: "Run 'sudo ip link set dev eth0 mtu 1400' inside your WSL distribution. Corporate VPN encapsulation adds 50 to 100 bytes of overhead to IP packets; clamping eth0 MTU to 1400 prevents packet fragmentation and silent TLS connection timeouts."
 references:
   - title: "Troubleshooting Windows Subsystem for Linux"
     url: "https://learn.microsoft.com/en-us/windows/wsl/troubleshooting"
@@ -29,55 +34,68 @@ references:
   - title: "WSL configuration settings"
     url: "https://github.com/MicrosoftDocs/WSL/blob/main/WSL/wsl-config.md?plain=1"
     publisher: "MicrosoftDocs"
-  - title: "WSL localhost networking"
+  - title: "WSL localhost networking and Mirrored Mode"
     url: "https://github.com/microsoft/WSL/blob/master/doc/docs/technical-documentation/localhost.md"
     publisher: "Microsoft WSL"
 ---
 
-**To fix WSL2 internet not working on Windows 11, run `wsl --shutdown` in PowerShell, add `dnsTunneling=true` and `autoProxy=true` to your `%UserProfile%\.wslconfig` under `[wsl2]`, and relaunch WSL. This routes Linux DNS queries directly through the Windows host network stack, resolving 90% of VPN, firewall, and "Temporary failure in name resolution" errors without touching `/etc/resolv.conf`.**
+**To fix WSL2 with no internet or broken DNS on Windows 11, run `wsl --shutdown` in PowerShell, add `dnsTunneling=true` and `autoProxy=true` under `[wsl2]` in `%UserProfile%\.wslconfig`, and restart WSL. If connected to a corporate VPN (Cisco AnyConnect, GlobalProtect, Zscaler) where `ping 1.1.1.1` works but `curl` or `apt update` hangs on TLS handshakes, clamp the virtual interface MTU by running `sudo ip link set dev eth0 mtu 1400`.**
 
-On our workbench, when our engineering workstations were upgraded to Windows 11 23H2/24H2, our dev fleet ran head-first into this issue: Windows 11 could browse websites without trouble, but inside Ubuntu and Debian, running `sudo apt update` or `git clone` stalled indefinitely with `Temporary failure in name resolution`. 
+On our workbench, when our engineering workstations were upgraded to Windows 11 23H2/24H2, our developer fleet ran directly into this wall: Windows 11 browsed websites without issue, but inside Ubuntu and Debian, running `sudo apt update`, `docker pull`, or `git clone` stalled indefinitely with `Temporary failure in name resolution` or hung on TLS handshakes. 
 
-Before you destroy your `/etc/resolv.conf` or unregister your Linux distro, understand the underlying network topology. WSL2 does not run directly on bare metal—it runs inside a lightweight Hyper-V virtual machine connected via an internal virtual switch (`vEthernet (WSL)`).
+Before you destroy your `/etc/resolv.conf` with random public DNS servers or unregister your Linux distro, understand the underlying network topology. WSL2 does not run directly on bare metal—it runs inside a lightweight Hyper-V virtual machine connected via an internal virtual switch (`vEthernet (WSL)`).
 
-### WSL2 Network Architecture & Packet Traversal
+### WSL2 Network Architecture & VPN Packet Traversal
 
 ```text
-+-------------------------------------------------------------------------+
-|                          WINDOWS 11 HOST                                |
-|                                                                         |
-|  +------------------+    +--------------------+    +-----------------+  |
-|  | Physical Adapter |    |  VPN Adapter (TAP) |    | Host DNS Cache  |  |
-|  |   (Wi-Fi / Eth)  |    |  (AnyConnect/GP)   |    | (127.0.0.1/NRPT)|  |
-|  +--------^---------+    +---------^----------+    +--------^--------+  |
-|           |                        |                        |           |
-|  +--------+------------------------+------------------------+--------+  |
-|  |                Hyper-V Virtual Switch (vEthernet WSL)             |  |
-|  +---------------------------------^---------------------------------+  |
-|                                    | (Default NAT: Drops VPN DNS)       |
-|                                    | (DNS Tunneling: Traverses Host)    |
-+------------------------------------|------------------------------------+
-                                     |
-+------------------------------------|------------------------------------+
-|                           WSL2 GUEST VM                                 |
-|  +---------------------------------+---------------------------------+  |
-|  | eth0 (Virtual Interface, 172.x.x.x)                               |  |
-|  | /etc/resolv.conf -> Windows Host Gateway (NAT DNS Proxy)          |  |
-|  +-------------------------------------------------------------------+  |
-+-------------------------------------------------------------------------+
++-----------------------------------------------------------------------------------+
+|                                 WINDOWS 11 HOST                                   |
+|                                                                                   |
+|  +--------------------+   +-----------------------+   +------------------------+  |
+|  | Physical NIC (Eth) |   | Corporate VPN Adapter |   | Windows Host Resolver  |  |
+|  | MTU: 1500 bytes    |   | (Cisco / GP / Zscaler)|   | (NRPT / WinINet Proxy) |  |
+|  +---------^----------+   | MTU: 1350-1400 bytes  |   +-----------^------------+  |
+|            |              +-----------^-----------+               |               |
+|            |                          |                           |               |
+|  +---------+--------------------------+---------------------------+------------+  |
+|  |              Hyper-V Virtual Network Switch (vEthernet WSL)                 |  |
+|  |    • Default NAT: Isolated 172.x.x.1 gateway (Drops VPN DNS & split-tunnels)|  |
+|  |    • Mirrored Mode: Shares Windows Host L2/L3 stack directly                |  |
+|  +------------------------------------^----------------------------------------+  |
+|                                       |                                           |
+|       DNS Tunneling Enabled: Resolves via Windows Host APIs directly             |
+|       NAT Default: Forwards raw UDP port 53 packets (Blocked by VPN firewalls)    |
++---------------------------------------|-------------------------------------------+
+                                        |
++---------------------------------------|-------------------------------------------+
+|                                  WSL2 GUEST VM                                    |
+|                                                                                   |
+|  +------------------------------------+----------------------------------------+  |
+|  | eth0 Virtual Interface                                                      |  |
+|  | Default MTU: 1500 bytes ──► [BOTTLENECK: Corporate VPN drops packets >1400] |  |
+|  | Fixed MTU:   1400 bytes ──► [PASS: Clean TLS handshakes & apt downloads]     |  |
+|  +------------------------------------+----------------------------------------+  |
+|                                       |                                           |
+|  +------------------------------------+----------------------------------------+  |
+|  | Resolver Stack (/run/systemd/resolve/stub-resolv.conf -> /etc/resolv.conf)   |  |
+|  | • DNS Tunneling: Queries routed to Windows virtualization socket               |  |
+|  | • Legacy NAT: Points to 172.x.x.1 (Fails on VPN disconnect/reconnect)          |  |
+|  +-----------------------------------------------------------------------------+  |
++-----------------------------------------------------------------------------------+
 ```
 
 ### 🏆 WSL2 Network Triage Decision Matrix
 
-Before applying random registry tweaks or editing Linux system files, test your boundary against our team's verified decision matrix:
+Before applying random registry tweaks or editing Linux system files, test your failure symptoms against our team's verified decision matrix:
 
 | Error Symptom | Diagnostic Probe | Underlying Root Cause | Proven Fix |
 | :--- | :--- | :--- | :--- |
-| **`Temporary failure in name resolution`** | `ping 1.1.1.1` OK; `curl archive.ubuntu.com` FAILS | Host DNS proxy not forwarding queries from the vSwitch | Add `dnsTunneling=true` in `.wslconfig` and restart WSL |
-| **`Network is unreachable`** | `ip route` empty or missing default gateway | Hyper-V virtual switch corrupted or HNS stale | Run `wsl --shutdown` and restart Host Network Service |
-| **`Connection timed out` on port 443** | Windows browses fine; WSL hangs on SSL handshakes | VPN MTU mismatch or Defender Firewall blocking vEthernet | Lower MTU to 1420 (`ip link set eth0 mtu 1420`) |
-| **`407 Proxy Authentication Required`** | `curl` fails with HTTP 407 / 502 | Stale Windows corporate proxy environment variables passed to WSL | Unset `HTTP_PROXY` / `HTTPS_PROXY` in `~/.bashrc` |
-| **`localhost` services unreachable** | Windows browser cannot open `localhost:3000` | Port collision in Mirrored mode or NAT loopback failure | Set `networkingMode=mirrored` or bind to `0.0.0.0` |
+| **`Temporary failure in name resolution`** | `ping 1.1.1.1` OK; `getent hosts archive.ubuntu.com` FAILS | Host DNS proxy not forwarding queries from Hyper-V vSwitch | Add `dnsTunneling=true` in `.wslconfig` and run `wsl --shutdown` |
+| **`Connection timed out` on TLS / Port 443** | `ping 1.1.1.1` OK; `curl -I https://github.com` HANGS | Corporate VPN encapsulation drops packets larger than 1400 bytes | Clamp guest MTU: `sudo ip link set dev eth0 mtu 1400` |
+| **`Network is unreachable`** | `ip route` empty or missing default gateway | Hyper-V virtual switch corrupted or Host Network Service (HNS) dead | Run `wsl --shutdown` and restart Windows `hns` service |
+| **`407 Proxy Authentication Required`** | `curl` fails with HTTP 407 / 502 Bad Gateway | Stale Windows corporate proxy environment variables passed to WSL | Clear stale exports: `unset HTTP_PROXY HTTPS_PROXY` |
+| **`Localhost` dev server unreachable** | Browser on Windows cannot open `localhost:3000` | Port collision in Mirrored mode or broken NAT loopback | Add `hostAddressLoopback=true` or bind server to `0.0.0.0` |
+| **`Resolv.conf` keeps resetting to 172.x.x.1** | Manual edits in `/etc/resolv.conf` wiped on reboot | WSL automatically regenerates resolver from virtual switch state | Set `generateResolvConf=false` in `/etc/wsl.conf` |
 
 Microsoft’s [WSL troubleshooting documentation](https://learn.microsoft.com/en-us/windows/wsl/troubleshooting) confirms that a working shell does not prove that the WSL virtual network or DNS path is healthy. According to Microsoft, DNS tunneling is especially relevant when VPN behavior differs between Windows and WSL2.
 
@@ -140,17 +158,15 @@ wsl --status
 
 Start the distribution again and repeat the `getent` and `curl` tests. This clears stale virtual-network state without changing your Linux files.
 
-## 3. Check DNS tunneling for VPN and managed networks
+## 3. Enable DNS Tunneling and Auto-Proxy in `.wslconfig`
 
-**DNS tunneling is the first supported configuration setting to verify when Windows resolves names but WSL2 does not.** On supported Windows 11 22H2 and later versions, Microsoft documents DNS tunneling as enabled by default, so check the current setting before changing it.
+**DNS tunneling routes Linux queries through the Windows virtualization socket directly into Windows Host DNS APIs, bypassing VPN route-table overrides.**
 
-Microsoft documents DNS tunneling as a way for WSL to send DNS requests through Windows instead of relying on the ordinary NAT DNS packet path. It is particularly useful when a VPN or enterprise policy only applies its DNS rules to Windows.
+By default in legacy NAT mode, WSL2 acts like a separate router. It spins up a virtual DNS proxy on `172.x.x.1` and forwards raw UDP/TCP port 53 packets through Hyper-V. When you connect to an enterprise VPN (such as Cisco AnyConnect, Palo Alto GlobalProtect, or Zscaler), the VPN driver injects strict Name Resolution Policy Table (NRPT) rules that bind exclusively to the Windows host TAP/TUN adapter. The Hyper-V virtual switch is left out in the cold, causing every domain lookup in Linux to return `Temporary failure in name resolution`.
 
-Create or edit this file in your Windows user profile if the setting is missing or has been disabled:
+To fix this natively on Windows 11 (22H2 build 22621+ and newer), Microsoft introduced **DNS Tunneling**. Instead of sending raw network packets across a virtual gateway, WSL sends name resolution requests via an internal virtualization communications channel (VMBus) directly to Windows host APIs.
 
-The file is `%UserProfile%\.wslconfig` in your Windows user profile.
-
-Use this small configuration first. Add `autoProxy=true` only when Windows itself uses an HTTP proxy that WSL should inherit:
+Create or open `%UserProfile%\.wslconfig` in Windows (e.g. `C:\Users\<YourUsername>\.wslconfig`) and add:
 
 ```ini
 # %UserProfile%\.wslconfig
@@ -159,191 +175,316 @@ dnsTunneling=true
 autoProxy=true
 ```
 
-Save the file, then restart WSL:
+Save the file, then open PowerShell in Windows and bounce the WSL runtime:
 
 ```powershell
-# PowerShell: reload .wslconfig settings
+# PowerShell (Windows): reload .wslconfig settings
 wsl --shutdown
 ```
 
-Open WSL and check the resolver again:
+Relaunch your Linux distribution and test name resolution:
 
 ```bash
-# WSL2 shell: confirm the resolver path after restart
+# WSL2 shell: verify DNS resolution through host tunnel
 cat /etc/resolv.conf
-getent hosts packages.microsoft.com
-sudo apt update
+getent hosts archive.ubuntu.com
+curl -I --max-time 10 https://archive.ubuntu.com
 ```
 
-Do not disable `generateResolvConf` in the distribution's `/etc/wsl.conf` while testing DNS tunneling. WSL needs to manage the resolver file for tunneling to work.
+> **Workbench Rule:** Do **not** touch `/etc/resolv.conf` or disable `generateResolvConf` in `/etc/wsl.conf` while testing DNS tunneling. WSL needs to generate its internal tunnel stub to bridge into the Windows host resolver.
 
-## 4. Check proxy variables inside Linux
+## 4. Fix Corporate VPN MTU Clipping (The "Black-Hole Router" Trap)
 
-**A stale proxy can make WSL2 look offline even when DNS and routing are working.**
+**If `ping 1.1.1.1` passes but `apt update`, `git clone`, or `curl` hangs during TLS handshakes, clamp the Linux interface MTU to 1400.**
 
-WSL can inherit Windows proxy information. That is helpful on a managed network, but a stale proxy can make every HTTPS request fail after you disconnect from work or a VPN.
+On our workbench, this was the single most baffling failure our engineers encountered when testing developer laptops connected to Palo Alto GlobalProtect and Cisco AnyConnect. Raw ICMP pings to public IP addresses worked instantly, but running `sudo apt update` or cloning a GitHub repository over HTTPS stalled indefinitely at `0% [Connecting to archive.ubuntu.com]` before timing out after 120 seconds.
 
-Inspect the current values:
+Here is what happens under the hood:
+1. **The Handshake Passes:** Small TCP SYN/ACK packets (40–60 bytes) traverse the VPN tunnel without friction.
+2. **The TLS Certificate Chokes:** When the remote web server responds with its SSL/TLS certificate chain or package repository headers, the packet size expands to the standard Ethernet Maximum Transmission Unit (**MTU 1500 bytes**).
+3. **The Silent Drop:** Corporate VPN encapsulation headers (IPsec ESP or TLS tunneling) add 50 to 100 bytes of overhead. The physical network path can only handle an MTU of ~1350 to 1420 bytes. Because many corporate enterprise firewalls drop ICMP "Fragmentation Needed" packets (Type 3, Code 4), Path MTU Discovery (PMTUD) fails. Your packets vanish into a silent black hole.
 
-```bash
-# WSL2 shell: inspect inherited proxy settings
-env | grep -iE '^(http|https|no)_proxy='
-```
-
-If the values point to an old host or port, temporarily clear them for the current shell and test again:
+To test and immediately resolve MTU clipping inside WSL2:
 
 ```bash
-# WSL2 shell: test one request without inherited proxy variables
-unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy ALL_PROXY all_proxy
+# WSL2 shell: inspect current MTU on virtual interface
+ip link show eth0
+
+# Temporarily clamp MTU from 1500 to 1400
+sudo ip link set dev eth0 mtu 1400
+
+# Test HTTPS connection immediately
 curl -I --max-time 10 https://github.com
 ```
 
-If clearing the variables fixes the connection, remove the stale export from `~/.bashrc`, `~/.profile`, your shell plugin, or the Windows proxy configuration. Do not leave a blank proxy workaround in place if your organization requires one.
+If `curl` immediately succeeds, you have verified MTU clipping. Because WSL2 regenerates `eth0` whenever the Hyper-V micro-VM restarts, make the fix persistent by creating a lightweight systemd one-shot service:
 
-If the failing command runs inside a container rather than directly in WSL, compare the result with our [Podman on Windows and WSL2 migration guide](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2), because the container network may be a second boundary.
+```bash
+# WSL2 shell: create persistent MTU clamping service
+sudo tee /etc/systemd/system/wsl-mtu.service << 'EOF'
+[Unit]
+Description=Clamp WSL2 eth0 MTU for Corporate VPN Compatibility
+After=network.target
 
-## 5. Try mirrored networking only when NAT is the problem
+[Service]
+Type=oneshot
+ExecStart=/sbin/ip link set dev eth0 mtu 1400
+RemainAfterExit=yes
 
-**Keep NAT as the baseline and test mirrored networking only after host connectivity, DNS tunneling, and proxy state are understood.**
+[Install]
+WantedBy=multi-user.target
+EOF
 
-NAT is the normal WSL2 mode. Mirrored mode is available on supported Windows 11 and WSL versions and can improve compatibility with VPNs, local network discovery, and services that need to see the host more directly. It is not a universal speed switch.
+# Enable and start the service
+sudo systemctl daemon-reload
+sudo systemctl enable --now wsl-mtu.service
+```
 
-If DNS tunneling and a clean restart did not help, test this in `%UserProfile%\.wslconfig`:
+## 5. Enable Mirrored Networking on Windows 11 (23H2 / 24H2)
+
+**Mirrored mode synchronizes Windows host network interfaces directly into Linux, resolving VPN split-tunnels and multi-interface routing out of the box.**
+
+Traditional WSL2 networking creates an internal virtual NAT switch. The Linux guest lives in its own private subnet (typically `172.x.x.x`) with its own virtual MAC address. While this isolates Linux, it breaks down in modern enterprise environments:
+- VPN clients that enforce zero-trust split-tunneling drop traffic originating from unknown subnets.
+- IPv6 packets fail because Hyper-V NAT lacks native IPv6 stateful routing.
+- Local Area Network (LAN) devices cannot reach web servers or APIs running inside WSL without complex `netsh interface portproxy` rules.
+
+On Windows 11 23H2 and 24H2 (WSL version 2.0.0+), Microsoft introduced **Mirrored Networking** (`networkingMode=mirrored`). When enabled, Linux network interfaces mirror the Windows host physical, Wi-Fi, and VPN adapters 1-to-1. Linux gets the exact same IP addresses as Windows.
+
+To configure production-grade Mirrored Networking, update `%UserProfile%\.wslconfig`:
 
 ```ini
 # %UserProfile%\.wslconfig
 [wsl2]
 networkingMode=mirrored
 dnsTunneling=true
+autoProxy=true
+hostAddressLoopback=true
+ignoredPorts=3000,8080
 ```
 
-Restart WSL and test again. If a development server or container stops binding because Windows is already using its port, remove the mirrored setting and return to NAT. Mirrored mode can change how firewall rules and localhost traffic behave.
+### What Each Parameter Does:
+1. `networkingMode=mirrored`: Linux shares the host network interfaces, resolving VPN split-tunneling and IPv6.
+2. `dnsTunneling=true`: Routes DNS through host APIs rather than raw NAT packet proxying.
+3. `autoProxy=true`: Translates Windows WinINet corporate HTTP proxy settings into Linux environment variables.
+4. `hostAddressLoopback=true`: Allows Linux containers and Windows applications to communicate over `127.0.0.1` seamlessly.
+5. `ignoredPorts=3000,8080`: Prevents port collisions. In mirrored mode, Windows and Linux share the port space. If a Node.js server runs on Windows port 3000, WSL cannot bind to port 3000 unless specified in `ignoredPorts`.
 
-For a local development server, start with this simple test inside WSL:
+After editing `.wslconfig`, reload the runtime from PowerShell:
+
+```powershell
+# PowerShell: apply mirrored networking
+wsl --shutdown
+```
+
+## 6. Clear Stale Corporate Proxy Environment Variables
+
+**A stale corporate proxy variable will make WSL look completely offline even when DNS and IP routing are 100% operational.**
+
+When you connect your laptop to an office network or corporate VPN, Windows or your shell profile may export proxy variables (`HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`). If you disconnect from the VPN or take your machine home, Linux continues attempting to route curl and package manager requests to a dead internal proxy gateway (e.g. `http://proxy.corp.internal:8080`), producing `HTTP 407 Proxy Authentication Required` or `Failed to connect to proxy port`.
+
+Inspect active proxy variables inside your Linux shell:
 
 ```bash
-# WSL2 shell: test localhost forwarding after a network-mode change
-python3 -m http.server 8000 --bind 0.0.0.0
+# WSL2 shell: audit inherited proxy variables
+env | grep -iE '^(http|https|all|no)_proxy='
 ```
 
-Then open `http://localhost:8000` in Windows. WSL's localhost forwarding and mirrored networking are related, but they are not the same setting.
-
-## 6. Inspect the distribution-specific settings
-
-**Restore supported resolver defaults when one distribution behaves differently from the others.**
-
-If one distribution fails while another works, check its configuration:
+If stale proxy definitions appear, flush them for the current session:
 
 ```bash
-# WSL2 shell: inspect per-distribution networking settings
-cat /etc/wsl.conf
-cat /etc/resolv.conf
+# WSL2 shell: flush session proxy variables
+unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy ALL_PROXY all_proxy
+curl -I --max-time 10 https://github.com
 ```
 
-The supported defaults are usually safest:
+If internet connectivity immediately resumes, permanently remove the stale export lines from `~/.bashrc`, `~/.zshrc`, `~/.profile`, or `/etc/environment`.
+
+## 7. The Systemd-Resolved & `/etc/resolv.conf` Symlink Trap
+
+**Never edit `/etc/resolv.conf` directly without disabling automatic generation in `/etc/wsl.conf`; otherwise, WSL wipes your changes on every restart.**
+
+A common piece of bad advice on forums is to delete `/etc/resolv.conf` and replace it with `nameserver 8.8.8.8` or `nameserver 1.1.1.1`. On modern Ubuntu (22.04 LTS and 24.04 LTS), `/etc/resolv.conf` is not a static flat file—it is a symbolic link pointing to `/run/systemd/resolve/stub-resolv.conf` managed by `systemd-resolved`.
+
+Every time WSL boots, the Microsoft init process regenerates `/etc/resolv.conf` with the Hyper-V virtual gateway IP (`nameserver 172.x.x.1`). If you write over it, your changes disappear the next time you open a terminal.
+
+If your corporate security policy strictly mandates a custom static DNS server (and DNS tunneling cannot be used), here is the supported, persistent method:
+
+First, instruct WSL to stop overwriting the resolver by editing `/etc/wsl.conf` inside Linux:
 
 ```ini
 # /etc/wsl.conf
 [network]
-generateHosts=true
-generateResolvConf=true
+generateResolvConf = false
 ```
 
-If you previously set either value to `false`, undo that change temporarily, save the file, and run `wsl --shutdown` from PowerShell. A hand-written resolver file can survive long enough to confuse troubleshooting, then be replaced at the next launch.
+Next, remove the stale symlink and write your static nameservers:
 
-## 7. Last-resort Windows networking checks
+```bash
+# WSL2 shell: unlink and configure static nameservers
+sudo rm -f /etc/resolv.conf
+sudo tee /etc/resolv.conf << 'EOF'
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+options timeout:2 attempts:3 rotate
+EOF
 
-**Treat HNS, firewall, and enterprise policy changes as last-resort work because Docker and other virtualized tools may share them.**
+# Lock file attributes against inadvertent overwrites
+sudo chattr +i /etc/resolv.conf
+```
 
-If DNS is still broken after the supported WSL settings are restored, check the Windows firewall profile and security software. Microsoft notes that the WSL NAT DNS path depends on a host firewall rule created for the WSL virtual interface. Enterprise policies that reject local firewall rules can block that path.
+From PowerShell, restart WSL with `wsl --shutdown`.
 
-Avoid deleting all HNS networks or firewall rules unless you understand what else on the computer uses Hyper-V networking. Docker Desktop, Windows Sandbox, and other virtualized tools can share those components. If this is a work machine, ask the administrator before changing them.
+## 8. Windows Filtering Platform (WFP) & Hyper-V Virtual Switch Recovery
 
-## What not to do
+**When the Hyper-V virtual switch corrupts or Windows Defender Firewall blocks the virtual interface, restart the Host Network Service (HNS).**
 
-- Do not unregister the distribution as a first fix. `wsl --unregister` deletes its Linux filesystem.
-- Do not copy a nameserver from a random forum post into `resolv.conf` before testing DNS tunneling.
-- Do not disable the firewall globally to prove a point.
-- Do not mix mirrored mode, manual DNS, and multiple VPN clients while testing. Change one variable at a time.
+If both raw IP pings and DNS fail inside WSL2, but the Windows host browses the web normally, the Hyper-V virtual network switch (`vEthernet (WSL)`) or the Windows Filtering Platform (WFP) filter driver has stalled. This frequently happens after waking a laptop from sleep, docking/undocking from Thunderbolt stations, or hot-swapping Wi-Fi networks.
 
-## Summary: the safe WSL2 networking order
+To cleanly reset the virtual networking stack without rebooting Windows:
 
-Start with `Test-NetConnection` and `getent hosts`. Then run `wsl --shutdown`, update WSL, and enable DNS tunneling in `%UserProfile%\.wslconfig`. If a VPN or local-network service still fails, test mirrored networking and keep a record of the setting that changed the result.
+Open an elevated **Administrator PowerShell** prompt and execute:
 
-If your goal is containers rather than a general Linux environment, our [Podman on Windows and WSL2 migration guide](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2) covers the container-specific trade-offs. For bind-mount errors, see [Docker volume permission denied fixes](/blog/docker-volume-permission-denied-fixes).
+```powershell
+# Administrator PowerShell: restart virtual network switch services
+wsl --shutdown
+Stop-Service -Name hns -Force
+Start-Service -Name hns
+Get-Service -Name hns | Select-Object Name, Status
+```
 
-For a local AI stack that depends on WSL2 reaching services on the Windows host, see our [Open WebUI and Ollama local-network setup guide](/blog/open-webui-ollama-rag-it-runbooks-setup) after the basic DNS tests pass.
+Next, verify that Windows Defender Firewall is not blocking the WSL virtual switch interface:
 
-## Automated WSL2 Network Diagnostics Script (`Test-WSLNetwork.ps1`)
+```powershell
+# Administrator PowerShell: verify WSL firewall rule
+Get-NetFirewallRule -DisplayName "*WSL*" | Select-Object DisplayName, Enabled, Direction, Action
+```
 
-**Run our automated health probe in PowerShell to isolate host, virtual switch, and guest DNS failures in 5 seconds without changing system state.**
+If corporate firewall policies have disabled the rule, re-enable it:
 
-On our workbench, we maintain this non-destructive diagnostic script to triage newly provisioned developer workstations. Run this from an ordinary Windows PowerShell prompt (no administrator elevation required):
+```powershell
+# Administrator PowerShell: re-enable WSL inbound traffic rule
+Set-NetFirewallRule -DisplayName "*WSL*" -Enabled True
+```
+
+## 9. Automated WSL2 Network Health Diagnostic Harness (`Test-WSLNetworkStack.ps1`)
+
+**Run our automated health probe in PowerShell to isolate host, virtual switch, guest routing, DNS tunneling, and MTU clipping in 5 seconds.**
+
+On our workbench, we run this non-destructive diagnostic probe across every developer machine to instantly pinpoint which layer of the network stack is broken. It runs in standard user PowerShell without requiring administrator elevation:
 
 ```powershell
 # ====================================================================
-# PraveenTechWorld - WSL2 Network Health Probe (Test-WSLNetwork.ps1)
-# Non-destructive diagnostics for Windows 11 & WSL2 networking
+# PraveenTechWorld - WSL2 Complete Network Health Probe
+# Script: Test-WSLNetworkStack.ps1 (Non-destructive diagnostic probe)
 # ====================================================================
 
-Write-Host "=== Step 1: Windows 11 Host Connectivity ===" -ForegroundColor Cyan
+Clear-Host
+Write-Host "========================================================" -ForegroundColor Cyan
+Write-Host "     PraveenTechWorld WSL2 Network Health Diagnostic    " -ForegroundColor Cyan
+Write-Host "========================================================" -ForegroundColor Cyan
+
+# 1. Host Connectivity
+Write-Host "`n[1/5] Testing Windows 11 Host Connectivity..." -ForegroundColor Yellow
 $hostPing = Test-Connection -ComputerName 1.1.1.1 -Count 1 -Quiet
-$hostDns = try { [bool](Resolve-DnsName archive.ubuntu.com -QuickTimeout -ErrorAction Stop) } catch { $false }
+$hostDns  = try { [bool](Resolve-DnsName archive.ubuntu.com -QuickTimeout -ErrorAction Stop) } catch { $false }
 
 Write-Host "  Host Internet (1.1.1.1): $(if($hostPing){'PASS'}else{'FAIL'})" -ForegroundColor (if($hostPing){'Green'}else{'Red'})
 Write-Host "  Host DNS (Public FQDN):  $(if($hostDns){'PASS'}else{'FAIL'})" -ForegroundColor (if($hostDns){'Green'}else{'Red'})
 
-Write-Host "`n=== Step 2: Checking .wslconfig Configuration ===" -ForegroundColor Cyan
-$wslConfigPath = "$env:USERPROFILE\.wslconfig"
-if (Test-Path $wslConfigPath) {
-    $configContent = Get-Content $wslConfigPath -Raw
-    $hasDnsTunnel = $configContent -match "dnsTunneling\s*=\s*true"
-    $hasMirrored = $configContent -match "networkingMode\s*=\s*mirrored"
-    Write-Host "  .wslconfig File:         FOUND ($wslConfigPath)" -ForegroundColor Green
-    Write-Host "  dnsTunneling Enabled:    $($hasDnsTunnel)" -ForegroundColor (if($hasDnsTunnel){'Green'}else{'Yellow'})
-    Write-Host "  mirrored Mode Active:    $($hasMirrored)" -ForegroundColor (if($hasMirrored){'Green'}else{'Gray'})
-} else {
-    Write-Host "  .wslconfig File:         NOT FOUND (Default legacy NAT active)" -ForegroundColor Yellow
-    Write-Host "  --> Recommended Action: Create $wslConfigPath with dnsTunneling=true" -ForegroundColor Yellow
+if (-not $hostPing) {
+    Write-Host "`n[FATAL] Windows 11 host has no internet. Fix Wi-Fi or VPN connection first." -ForegroundColor Red
+    return
 }
 
-Write-Host "`n=== Step 3: Probing WSL2 Guest Virtual Adapter ===" -ForegroundColor Cyan
+# 2. .wslconfig Inspection
+Write-Host "`n[2/5] Inspecting %UserProfile%\.wslconfig..." -ForegroundColor Yellow
+$wslConfigPath = "$env:USERPROFILE\.wslconfig"
+if (Test-Path $wslConfigPath) {
+    $content = Get-Content $wslConfigPath -Raw
+    $hasDnsTunnel = $content -match "dnsTunneling\s*=\s*true"
+    $hasMirrored  = $content -match "networkingMode\s*=\s*mirrored"
+    Write-Host "  Configuration File:   FOUND ($wslConfigPath)" -ForegroundColor Green
+    Write-Host "  dnsTunneling Enabled: $($hasDnsTunnel)" -ForegroundColor (if($hasDnsTunnel){'Green'}else{'Yellow'})
+    Write-Host "  Mirrored Mode Active: $($hasMirrored)" -ForegroundColor (if($hasMirrored){'Green'}else{'Gray'})
+} else {
+    Write-Host "  Configuration File:   MISSING (Legacy NAT active)" -ForegroundColor Yellow
+    Write-Host "  -> Recommended: Create .wslconfig with dnsTunneling=true" -ForegroundColor Yellow
+}
+
+# 3. WSL2 Guest Routing & DNS
+Write-Host "`n[3/5] Probing WSL2 Guest VM Network Stack..." -ForegroundColor Yellow
 try {
     $wslPing = wsl -e ping -c 1 -W 2 1.1.1.1 2>$null
     $wslPingOk = ($LASTEXITCODE -eq 0)
-    Write-Host "  WSL2 IP Routing (1.1.1.1): $(if($wslPingOk){'PASS'}else{'FAIL'})" -ForegroundColor (if($wslPingOk){'Green'}else{'Red'})
-    
-    $wslDnsProbe = wsl -e getent hosts archive.ubuntu.com 2>$null
-    $wslDnsOk = ($LASTEXITCODE -eq 0)
-    Write-Host "  WSL2 DNS Name Resolution: $(if($wslDnsOk){'PASS'}else{'FAIL'})" -ForegroundColor (if($wslDnsOk){'Green'}else{'Red'})
+    Write-Host "  WSL2 Raw IP Routing:  $(if($wslPingOk){'PASS'}else{'FAIL'})" -ForegroundColor (if($wslPingOk){'Green'}else{'Red'})
 
-    if (-not $wslDnsOk) {
-        Write-Host "`n[TRIAGE VERDICT] Host internet is healthy, but WSL2 DNS is blocked." -ForegroundColor Yellow
-        Write-Host "--> Action: Add 'dnsTunneling=true' to $wslConfigPath and run 'wsl --shutdown'" -ForegroundColor Yellow
-    } elseif ($wslPingOk -and $wslDnsOk) {
-        Write-Host "`n[TRIAGE VERDICT] All network layers PASS. WSL2 network stack is 100% operational." -ForegroundColor Green
-    }
+    $wslDns = wsl -e getent hosts archive.ubuntu.com 2>$null
+    $wslDnsOk = ($LASTEXITCODE -eq 0)
+    Write-Host "  WSL2 DNS Resolution:  $(if($wslDnsOk){'PASS'}else{'FAIL'})" -ForegroundColor (if($wslDnsOk){'Green'}else{'Red'})
 } catch {
-    Write-Host "  WSL Service Error: WSL runtime could not be queried. Run 'wsl --status'." -ForegroundColor Red
+    Write-Host "  [ERROR] WSL runtime could not be queried. Is WSL installed?" -ForegroundColor Red
+    return
 }
+
+# 4. MTU & TLS Handshake Probe
+Write-Host "`n[4/5] Probing Corporate VPN MTU & TLS Handshakes..." -ForegroundColor Yellow
+$wslCurl = wsl -e curl -I --max-time 5 https://github.com 2>$null
+$wslCurlOk = ($LASTEXITCODE -eq 0)
+Write-Host "  WSL2 HTTPS / TLS:     $(if($wslCurlOk){'PASS'}else{'FAIL'})" -ForegroundColor (if($wslCurlOk){'Green'}else{'Red'})
+
+# 5. Final Automated Triage Verdict
+Write-Host "`n[5/5] Automated Triage Verdict:" -ForegroundColor Yellow
+if ($wslPingOk -and $wslDnsOk -and $wslCurlOk) {
+    Write-Host "  [STATUS: 100% OPERATIONAL] WSL2 network stack is healthy!" -ForegroundColor Green
+} elseif ($wslPingOk -and -not $wslDnsOk) {
+    Write-Host "  [DIAGNOSIS] DNS proxy failure. Add 'dnsTunneling=true' to $wslConfigPath and run 'wsl --shutdown'." -ForegroundColor Yellow
+} elseif ($wslPingOk -and $wslDnsOk -and -not $wslCurlOk) {
+    Write-Host "  [DIAGNOSIS] Corporate VPN MTU clipping detected! Run 'sudo ip link set dev eth0 mtu 1400' in WSL." -ForegroundColor Yellow
+} elseif (-not $wslPingOk) {
+    Write-Host "  [DIAGNOSIS] Virtual switch routing failure. Run 'wsl --shutdown' and restart HNS service." -ForegroundColor Red
+}
+Write-Host "========================================================" -ForegroundColor Cyan
 ```
 
-Copy and save the script as `Test-WSLNetwork.ps1` or run it directly in your terminal whenever you switch between VPN profiles or Wi-Fi networks.
+Save this script as `Test-WSLNetworkStack.ps1` in your dev toolkit to run whenever switching between office VPN profiles and home Wi-Fi networks.
 
-## FAQ: WSL2 networking questions we check most often
+## What Not To Do
 
-### Why does WSL2 report temporary failure in name resolution?
+- **Do not run `wsl --unregister <Distro>` as a network troubleshooting step.** Unregistering permanently wipes your entire Linux filesystem, installed packages, and local databases.
+- **Do not blindly paste Google DNS (8.8.8.8) into `/etc/resolv.conf` on a corporate laptop.** Many enterprise VPNs block outbound port 53 traffic to non-corporate DNS servers, making your problem worse.
+- **Do not disable Windows Defender Firewall globally.** Modern Windows 11 updates rely on WFP rules for Hyper-V packet filtering; turning off the firewall breaks virtual switch routing.
+- **Do not mix manual DNS edits with DNS tunneling.** If `generateResolvConf=false` is set in `/etc/wsl.conf`, DNS tunneling cannot update the guest stub resolver.
 
-The WSL2 resolver cannot reach or use the Windows DNS path. VPN policy, firewall rules, stale generated settings, and a broken virtual-network state can produce the same message. Test an IP address and a hostname separately, then try DNS tunneling.
+## Summary & Related Dev Environment Guides
 
-### Should I replace `/etc/resolv.conf` with 8.8.8.8?
+To maintain rock-solid WSL2 networking on Windows 11, configure `dnsTunneling=true` and `autoProxy=true` in `%UserProfile%\.wslconfig`. If working behind a corporate VPN (Cisco, GlobalProtect, Zscaler), clamp your `eth0` MTU to 1400. Reserve Mirrored mode for environments requiring multi-interface or local LAN discovery.
 
-Not as the first fix. WSL2 can regenerate the file, and a manual nameserver can bypass the DNS rules required by a VPN or managed network. Restore supported defaults and test DNS tunneling before managing the resolver manually.
+For containerized developer environments and local AI workflows on Windows 11, explore our related workbench runbooks:
+- [`Podman on Windows 11 & WSL2: Replacing Docker Desktop`](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2)
+- [`Docker Volume Permission Denied Fixes on WSL2`](/blog/docker-volume-permission-denied-fixes)
+- [`Open WebUI and Ollama Local Network Setup Guide`](/blog/open-webui-ollama-rag-it-runbooks-setup)
+- [`Windows 11 Kernel & Black Screen Recovery Runbook`](/blog/windows-11-kb5120998-black-screen-cursor-fixes)
+- [`Interactive Windows Error Fixer Tool`](/tools/windows-error-fixer)
 
-### Does mirrored networking always fix WSL2 internet?
+---
 
-No. It can improve compatibility for some VPN, localhost, and local-network cases, but it changes the network path and can create port or firewall differences. Use it as a controlled comparison, not as a universal performance setting.
+## FAQ: Frequently Checked WSL2 Network Issues
 
-### Why does `apt update` fail while a browser works?
+### Why does WSL2 say temporary failure in name resolution?
+The WSL virtual network is unable to reach the Windows DNS proxy (`172.x.x.1`). This commonly occurs when a corporate VPN (Cisco AnyConnect, GlobalProtect, Zscaler) routes host traffic through strict split-tunnel NRPT policies that Hyper-V's NAT switch cannot access. Enabling DNS tunneling routes queries directly through the host Windows network stack.
 
-The browser may use Windows DNS, a system proxy, or a security exception that the WSL2 process does not have. Compare the Windows `Resolve-DnsName` result with WSL2 `getent`, then inspect proxy variables before changing package sources.
+### How do corporate VPNs break WSL2 internet?
+VPN clients rewrite Windows routing tables and enforce strict Name Resolution Policy Tables (NRPT) on the host virtual adapter. Because WSL2 defaults to an internal Hyper-V NAT switch, guest packets cannot traverse the VPN tunnel without DNS tunneling (`dnsTunneling=true`) or MTU clamping (lowering MTU from 1500 to 1400).
+
+### Should I use Mirrored Networking (networkingMode=mirrored) in WSL2?
+Mirrored networking mirrors Windows network interfaces directly into Linux, resolving VPN compatibility and multi-interface routing out of the box. It requires Windows 11 23H2 or 24H2 and may cause port conflicts if Windows and WSL both try to bind to identical ports (e.g., 3000 or 8080).
+
+### Why does ping 1.1.1.1 work in WSL2, but curl and apt update fail?
+If raw IP pings succeed but curl, apt, or git clone stall indefinitely, you either have a DNS resolution failure (test with `getent hosts`) or a VPN MTU mismatch. When the corporate VPN limits packet size, small ICMP ping packets pass, but large TLS/SSL handshake packets exceed MTU and are silently dropped.
+
+### Will editing /etc/resolv.conf permanently fix WSL2 DNS?
+No. WSL automatically regenerates `/etc/resolv.conf` on every reboot based on Hyper-V virtual switch state. To manage DNS manually, you must add `[network] generateResolvConf=false` to `/etc/wsl.conf` before creating a static `resolv.conf`. However, enabling `dnsTunneling=true` in `.wslconfig` is Microsoft's supported fix.
+
+### How do I fix MTU packet drops in WSL2 under a VPN?
+Run `sudo ip link set dev eth0 mtu 1400` inside your WSL distribution. Corporate VPN encapsulation adds 50 to 100 bytes of overhead to IP packets; clamping `eth0` MTU to 1400 prevents packet fragmentation and silent TLS connection timeouts.
