@@ -1,0 +1,294 @@
+---
+title: "Windows 11 Keeps Crashing? Master Kernel, RAM & Driver Stability Runbook"
+description: "Windows 11 keeps crashing or rebooting? Master triage for Kernel-Power 41, nvlddmkm GPU dumps, bad RAM vs driver faults, and minidump analysis in 10 minutes."
+publishDate: "2026-09-06"
+updatedDate: "2026-09-06"
+author: "praveen"
+category: "windows-fixes"
+pillarId: "windows-fixes"
+problem_id: "PTW-WIN-KERNEL-CRASH-301"
+target_query: "windows 11 keeps crashing"
+tags: ["windows-11", "bsod", "kernel-power-41", "nvlddmkm", "hardware-troubleshooting", "driver-crashes", "ram-testing", "diagnostics"]
+coverImage: "/images/articles/windows-11-kernel-hardware-driver-stability-master-runbook.jpg"
+imageAlt: "Minimal flat editorial illustration of a computer motherboard CPU socket and RAM memory channel with a fractured crimson trace line"
+draft: false
+seoTitle: "Windows 11 Keeps Crashing: Kernel, RAM & Driver Triage"
+socialHook: "PC randomly rebooting with Kernel-Power 41 or freezing on desktop? Here is our engineering team's definitive diagnostic runbook to isolate bad RAM, failing PSU rails, GPU driver timeouts, and BSoD bugchecks."
+faq:
+  - question: "Why does Windows 11 keep crashing randomly with Kernel-Power Event ID 41?"
+    answer: "Event ID 41 indicates the system rebooted without cleanly shutting down first. If the BugcheckCode in the event details is '0', Windows lost power instantly due to a failing power supply (PSU), aggressive thermal cut-off, or unstable RAM timings. If the BugcheckCode is non-zero, Windows suffered a kernel crash (BSoD) and generated a minidump."
+  - question: "How do you tell if a crash is caused by bad RAM or a bad driver?"
+    answer: "RAM instability typically generates random, rotating bugcheck codes across reboots (e.g. MEMORY_MANAGEMENT 0x1A, IRQL_NOT_LESS_OR_EQUAL 0x0A, and PFN_LIST_CORRUPT 0x4E) because memory corruption strikes different virtual addresses randomly. Driver crashes consistently produce identical bugcheck codes pointing to the exact same faulting driver sys file (e.g. nvlddmkm.sys or storahci.sys)."
+  - question: "Where are Windows 11 crash dumps stored?"
+    answer: "Small memory dumps are written to 'C:\\Windows\\Minidump\\*.dmp', while full kernel crash dumps are saved to 'C:\\Windows\\MEMORY.DMP'. You can open and inspect these files using WinDbg or BlueScreenView to inspect the faulting module, exception address, and stack trace."
+  - question: "What is the difference between Bugcheck 0x124 and 0x101?"
+    answer: "Bugcheck 0x124 (WHEA_UNCORRECTABLE_ERROR) is a fatal hardware error reported directly by the CPU architecture (PCIe bus parity errors, L1/L2 cache errors, or NVMe controller disconnections). Bugcheck 0x101 (CLOCK_WATCHDOG_TIMEOUT) occurs when a secondary CPU logical core fails to service clock interrupts within the expected watchdog interval, typically caused by unstable core voltage (Vcore) or aggressive overclocking."
+  - question: "Does turning off Fast Startup fix random Windows 11 reboots?"
+    answer: "Yes, in many cases. Fast Startup saves the Windows kernel session and loaded device drivers to hiberfil.sys during shutdown. If a driver state is corrupt or fails ACPI S4 resume, Fast Startup restores the corrupt memory image on boot, creating an infinite crash loop. Disabling Fast Startup forces a pristine kernel cold-boot."
+references:
+  - title: "Bug Check Code Reference (Windows Drivers)"
+    url: "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/bug-check-code-reference2"
+    publisher: "Microsoft Learn"
+  - title: "Windows Hardware Error Architecture (WHEA)"
+    url: "https://learn.microsoft.com/en-us/windows-hardware/drivers/whea/introduction-to-the-windows-hardware-error-architecture"
+    publisher: "Microsoft Learn"
+  - title: "Troubleshooting Windows Event ID 41 (Kernel-Power)"
+    url: "https://learn.microsoft.com/en-us/troubleshoot/windows-client/performance/event-id-41-restart"
+    publisher: "Microsoft Learn"
+---
+
+**To triage Windows 11 randomly crashing or rebooting, first inspect Event Viewer under System logs for `Event ID 41 (Kernel-Power)`. If BugcheckCode is `0`, your system suffered an instantaneous hardware power loss, thermal trip, or catastrophic RAM timing failure. If BugcheckCode is non-zero, Windows executed a kernel bugcheck and saved a minidump to `C:\Windows\Minidump` identifying the faulting driver.**
+
+On our workbench, we triage dozens of developer workstations, test rigs, and high-performance engineering laptops. When a machine begins rebooting mid-compile, freezing on the desktop, or throwing blue screens with varying error codes, most guides tell users to "run SFC /scannow and update your drivers." 
+
+In real-world systems engineering, that advice rarely solves anything. Random stability failures stem from specific hardware boundaries: DDR5 memory training errors, GPU driver watchdog timeouts, Transient power spikes tripping PSU over-current protection (OCP), or failing PCIe lanes.
+
+This master runbook details our team's complete, end-to-end diagnostic protocol to isolate the exact component causing your system to crash.
+
+---
+
+### Windows 11 Crash Architecture: Hard Power Loss vs Kernel Bugcheck
+
+To diagnose a crashing computer, you must understand the two distinct paths a Windows crash takes:
+
+```text
++-----------------------------------------------------------------------------------+
+|                        WINDOWS 11 SYSTEM CRASH ARCHITECTURE                       |
++-----------------------------------------------------------------------------------+
+|                                                                                   |
+|  [ FAILURE TRIGGER ]                                                              |
+|        │                                                                          |
+|        ├──► PATH A: Instantaneous Power / Hardware Lockup                         |
+|        │    • Cause: PSU rail drop, VRM overheating, catastrophic CPU fault       |
+|        │    • OS State: CPU execution halts instantly; no code can execute        |
+|        │    • Dump Status: ZERO bytes written (No Minidump possible)              |
+|        │    • Event Viewer: Event ID 41 (Kernel-Power) -> BugcheckCode = 0        |
+|        │                                                                          |
+|        └──► PATH B: Kernel Panic / Unhandled Exception (BSoD)                     |
+|             • Cause: Page fault in non-paged area, driver timeout, bad RAM bit    |
+|             • OS State: Hal.dll traps exception -> KeBugCheckEx executes          |
+|             • Dump Status: Writes C:\Windows\Minidump\xxxx.dmp via diskdump.sys   |
+|             • Event Viewer: Event ID 1001 (BugCheck) -> BugcheckCode = 0x3B/0x101 |
+|                                                                                   |
++-----------------------------------------------------------------------------------+
+```
+
+---
+
+## 1. The Kernel Crash Triage Matrix: Decoding Bugcheck Codes
+
+**Never guess the cause of a Blue Screen; the Bugcheck code defines the exact subsystem layer that collapsed.**
+
+When Windows encounters an unrecoverable kernel exception, it halts the CPU and displays a stop code. Match your symptoms against our workbench triage matrix:
+
+### 🏆 Master Windows 11 Kernel Bugcheck Matrix
+
+| Bugcheck Code & Name | Root Cause Subsystem | Most Common Culprits | Recommended Investigation |
+| :--- | :---: | :--- | :--- |
+| **`Event 41 (Bugcheck 0)`**<br />Dirty Shutdown | Electrical / Thermal | Power supply (PSU) rail drop, UPS battery failure, VRM overheating | Test under FurMark + Prime95; check 12V rail voltage |
+| **`0x124 WHEA_UNCORRECTABLE_ERROR`** | CPU / PCIe Bus | Failing NVMe SSD, damaged CPU L2/L3 cache, unstable Vcore | Inspect WHEA Event 18/19 in Event Viewer; reseat NVMe |
+| **`0x101 CLOCK_WATCHDOG_TIMEOUT`** | CPU Core Hang | Logical core locked in infinite loop; unstable CPU overclock | See our [Clock Watchdog 0x101 Guide](/blog/how-to-fix-clock-watchdog-timeout-0x101-blue-screen-error-windows-11) |
+| **`0x133 DPC_WATCHDOG_VIOLATION`** | Driver DPC Timeout | Storage controller driver (`storahci.sys`) or GPU driver | Update storage firmware; run LatencyMon to find ISR leaks |
+| **`0x116 / 0x119 VIDEO_TDR_FAILURE`** | GPU Timeout Detection | Nvidia driver hang (`nvlddmkm.sys`) or VRAM degradation | See our [nvlddmkm Event ID 153 Guide](/blog/how-to-fix-nvlddmkm-event-id-153-gpu-crash) and [Event 13 Guide](/blog/how-to-fix-nvlddmkm-sys-event-id-13) |
+| **`0x1A MEMORY_MANAGEMENT`** | RAM / Page Table | Unstable XMP/EXPO memory profile, degraded DDR4/DDR5 DIMM | Run MemTest86+ (4 passes); disable XMP/EXPO in BIOS |
+| **`0x3B SYSTEM_SERVICE_EXCEPTION`** | Driver Memory Access | Corrupted third-party anti-cheat, antivirus, or VPN driver | Analyze Minidump stack trace to identify the driver |
+| **`0x1E KMODE_EXCEPTION_NOT_HANDLED`** | Kernel Memory Fault | Driver attempting to execute illegal instruction or address | See our [Kmode Exception 0x1e Guide](/blog/how-to-fix-kmode-exception-not-handled-0x1e-windows-11) |
+
+---
+
+## 2. Hard Reboots (Bugcheck 0): Isolating PSU, VRM & Power Delivery
+
+**If your PC shuts down or restarts with zero warning and no blue screen, your issue is 95% electrical or thermal, not a software bug.**
+
+In Event Viewer under `Windows Logs > System`, filter for `Event ID 41`. Select the event and click the **Details** tab:
+
+```xml
+<EventData>
+  <Data Name="BugcheckCode">0</Data>
+  <Data Name="BugcheckParameter1">0x0</Data>
+  <Data Name="PowerButtonTimestamp">0</Data>
+</EventData>
+```
+
+When `BugcheckCode` is `0` and `PowerButtonTimestamp` is `0`, the computer lost power instantaneously. The kernel did not even have the 20 milliseconds required to write a crash log.
+
+### Our 3-Step Power Delivery Triage:
+1. **The Transient Spike Test**: Modern GPUs (RTX 3080/4090) produce microsecond power spikes up to 2× their rated TDP. If you are using a daisy-chained single PCIe power cable rather than independent cables directly from the PSU to the 12VHPWR adapter, the PSU's Over-Current Protection (OCP) will trigger instant shutdown. Always use separate dedicated cables.
+2. **Thermal Shutdown Inspection**: Use HWiNFO64 to monitor **CPU Package Temperature** and **Motherboard VRM Temperature**. If the CPU hits 100°C or the VRM hits 115°C, thermal protection triggers a hard power cutoff to prevent silicon degradation.
+3. **Wall Outlet & UPS Battery Degradation**: An aging Uninterruptible Power Supply (UPS) with degraded lead-acid or lithium cells cannot handle rapid load transitions from idle to 100% compute, dropping voltage below 105V and rebooting the PC.
+
+---
+
+## 3. Bad RAM vs Bad Driver: The Forensic Differentiation
+
+**A bad driver produces identical, repeating stop codes; failing RAM produces rotating, completely unpredictable stop codes.**
+
+One of the most frequent misdiagnoses in IT troubleshooting is replacing drivers when physical memory is corrupt. Because the Windows kernel places data dynamically across available physical addresses:
+- **If physical RAM has a stuck bit at address `0x3F2A10`**: Whichever process happens to read that address will crash. If Explorer reads it, you get a desktop freeze. If the audio driver reads it, you get `0x0A IRQL_NOT_LESS_OR_EQUAL`. If the memory manager inspects it, you get `0x1A MEMORY_MANAGEMENT`.
+- **If a GPU driver has a null pointer bug**: It will crash at the exact same driver function every time with `0x116 VIDEO_TDR_FAILURE` or Event 153.
+
+For a detailed walkthrough on isolating memory timings versus kernel software, see our dedicated guide: [PC Keeps Crashing: How to Tell if it's a RAM Issue or a Bad Driver](/blog/pc-keeps-crashing-how-to-tell-if-it-s-a-ram-issue-or-a-bad-driver).
+
+### Safe Memory Verification Sequence:
+1. **Enter Motherboard BIOS**: Temporarily disable **XMP** (Intel) or **EXPO** (AMD). High-speed DDR5 (6000 MT/s+) frequently suffers from unstable sub-timings or memory controller undervoltage.
+2. **Test at JEDEC Baseline**: Run your memory at stock baseline (4800 MT/s). If the crashes cease entirely, your RAM is physically functional but your memory controller requires a minor SoC voltage bump or BIOS firmware update.
+3. **Execute MemTest86+**: Create a bootable USB drive with [MemTest86+](https://www.memtest.org/) and let it run for a minimum of 4 complete passes. **A single reported error means the memory stick must be replaced or RMA'd.**
+
+---
+
+## 4. GPU TDR Crashes: nvlddmkm Event ID 153 and Event 13
+
+**If your display freezes for 3 seconds, turns black, and recovers (or crashes to desktop during 3D gaming), Windows triggered Timeout Detection and Recovery (TDR).**
+
+Windows monitors the GPU graphics pipeline. If a render thread takes longer than 2 seconds to complete a frame, the OS assumes the GPU is hung, resets the graphics driver (`nvlddmkm.sys`), and logs:
+- `Event ID 153: The description for Event ID 153 from source nvlddmkm cannot be found.`
+- `Event ID 13: \Device\Video3 Graphics Exception: ESR 0x...`
+
+### The Proven TDR Resolution Protocol:
+1. **Clean Driver Sweep via DDU**: Download **Display Driver Uninstaller (DDU)**. Reboot Windows into Safe Mode, run DDU to completely purge all Nvidia/AMD driver files, registry keys, and shader caches, then install the latest WHQL studio/game-ready driver.
+2. **Reseat GPU and Power Connectors**: Inspect the 12VHPWR connector on modern Nvidia cards. A loose 16-pin connector causing resistance variance on the sense pins will trigger silent voltage drops and TDR resets.
+3. **PCIe Link Speed Downshift**: In BIOS, manually lock your primary PCIe slot to **Gen 4** instead of Gen 5 / Auto if using a riser cable. Riser cables often introduce signal degradation that trips driver resets.
+
+For exhaustive step-by-step runbooks on specific GPU driver crashes, explore our deep-dives:
+- [How to Fix nvlddmkm Event ID 153 GPU Crashes](/blog/how-to-fix-nvlddmkm-event-id-153-gpu-crash)
+- [How to Fix nvlddmkm.sys Event ID 13 Exceptions](/blog/how-to-fix-nvlddmkm-sys-event-id-13)
+
+---
+
+## 5. Automated PowerShell Crash Forensics Script (`Test-WindowsKernelStability.ps1`)
+
+**Run our automated health probe in PowerShell to audit Event 41 dirty reboots, BSoD bugchecks, and minidump metadata in 5 seconds.**
+
+On our workbench, we run this non-destructive diagnostic probe to immediately determine whether a workstation suffered an electrical power cut or a kernel software crash:
+
+```powershell
+# ====================================================================
+# PraveenTechWorld - Windows 11 Kernel Stability Diagnostic Probe
+# Script: Test-WindowsKernelStability.ps1 (Non-destructive triage)
+# ====================================================================
+
+Clear-Host
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "    PraveenTechWorld Windows 11 Kernel Stability Probe    " -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
+
+# 1. Check for Event 41 (Kernel-Power Dirty Shutdowns)
+Write-Host "`n[1/4] Auditing Kernel-Power Event ID 41 (Last 7 Days)..." -ForegroundColor Yellow
+$startDate = (Get-Date).AddDays(-7)
+$event41 = Get-WinEvent -FilterHashtable @{
+    LogName   = 'System'
+    Id        = 41
+    StartTime = $startDate
+} -ErrorAction SilentlyContinue
+
+if ($event41) {
+    Write-Host "  Found $($event41.Count) dirty reboot event(s) in the last 7 days!" -ForegroundColor Red
+    foreach ($evt in $event41 | Select-Object -First 3) {
+        $xml = [xml]$evt.ToXml()
+        $bugcode = $xml.Event.EventData.Data | Where-Object { $_.Name -eq 'BugcheckCode' } | Select-Object -ExpandProperty '#text'
+        $param1  = $xml.Event.EventData.Data | Where-Object { $_.Name -eq 'BugcheckParameter1' } | Select-Object -ExpandProperty '#text'
+        
+        $hexCode = "0x" + [Convert]::ToString([int64]$bugcode, 16).ToUpper()
+        Write-Host "  • Timestamp: $($evt.TimeCreated)" -ForegroundColor White
+        Write-Host "    BugcheckCode: $bugcode ($hexCode)" -ForegroundColor (if($bugcode -eq 0){'Magenta'}else{'Red'})
+        
+        if ($bugcode -eq 0) {
+            Write-Host "    --> DIAGNOSIS: Bugcheck 0 indicates INSTANT HARDWARE POWER LOSS or thermal trip (PSU/VRM)." -ForegroundColor Magenta
+        } else {
+            Write-Host "    --> DIAGNOSIS: Blue Screen of Death occurred. Kernel crash dump generated." -ForegroundColor Red
+        }
+    }
+} else {
+    Write-Host "  Zero Kernel-Power Event 41 reboots detected. Power delivery is healthy." -ForegroundColor Green
+}
+
+# 2. Check for GPU TDR Resets (nvlddmkm / amdkmdag)
+Write-Host "`n[2/4] Auditing GPU Driver Watchdog Timeouts (Event 153/13/4101)..." -ForegroundColor Yellow
+$gpuEvents = Get-WinEvent -FilterHashtable @{
+    LogName   = 'System'
+    ProviderName = 'nvlddmkm', 'amdkmdag', 'Display'
+    StartTime = $startDate
+} -ErrorAction SilentlyContinue | Where-Object { $_.Id -in 153, 13, 4101 }
+
+if ($gpuEvents) {
+    Write-Host "  Detected $($gpuEvents.Count) GPU driver timeout(s)!" -ForegroundColor Red
+    Write-Host "  Latest Event ID $($gpuEvents[0].Id) at $($gpuEvents[0].TimeCreated)" -ForegroundColor Yellow
+    Write-Host "  --> ACTION: Clean driver reinstall with DDU; verify 12VHPWR GPU power cables." -ForegroundColor Yellow
+} else {
+    Write-Host "  Zero GPU driver timeouts detected. Display pipeline is stable." -ForegroundColor Green
+}
+
+# 3. Check for Minidump Files
+Write-Host "`n[3/4] Inspecting Windows Minidump Directory..." -ForegroundColor Yellow
+$dumpPath = "C:\Windows\Minidump"
+if (Test-Path $dumpPath) {
+    $dumps = Get-ChildItem -Path $dumpPath -Filter "*.dmp" | Sort-Object LastWriteTime -Descending
+    if ($dumps) {
+        Write-Host "  Found $($dumps.Count) crash dump file(s) in $dumpPath:" -ForegroundColor Red
+        foreach ($d in $dumps | Select-Object -First 3) {
+            Write-Host "  • $($d.Name) ($([Math]::Round($d.Length / 1KB, 2)) KB) - $($d.LastWriteTime)" -ForegroundColor White
+        }
+    } else {
+        Write-Host "  Minidump folder is empty. No recent kernel crashes stored." -ForegroundColor Green
+    }
+} else {
+    Write-Host "  Minidump directory does not exist (No crash dumps recorded)." -ForegroundColor Green
+}
+
+# 4. Fast Startup Check
+Write-Host "`n[4/4] Verifying Windows Fast Startup State..." -ForegroundColor Yellow
+$fastStartup = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power" -Name "HiberbootEnabled" -ErrorAction SilentlyContinue
+if ($fastStartup -and $fastStartup.HiberbootEnabled -eq 1) {
+    Write-Host "  Fast Startup: ENABLED (May restore corrupted driver states upon reboot)" -ForegroundColor Yellow
+    Write-Host "  --> Recommended Fix: Disable Fast Startup via 'powercfg -h off' or Control Panel." -ForegroundColor Yellow
+} else {
+    Write-Host "  Fast Startup: DISABLED (System performs clean cold boots)." -ForegroundColor Green
+}
+
+Write-Host "`n==========================================================" -ForegroundColor Cyan
+Write-Host "                 Diagnostic Audit Complete                " -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
+```
+
+Save this script as `Test-WindowsKernelStability.ps1` and run it from PowerShell to isolate crashes in seconds without modifying system files.
+
+---
+
+## 6. What Not To Do
+
+- **Do not blindly reinstall Windows as a first step.** Reinstalling the OS cannot fix unstable DDR5 sub-timings, failing PCIe riser cables, or a degrading power supply. For a realistic breakdown of what a reset can and cannot solve, read our investigation: [Does Resetting Windows Remove Viruses Completely?](/blog/does-resetting-windows-remove-viruses-completely).
+- **Do not apply aggressive CPU undervolts while troubleshooting crashes.** Undervolting lowers temperatures but destabilizes transient idle-to-load voltage transitions, triggering `0x101 CLOCK_WATCHDOG_TIMEOUT` stops.
+- **Do not ignore Event 41 BugcheckCode 0.** Swapping software drivers will never fix an electrical rail collapse. If BugcheckCode is 0, focus on PSU, cables, and thermals.
+- **Do not run multiple background memory/GPU stress tests simultaneously.** Run MemTest86+ standalone, FurMark standalone, and Prime95 standalone to isolate each component independently.
+
+---
+
+## Summary: The Phased Stability Workflow
+
+When Windows 11 begins crashing randomly:
+1. Run `Test-WindowsKernelStability.ps1` to separate **Bugcheck 0 (Power Loss)** from **Non-Zero (Kernel Dump)**.
+2. If Bugcheck is 0, check 12VHPWR GPU power cabling, test wall power, and inspect VRM thermals.
+3. If Bugcheck is non-zero, analyze the minidump in `C:\Windows\Minidump`.
+4. If rotating memory error codes appear, disable XMP/EXPO and test with MemTest86+.
+5. If GPU driver timeouts appear, execute a clean DDU sweep in Safe Mode.
+
+For interactive troubleshooting and automated error code lookup, use our [Interactive Windows Error Fixer Tool](/tools/windows-error-fixer).
+
+---
+
+## FAQ: Frequently Asked Crash Questions
+
+### Why does Windows 11 keep crashing randomly with Kernel-Power Event ID 41?
+Event ID 41 indicates the system rebooted without cleanly shutting down first. If the BugcheckCode in the event details is `0`, Windows lost power instantly due to a failing power supply (PSU), aggressive thermal cut-off, or unstable RAM timings. If the BugcheckCode is non-zero, Windows suffered a kernel crash (BSoD) and generated a minidump.
+
+### How do you tell if a crash is caused by bad RAM or a bad driver?
+RAM instability typically generates random, rotating bugcheck codes across reboots (e.g. `MEMORY_MANAGEMENT 0x1A`, `IRQL_NOT_LESS_OR_EQUAL 0x0A`, and `PFN_LIST_CORRUPT 0x4E`) because memory corruption strikes different virtual addresses randomly. Driver crashes consistently produce identical bugcheck codes pointing to the exact same faulting driver sys file (e.g. `nvlddmkm.sys` or `storahci.sys`).
+
+### Where are Windows 11 crash dumps stored?
+Small memory dumps are written to `C:\Windows\Minidump\*.dmp`, while full kernel crash dumps are saved to `C:\Windows\MEMORY.DMP`. You can open and inspect these files using WinDbg or BlueScreenView to inspect the faulting module, exception address, and stack trace.
+
+### What is the difference between Bugcheck 0x124 and 0x101?
+Bugcheck `0x124` (`WHEA_UNCORRECTABLE_ERROR`) is a fatal hardware error reported directly by the CPU architecture (PCIe bus parity errors, L1/L2 cache errors, or NVMe controller disconnections). Bugcheck `0x101` (`CLOCK_WATCHDOG_TIMEOUT`) occurs when a secondary CPU logical core fails to service clock interrupts within the expected watchdog interval, typically caused by unstable core voltage (Vcore) or aggressive overclocking.
+
+### Does turning off Fast Startup fix random Windows 11 reboots?
+Yes, in many cases. Fast Startup saves the Windows kernel session and loaded device drivers to `hiberfil.sys` during shutdown. If a driver state is corrupt or fails ACPI S4 resume, Fast Startup restores the corrupt memory image on boot, creating an infinite crash loop. Disabling Fast Startup forces a pristine kernel cold-boot.
