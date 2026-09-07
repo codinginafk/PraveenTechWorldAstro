@@ -7,12 +7,12 @@ import ArticleCard from "@components/content/ArticleCard.astro";
 export async function getStaticPaths() {
   const articles = await getPublishedArticles();
   const tagSet = new Set<string>();
-  articles.forEach((a) => a.data.tags.forEach((t) => tagSet.add(t.toLowerCase())));
+  articles.forEach((a) => a.data.tags.forEach((t) => tagSet.add(t.toLowerCase().trim())));
   const tags = [...tagSet];
   const paths = [];
   for (const tag of tags) {
-    const slug = tag.replace(/\s+/g, "-");
-    paths.push({ params: { slug }, props: { tagSlug: tag, canonicalSlug: tag } });
+    const slug = tag.replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    paths.push({ params: { slug }, props: { tagSlug: tag, canonicalSlug: slug } });
   }
   return paths;
 }
@@ -20,7 +20,7 @@ export async function getStaticPaths() {
 const { tagSlug, canonicalSlug } = Astro.props;
 const allArticles = await getPublishedArticles();
 const tagArticles = allArticles.filter((a) =>
-  a.data.tags.some((t) => t.toLowerCase() === tagSlug.toLowerCase())
+  a.data.tags.some((t) => t.toLowerCase().trim() === tagSlug.toLowerCase().trim())
 );
 let tagEntry = null;
 try {
