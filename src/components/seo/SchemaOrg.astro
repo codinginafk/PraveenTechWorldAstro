@@ -37,23 +37,44 @@ const { type, articleData, breadcrumbItems, faqItems, howToData, personData, spe
   type === "article" && articleData && (
     <script type="application/ld+json" is:inline set:html={JSON.stringify({
       "@context": "https://schema.org",
-      "@type": "Article",
+      "@type": "TechArticle",
       headline: articleData.title,
       description: articleData.description,
       url: articleData.url,
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": articleData.url,
+      },
       datePublished: articleData.publishDate,
       dateModified: articleData.updatedDate || articleData.publishDate,
-      author: { "@type": "Person", name: articleData.authorName },
+      author: {
+        "@type": "Person",
+        name: articleData.authorName || "Praveen",
+        url: "https://www.praveentechworld.com/about",
+        sameAs: [
+          "https://x.com/praveenwithapen",
+          "https://www.linkedin.com/in/praveen-kumar-says/",
+        ],
+      },
       publisher: {
         "@type": "Organization",
         name: "PraveenTechWorld",
+        url: "https://www.praveentechworld.com",
         logo: {
           "@type": "ImageObject",
           url: "https://www.praveentechworld.com/favicon/favicon.svg",
         },
       },
-      image: articleData.image,
+      image: articleData.image ? {
+        "@type": "ImageObject",
+        url: articleData.image.startsWith("http")
+          ? articleData.image
+          : `https://www.praveentechworld.com${articleData.image}`,
+        width: 1200,
+        height: 675,
+      } : undefined,
       keywords: articleData.tags?.join(", "),
+      inLanguage: "en-US",
     })} />
   )
 }
