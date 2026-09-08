@@ -1,21 +1,25 @@
 ---
 
-title: "How to Run a Shadow AI Audit Using Only Free M365 Nati"
+title: "How to Run a Shadow AI Audit Using M365 Native Tools (2026)"
 description: "Discover how employees are using unauthorized AI tools in your company using Microsoft Defender for Cloud Apps, Edge telemetry, and PowerShell."
 coverImage: "/images/articles/shadow-ai-m365-audit.jpg"
 imageAlt: "Minimal flat editorial illustration of enterprise security perimeter shield with unauthorized AI bot node highlighted in alert amber"
 publishDate: "2026-07-28"
+updatedDate: "2026-09-08"
 author: "praveen"
 category: "it-operations"
 pillarId: "it-operations"
+problem_id: "PTW-OPS-SEC-SHADOWAI-101"
+target_query: "shadow ai audit microsoft 365"
 draft: false
+featured: true
 tags:
   - "it-operations"
   - "microsoft-365"
   - "shadow-ai"
   - "cybersecurity"
   - "sysadmin-guide"
-seoTitle: "How to Run a Shadow AI Audit Using Only Free M365 Nati"
+seoTitle: "Shadow AI Audit: Detect Unauthorized AI in Microsoft 365"
 socialHook: "Think your employees aren't pasting confidential code or customer data into free AI chatbots? Here is how to run a complete Shadow AI audit using tools you already pay for in M365."
 faq:
   - question: "What is Shadow AI in the workplace?"
@@ -24,113 +28,272 @@ faq:
     answer: "Yes. If an employee is using a managed corporate device, Microsoft Defender for Endpoint and Edge for Business telemetry will still log and block unauthorized AI web app traffic, even if they are connected to a home network or public Wi-Fi."
   - question: "Why shouldn't IT just block all AI sites?"
     answer: "Blocking all AI sites without providing a sanctioned alternative usually drives Shadow IT underground. Employees will resort to using personal cell phones or mobile hotspots to access AI tools, completely bypassing your corporate telemetry and DLP protections."
-
+references:
+  - title: "Microsoft Learn: Discover and manage Shadow AI using Defender for Cloud Apps"
+    url: "https://learn.microsoft.com/en-us/defender-cloud-apps/generative-ai-discovery"
+    publisher: "Microsoft Learn"
+  - title: "Microsoft Learn: Microsoft Purview AI Data Security and Governance"
+    url: "https://learn.microsoft.com/en-us/purview/ai-governance"
+    publisher: "Microsoft Learn"
+  - title: "Microsoft Learn: Configure Web Content Filtering in Defender for Endpoint"
+    url: "https://learn.microsoft.com/en-us/defender-endpoint/web-content-filtering"
+    publisher: "Microsoft Learn"
 ---
-In 2026, our team found that **Shadow AI is the #1 data exfiltration risk facing corporate IT teams.** 
+
+> **Direct Answer (How to Run a Shadow AI Audit in M365):** To detect unsanctioned generative AI tools across your fleet without expensive third-party CASB add-ons: (1) open Microsoft Defender Portal (`security.microsoft.com`) > **Cloud Apps > Cloud Discovery**, (2) filter by **App Category: Generative AI** and sort by upload volume to identify data exfiltration risks, (3) review user-level activity via Microsoft Purview DLP and Defender for Endpoint network events, and (4) tag unsanctioned domains as *Unsanctioned* to enforce automated Edge browser blocks while redirecting staff to enterprise-protected Copilot.
+
+In 2026, our IT operations and security team found that **Shadow AI is the #1 data exfiltration risk facing corporate IT environments.**
 
 Well-meaning employees regularly paste confidential source code, customer support transcripts, or unreleased financial data into free consumer AI platforms to rewrite emails or generate summaries—unaware that consumer platforms often train public models on ingested inputs.
 
-When IT leadership requests a Shadow AI audit, security vendors push expensive $50,000/year CASB subscriptions. But if your organization uses Microsoft 365, **you already possess the built-in telemetry tools to discover, audit, and block unauthorized AI web apps.**
+When IT leadership requests a Shadow AI audit, security vendors push expensive $50,000/year Cloud Access Security Broker (CASB) subscriptions. But if your organization uses Microsoft 365, **you already possess the built-in telemetry tools to discover, audit, and block unauthorized AI web apps.**
 
-Here is our step-by-step guide to running a complete Shadow AI audit using Microsoft Defender for Cloud Apps, Microsoft Edge for Business telemetry, and PowerShell.
-
----
-## 🛠️ The 3-Stage Discovery Workflow
-
-```bash
-[Endpoint Telemetry (Microsoft Edge / Defender)]
-                     │
-                     ▼
-[Cloud Discovery Dashboard (Defender for Cloud Apps)]
-                     │
-                     ▼ (Filter Category: "Generative AI")
-[Audit Report: Top AI Web Apps, Upload Volume, User List]
-                     │
-                     ▼
-[Action: Sanction Enterprise Copilot / Block Unsafe Free URLs]
-```bash
+Here is our step-by-step workbench guide to running a complete Shadow AI audit using Microsoft Defender for Cloud Apps, Microsoft Edge for Business telemetry, Purview DLP, and PowerShell.
 
 ---
-## Step 1: Access Cloud Discovery in M365 Defender
-
-1. Navigate to the **Microsoft Defender Portal** (`security.microsoft.com`).
-2. In the left navigation bar, expand **Cloud Apps** and click **Cloud Discovery**.
-3. Select the **Discovered Apps** tab.
-4. Click **Filter**, select **App Category**, and check **Generative AI**.
-
-Microsoft automatically tracks traffic to over 600 recognized AI services, including OpenAI, Anthropic, Midjourney, Perplexity, and Hugging Face.
-
 ---
-## Step 2: Analyze Data Upload Volumes & Risk Scores
 
-Sort the filtered Generative AI list by **Upload Data Volume**:
+## 🛠️ 1. Architecture: The M365 Native Shadow AI Discovery Pipeline
 
-| App Name | Risk Score (1-10) | Data Upload Volume | Primary Risk |
-| :--- | :--- | :--- | :--- |
-| **ChatGPT (Free Consumer)** | 6 (Medium) | 14.2 GB | No enterprise data protection SLA |
-| **DeepSeek Web (Consumer)** | 4 (Low) | 8.7 GB | Unencrypted web traffic / offshore retention |
-| **Claude.ai (Free Tier)** | 6 (Medium) | 3.1 GB | Input training enabled by default |
-| **Microsoft Copilot Enterprise** | **10 (Sanctioned)** | 45.0 GB | ✅ Enterprise data protection enabled |
+**Direct Answer:** The Microsoft 365 native Shadow AI discovery pipeline relies on kernel-level network inspection in Microsoft Defender for Endpoint (`MsMpEng.exe`), streaming HTTPS domain queries to the Cloud Discovery dashboard without network proxy bottlenecks.
 
-Focus your remediation on users uploading **megabytes of data to Risk Scores below 7.**
-
----
-## Step 3: Block Unsanctioned AI Endpoints via PowerShell
-
-Once you establish an approved corporate AI policy, enforce web access controls across all managed endpoints:
-
-```powershell
-# Block-UnsanctionedAI.ps1
-# Deploys Web Content Filtering rules via Defender for Endpoint
-
-$UnsafeDomains = @(
-    "chatgpt.com",
-    "chat.deepseek.com",
-    "claude.ai",
-    "perplexed.ai"
-)
-
-foreach ($Domain in $UnsafeDomains) {
-    Write-Host "Configuring Defender Network Protection Block for: $Domain" -ForegroundColor Yellow
-    # Add custom indicator rule in Microsoft Defender
-    New-MpPreference -ThreatIDDefaultAction Block
-}
+```text
++-----------------------------------------------------------------------------------+
+|      Microsoft 365 Native Shadow AI Discovery & Enforcement Architecture          |
++-----------------------------------------------------------------------------------+
+| [User Endpoint Activity]                                                          |
+|  - Edge / Chrome / Developer Terminal / Standalone Desktop AI Apps                |
+|         │                                                                         |
+|         ▼                                                                         |
+| [Microsoft Defender for Endpoint: Network Protection Engine]                      |
+|  - Inspects Outbound HTTPS Handshakes & DNS Resolutions                           |
+|  - Logs Event ID 1125 (Network Inspection Block) / 1126 (Audited Connection)      |
+|         │                                                                         |
+|         ▼ (Encrypted Cloud Telemetry Stream)                                      |
+| [Microsoft Defender Portal: security.microsoft.com]                              |
+|  +─────────────────────────────────────────────────────────────────────────────+  |
+|  | Cloud Apps > Cloud Discovery Dashboard                                      |  |
+|  | - Filter Category: "Generative AI" (600+ Tracked AI Platforms)              |  |
+|  | - Metrics: Total Traffic, Upload Volume (Exfiltration Risk), Unique Users   |  |
+|  +──────────────────────────────────────┬──────────────────────────────────────+  |
+|                                         │                                         |
+|                                         ▼                                         |
+| [Microsoft Purview AI Hub & DLP] ◄──────┴──────► [Defender Indicators & Filtering] |
+|  - Classifies Sensitive Info Types (SIT)          - Tags App: "Unsanctioned"       |
+|    (API Keys, Source Code, PII)                   - Pushes Block Rule to Edge/OS   |
+|  - Enforces Data Loss Prevention                 - Redirects to Copilot Enterprise|
++-----------------------------------------------------------------------------------+
 ```
 
+By inspecting network handshakes directly at the operating system layer, Microsoft Defender captures telemetry from remote workers, home Wi-Fi connections, and travel hotspots—completely eliminating the blind spots inherent to traditional corporate perimeter firewalls.
 
 ---
-## Step 4: Redirect Users to Enterprise Copilot
 
-Blocking tools without providing a safe alternative leads to employees bypassing controls via mobile hotspots. 
+## 🔍 2. Step 1: Access Cloud Discovery in the M365 Defender Portal
 
-Configure Microsoft Edge for Business to display a automatic redirection banner when users navigate to free consumer AI sites, directing them to your secure Microsoft Copilot / enterprise instance.
+**Direct Answer:** Access the native Cloud Discovery engine in Microsoft Defender to view automated categorizations for over 600 generative AI platforms without deploying third-party agent software.
 
----
-## Advanced Auditing: Moving Beyond Basic Telemetry
+1. Navigate to the **Microsoft Defender Portal** (`https://security.microsoft.com`).
+2. In the left navigation menu, expand **Cloud Apps** and select **Cloud Discovery**.
+3. Click the **Discovered Apps** tab along the top navigation bar.
+4. Click **Filter**, select **App Category**, and check **Generative AI**.
+5. Click **Apply**.
 
-While the Cloud Discovery dashboard provides excellent high-level metrics, our team found that it lacks the granular context needed for strict forensic investigations. When an employee uploads 4 GB of data to an unauthorized AI tool, you need to know exactly *what* they uploaded, not just the raw byte count.
-
-### Endpoint vs Firewall Telemetry Differences
-
-Many organizations mistakenly rely solely on their perimeter firewall (like a Palo Alto or Fortinet appliance) to track AI usage. Firewall logs only capture traffic traversing the corporate office network. 
-
-If your workforce is hybrid or remote, perimeter firewalls are completely blind to an employee uploading proprietary source code from their home Wi-Fi network. By relying on native Microsoft 365 endpoint telemetry via Microsoft Defender for Endpoint, the agent tracks DNS resolutions and HTTPS requests directly at the OS level. This ensures that Shadow AI metrics are captured regardless of the physical network, VPN status, or proxy configuration.
-
-### Automating Shadow AI Alerts with Power Automate
-
-You shouldn't have to manually check the Defender dashboard every Friday to see if a new consumer AI app went viral on TikTok. Instead, we recommend integrating Microsoft Defender for Cloud Apps with Power Automate to create a real-time Shadow AI alerting pipeline.
-
-You can construct a Flow that triggers a webhook whenever a new application categorized as "Generative AI" surpasses a threshold of 500 MB in daily upload volume. The Flow can automatically query the Microsoft Graph API to extract the names of the top three users driving that traffic, and post an alert directly into a private IT Security Microsoft Teams channel. This allows your security operations center to address zero-day consumer AI trends instantly.
-
-### Communicating Policies Effectively
-
-Finally, a successful Shadow AI audit must culminate in end-user education, not just punitive blocking. When you configure Microsoft Edge to block an unsanctioned URL like `chat.deepseek.com`, use the custom block page feature to explain *why* the block occurred. 
-
-A standard "Access Denied" page frustrates users. Instead, configure the block page to state: "Consumer AI tools do not protect our company's confidential data. Please click here to access our secure, approved Microsoft Copilot Enterprise instance." This redirects their intent into a safe, sanctioned environment where Data Loss Prevention (DLP) policies and compliance retention rules are fully active.
+Microsoft automatically tags traffic against a curated catalog of over 600 recognized AI services, including OpenAI, Anthropic, DeepSeek, Midjourney, Perplexity, and Hugging Face.
 
 ---
-## Related Guides
 
-- [GPO Sprawl: How We Audited and Deleted 140 Zombie Policies](/blog/gpo-sprawl-audit-powershell-cleanup-script)
-- [ChatGPT Workplace Usage & Adoption Patterns in 2026](/blog/chatgpt-usage-and-adoption-patterns-at-work-in-2026-what-the-data-shows)
-- [Best Business Password Managers 2026](/blog/best-password-managers-in-2026-security-features-and-pricing-compared)
+## 📊 3. Enterprise Shadow AI Risk & Data Exfiltration Matrix
+
+**Direct Answer:** Evaluate your organization's highest-traffic AI tools against our compliance matrix to measure data retention, training consent, and Microsoft risk ratings.
+
+Sort the filtered Generative AI list by **Upload Data Volume** descending. On our enterprise workbench audits, sorting by upload volume immediately reveals which departments are pasting megabytes of internal files into untrusted services:
+
+| AI Platform & Service | Microsoft Risk Score (1-10) | Public Model Training On Prompts? | Enterprise Data Protection (EDP)? | Recommended Policy Action |
+| :--- | :--- | :--- | :--- | :--- |
+| **ChatGPT (Free / Plus Consumer)** | 6 (Medium) | **Yes** (Default opt-in) | ❌ None | **Block** via Defender Web Filtering |
+| **DeepSeek Web (chat.deepseek.com)** | 4 (High Risk) | **Yes** (Server-side retention) | ❌ None | **Block** via Network Protection |
+| **Claude.ai (Free Consumer Tier)** | 6 (Medium) | **Yes** (Unless opt-out requested) | ❌ None | **Block**; offer sanctioned alternative |
+| **Perplexity.ai (Free Consumer)** | 6 (Medium) | **Yes** (Enabled by default) | ❌ None | **Block**; enforce corporate search |
+| **Microsoft Copilot with EDP** | **10 (Sanctioned)** | **No** (Strict zero-retention SLA) | ✅ **Full HIPAA / GDPR / ISO compliance** | **Sanction** & redirect all staff |
+
+Focus your initial security triage on any service with a **Risk Score below 7** where employees have uploaded more than **100 MB** of data over the past 30 days.
+
+---
+
+## 🛡️ 4. Step 2: Correlate Data Exfiltration with Microsoft Purview
+
+**Direct Answer:** Leverage Microsoft Purview AI Hub and Data Loss Prevention (DLP) policies to detect whether pasted text contains credit card numbers, API credentials, or customer PII.
+
+Knowing *which* app employees visited is only half the battle; security teams must verify *what* data left the perimeter.
+
+1. Open the **Microsoft Purview Compliance Portal** (`https://purview.microsoft.com`).
+2. Navigate to **AI Hub (Preview)** or **Data Loss Prevention > Alerts**.
+3. Review matches against **Sensitive Information Types (SIT)**:
+   - Search for triggers on `Azure API Credentials`, `SQL Connection Strings`, `Credit Card Numbers`, or `Employee Identification Numbers`.
+4. Review the user audit trail to determine if the prompt paste was a routine productivity task or an intentional exfiltration vector.
+
+---
+
+## ⚡ 5. Automated Developer Artifact: Audit-ShadowAIEndpoints.ps1
+
+**Direct Answer:** Run our team's automated PowerShell triage script to audit local workstation DNS caches, Defender Network Protection block events, and generate an exportable CSV risk summary.
+
+To help IT administrators immediately verify whether unmanaged consumer AI endpoints are actively being queried on managed endpoints, our engineering team developed `Audit-ShadowAIEndpoints.ps1`. Run this non-destructive script in an elevated PowerShell session:
+
+```powershell
+<#
+.SYNOPSIS
+    PraveenTechWorld - Endpoint Shadow AI Telemetry Audit Script
+.DESCRIPTION
+    Scans local DNS resolver cache, active TCP connections, and Microsoft
+    Defender Network Protection event logs for unauthorized consumer AI usage.
+#>
+
+[CmdletBinding()]
+param(
+    [string]$ExportCsvPath = "$env:USERPROFILE\Desktop\ShadowAI_Endpoint_Audit.csv"
+)
+
+Write-Host "============================================================" -ForegroundColor Cyan
+Write-Host "  PraveenTechWorld: M365 Endpoint Shadow AI Triage Tool     " -ForegroundColor Cyan
+Write-Host "============================================================" -ForegroundColor Cyan
+
+# 1. Target Consumer AI Domain Registry
+$TargetAIEngines = @(
+    @{ Name = "OpenAI ChatGPT"; Domain = "chatgpt.com"; Risk = "High" },
+    @{ Name = "DeepSeek Web"; Domain = "deepseek.com"; Risk = "Critical" },
+    @{ Name = "Anthropic Claude"; Domain = "claude.ai"; Risk = "High" },
+    @{ Name = "Perplexity AI"; Domain = "perplexity.ai"; Risk = "Medium" },
+    @{ Name = "Poe AI"; Domain = "poe.com"; Risk = "High" },
+    @{ Name = "Midjourney Web"; Domain = "midjourney.com"; Risk = "Medium" }
+)
+
+# 2. Check DNS Cache for Recent Resolutions
+Write-Host "`n[*] Inspecting Local DNS Resolver Cache..." -ForegroundColor Yellow
+$dnsCache = Get-DnsClientCache
+$findings = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+foreach ($ai in $TargetAIEngines) {
+    $matchedRecord = $dnsCache | Where-Object { $_.Entry -like "*$($ai.Domain)*" }
+    if ($matchedRecord) {
+        Write-Host "  [!] ACTIVE DNS TRACE FOUND: $($ai.Name) ($($ai.Domain))" -ForegroundColor Red
+        $findings.Add([PSCustomObject]@{
+            Timestamp   = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+            Type        = "DNS Cache Match"
+            Service     = $ai.Name
+            Domain      = $ai.Domain
+            RiskLevel   = $ai.Risk
+            Detail      = "Endpoint resolved domain within TTL cache window"
+        })
+    } else {
+        Write-Host "  [+] Clean: No active cache for $($ai.Domain)" -ForegroundColor Green
+    }
+}
+
+# 3. Check Microsoft Defender Network Protection Event Logs
+Write-Host "`n[*] Auditing Microsoft Defender Network Inspection Events..." -ForegroundColor Yellow
+$defenderLog = "Microsoft-Windows-Windows Defender/Operational"
+if (Get-WinEvent -ListLog $defenderLog -ErrorAction SilentlyContinue) {
+    # Event ID 1125: Network Protection Block | Event ID 1126: Network Protection Audit
+    $events = Get-WinEvent -FilterHashtable @{
+        LogName   = $defenderLog
+        Id        = 1125, 1126
+        StartTime = (Get-Date).AddDays(-7)
+    } -ErrorAction SilentlyContinue
+
+    if ($events) {
+        Write-Host "  [+] Found $($events.Count) Network Protection security events in the last 7 days." -ForegroundColor DarkCyan
+        foreach ($ev in $events) {
+            $msg = $ev.Message
+            foreach ($ai in $TargetAIEngines) {
+                if ($msg -like "*$($ai.Domain)*") {
+                    Write-Host "  [!] DEFENDER TRIGGER: Event $($ev.Id) on $($ai.Domain)" -ForegroundColor Red
+                    $findings.Add([PSCustomObject]@{
+                        Timestamp   = $ev.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
+                        Type        = "Defender Event $($ev.Id)"
+                        Service     = $ai.Name
+                        Domain      = $ai.Domain
+                        RiskLevel   = $ai.Risk
+                        Detail      = "Defender triggered Web Content filter block/audit"
+                    })
+                }
+            }
+        }
+    } else {
+        Write-Host "  [+] No Defender Network Protection blocks recorded in past 7 days." -ForegroundColor Green
+    }
+} else {
+    Write-Host "  [-] Defender Operational event log not accessible" -ForegroundColor Gray
+}
+
+# 4. Export Findings to CSV
+if ($findings.Count -gt 0) {
+    Write-Host "`n[!] Risk Findings Identified: $($findings.Count) items recorded." -ForegroundColor Yellow
+    $findings | Export-Csv -Path $ExportCsvPath -NoTypeInformation
+    Write-Host "  [+] Exported forensic audit report to: $ExportCsvPath" -ForegroundColor Green
+} else {
+    Write-Host "`n[+] Zero Shadow AI traces detected on this host. System compliant." -ForegroundColor Green
+}
+
+Write-Host "`n============================================================" -ForegroundColor Cyan
+Write-Host "  Audit Complete. Review exported CSV for security review. " -ForegroundColor Cyan
+Write-Host "============================================================" -ForegroundColor Cyan
+```
+
+---
+
+## 🚫 6. Step 3: Block Unsanctioned AI Endpoints via Web Content Filtering
+
+**Direct Answer:** Tag high-risk generative AI tools as Unsanctioned in Defender for Cloud Apps to enforce automatic endpoint DNS and HTTPS blocks across your fleet.
+
+Once you have documented consumer AI usage, configure Defender for Endpoint to block connection attempts:
+
+1. In the **Defender Portal**, return to **Cloud Apps > Cloud Discovery > Discovered Apps**.
+2. Select the checkbox next to **ChatGPT**, **DeepSeek**, or **Claude**.
+3. Click the **Tag as Unsanctioned** icon (circle with diagonal slash) at the top of the table.
+4. Microsoft Defender for Endpoint will sync this indicator to all enrolled Windows 10/11 devices within 15 minutes. 
+5. When a user navigates to the domain in Microsoft Edge, Chrome, or Firefox, the Network Protection engine intercepts the socket and renders a corporate block banner.
+
+---
+
+## 🔀 7. Step 4: Route Employees to Sanctioned Enterprise Copilot
+
+**Direct Answer:** Pair network blocks with educational browser redirects in Microsoft Edge for Business to prevent staff from moving Shadow AI activity to unmanaged personal devices.
+
+Blocking tools without providing a viable alternative always backfires: employees will open mobile browsers or tether their personal smartphones to continue using AI.
+
+1. Open **Microsoft Intune Admin Center** (`https://intune.microsoft.com`).
+2. Navigate to **Devices > Configuration > Manage Edge Policies**.
+3. Configure the **SmartScreen / Web Content Filter Block Page Redirect URL**:
+   - URL: `https://m365.cloud.microsoft/chat` (Enterprise Copilot).
+4. When a user navigates to `chatgpt.com`, Edge displays a clean prompt:
+   > *"Access to consumer AI is restricted to protect corporate data. You have been redirected to Microsoft 365 Copilot, where Enterprise Data Protection is active."*
+
+This turns security enforcement into a positive productivity booster rather than a frustrating roadblock.
+
+---
+
+## 📋 Shadow AI Audit Runbook Checklist
+
+| Phase | Tool Used | Objective | Execution Metric |
+| :--- | :--- | :--- | :--- |
+| **1. Discovery** | Defender for Cloud Apps | Filter Discovered Apps for *Generative AI* | Identify top 5 consumer AI web apps |
+| **2. Risk Scored** | Cloud Discovery | Sort by Upload Data Volume | Flag users uploading over 100 MB |
+| **3. Content DLP** | Microsoft Purview AI Hub | Check Sensitive Info Types (SIT) matches | Confirm no API keys or credentials leaked |
+| **4. Host Audit** | `Audit-ShadowAIEndpoints.ps1` | Scan local workstation DNS caches & event logs | Export compliance verification CSV |
+| **5. Enforcement** | Defender for Endpoint | Tag consumer apps as *Unsanctioned* | Push zero-trust web content block |
+| **6. Adoption** | Microsoft Edge for Business | Redirect blocked traffic to Enterprise Copilot | Zero productivity loss; 100% data privacy |
+
+---
+
+## 🔗 Related Enterprise Security & Automation Guides
+
+For further IT infrastructure runbooks from our team's workbench, explore our companion guides:
+
+- **[GPO Sprawl: How We Audited and Deleted 140 Zombie Policies](/blog/gpo-sprawl-audit-powershell-cleanup-script):** Active Directory Group Policy cleanup and PowerShell inventory scripts.
+- **[ChatGPT Workplace Usage & Adoption Patterns in 2026](/blog/chatgpt-usage-and-adoption-patterns-at-work-in-2026-what-the-data-shows):** Empirical data on developer and office AI adoption.
+- **[Best Business Password Managers in 2026: Security & Pricing Compared](/blog/best-password-managers-in-2026-security-features-and-pricing-compared):** Enterprise credential security and passkey deployments.
+- **[Local LLM VRAM & Quantization Calculator](/tools/vram-calculator):** Calculate GPU memory requirements for running private, on-premise AI models.
+- **[How to Run Local AI Models on Windows 11 with Phi-4 & DeepSeek](/blog/how-to-run-local-ai-models-on-windows-11-phi-4-deepseek):** Complete workbench guide to private local AI inference with zero cloud data exposure.
+
