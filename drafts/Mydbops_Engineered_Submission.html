@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Eliminating High-Concurrency MySQL Memory Starvation: When the OS Page Cache Collides with the InnoDB Buffer Pool</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+    color: #1a1a1a;
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  .meta-box {
+    background-color: #f8f9fa;
+    border-left: 4px solid #1a73e8;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+  }
+  .meta-box p { margin: 5px 0; }
+  .meta-box strong { color: #1a73e8; }
+  h1 { font-size: 26px; color: #111; line-height: 1.3; margin-bottom: 8px; }
+  .byline { font-size: 14px; color: #5f6368; font-style: italic; margin-bottom: 24px; }
+  h2 { font-size: 20px; color: #1a73e8; margin-top: 32px; border-bottom: 1px solid #e0e0e0; padding-bottom: 6px; }
+  p, li { font-size: 15px; color: #333; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 8px; }
+  a { color: #1a73e8; text-decoration: underline; font-weight: 500; }
+  a:hover { color: #1557b0; }
+  code { background-color: #f1f3f4; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13.5px; }
+  .author-box {
+    background-color: #f1f3f4;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 36px;
+    font-size: 14px;
+    border: 1px solid #e2e8f0;
+  }
+</style>
+</head>
+<body>
+
+<div class="meta-box">
+  <p><strong>Target Platform:</strong> Mydbops (https://www.mydbops.com/blog/)</p>
+  <p><strong>Article Title:</strong> Eliminating High-Concurrency MySQL Memory Starvation: When the OS Page Cache Collides with the InnoDB Buffer Pool</p>
+  <p><strong>Category:</strong> MySQL / Database Performance / Linux Administration</p>
+  <p><strong>Target Word Count:</strong> ~850 words (Senior DBA Engineering Case Study)</p>
+  <p><strong>Primary Target Link:</strong> <a href="https://www.praveentechworld.com/blog/tuning-linux-page-cache-innodb-buffer-pool-oom-fix/">https://www.praveentechworld.com/blog/tuning-linux-page-cache-innodb-buffer-pool-oom-fix/</a></p>
+  <p><strong>Secondary Tools Link:</strong> <a href="https://www.praveentechworld.com/tools/">https://www.praveentechworld.com/tools/</a></p>
+</div>
+
+<h1>Eliminating High-Concurrency MySQL Memory Starvation: When the OS Page Cache Collides with the InnoDB Buffer Pool</h1>
+<div class="byline">By Praveen, Infrastructure Architect | Technical Contributor for Mydbops</div>
+
+<h2>The 80% RAM Myth in High-Throughput Environments</h2>
+<p>For more than a decade, the standard DBA rule of thumb for dedicated database servers has been straightforward: allocate 70% to 80% of total physical RAM to <code>innodb_buffer_pool_size</code>. On a dedicated bare-metal host with predictable point-lookup workloads, this calculation provides reasonable performance while leaving enough headroom for the operating system. However, in high-throughput cloud environments running MySQL 8.0, 8.4 LTS, or 9.0, this rule frequently leads to sudden, unexplained database crashes caused by the Linux Out-Of-Memory (OOM) Killer.</p>
+<p>When a database process is killed by signal 9 with no entry in <code>mysql-error.log</code>, administrators often assume hardware failure or an unlogged memory leak. In reality, the crash is almost always the result of a silent collision between MySQL connection overhead, the Linux kernel page cache, and InnoDB's internal buffering.</p>
+
+<h2>How Connection Buffers and Kernel Page Caches Starve the Host</h2>
+<p>The core issue stems from how memory is categorized outside the buffer pool. An enterprise database instance consumes memory across three competing domains:</p>
+<ul>
+  <li><strong>Global Static Buffers:</strong> The InnoDB buffer pool, adaptive hash index, and redo log buffer.</li>
+  <li><strong>Thread-Allocated Session Memory:</strong> Per-connection allocations including <code>sort_buffer_size</code>, <code>read_buffer_size</code>, <code>join_buffer_size</code>, and <code>max_heap_table_size</code>. Under a traffic surge of 500 active concurrent connections, temporary table allocations can quietly demand an extra 16 GB to 32 GB of heap memory.</li>
+  <li><strong>The Linux VFS Page Cache:</strong> During automated logical backups (mysqldump), bulk data loads, or external reporting queries, the Linux Virtual File System caches raw disk blocks in memory. While page cache pages are technically "reclaimable", the kernel cannot free dirty pages synchronously fast enough under severe memory pressure.</li>
+</ul>
+<p>When sudden query spikes demand heap memory while the page cache is heavily saturated with unwritten dirty pages, Linux enters synchronous page reclamation mode. Memory allocation latencies spike from microseconds to hundreds of milliseconds. If free memory drops below <code>vm.min_free_kbytes</code>, the Linux kernel invokes <code>oom_kill_process</code>, targeting mysqld as the single process consuming the most RSS memory.</p>
+
+<h2>Kernel Tuning: Forcing O_DIRECT and Capping Dirty Pages</h2>
+<p>To build a production environment resilient against OOM termination, database engineers must configure MySQL and the Linux kernel to respect each other's memory boundaries:</p>
+<ul>
+  <li><strong>Enforce <code>innodb_flush_method = O_DIRECT</code>:</strong> This ensures InnoDB reads and writes data files directly to NVMe storage, bypassing the Linux page cache and eliminating double-buffering entirely.</li>
+  <li><strong>Cap Kernel Dirty Page Ratios:</strong> Set <code>vm.dirty_background_ratio = 5</code> and <code>vm.dirty_ratio = 10</code> in <code>/etc/sysctl.conf</code>. This forces the kernel flusher threads (kworker) to continuously flush dirty pages to storage before they consume free RAM.</li>
+  <li><strong>Conservative Swappiness:</strong> Set <code>vm.swappiness = 1</code> or <code>10</code>. While some DBAs disable swap entirely (<code>vm.swappiness = 0</code>), this removes the kernel's emergency release valve, converting a brief disk throttle into an immediate mysqld fatal crash.</li>
+</ul>
+
+<h2>Validating Memory Boundaries in Multi-Tenant Infrastructure</h2>
+<p>Accurately calculating buffer limits is critical when deploying database instances across modern virtualized hosts and container clusters. For engineers running high-throughput relational workloads, our workbench has published a <a href="https://www.praveentechworld.com/blog/tuning-linux-page-cache-innodb-buffer-pool-oom-fix/">comprehensive Linux page cache and InnoDB buffer pool tuning runbook</a> that breaks down empirical load-test results, dirty page flush thresholds, and safe production sysctl configurations.</p>
+<p>Additionally, to avoid manual calculation errors when estimating per-thread buffers across diverse instances, devops teams can leverage these <a href="https://www.praveentechworld.com/tools/">interactive developer tools and memory calculators</a> to project memory ceilings under maximum connection saturation. Similar dynamics apply to containerized development environments, as demonstrated in our analysis of <a href="https://www.praveentechworld.com/blog/why-wsl2-vmmem-wont-free-ram-auto-memory-reclaim-fix/">Linux kernel vmmem and cgroup memory reclamation behavior</a>, where aggressive page caches lock host RAM indefinitely unless kernel reclamation triggers are explicitly tuned.</p>
+
+<h2>Conclusion: Reliability Over Raw Allocation</h2>
+<p>Maximizing database uptime is not about assigning the largest possible percentage of RAM to InnoDB. A database server configured with a 65% buffer pool, O_DIRECT flushing, capped dirty page thresholds, and adequate per-thread connection headroom will consistently outperform a brittle 80% allocation that periodically succumbs to OOM termination. By aligning Linux virtual memory parameters with InnoDB's execution profile, DBAs can ensure predictable throughput without midnight outage alerts.</p>
+
+<div class="author-box">
+  <p><strong>About the Author:</strong> Praveen is an infrastructure architect, cloud performance engineer, and publisher of <a href="https://www.praveentechworld.com/">PraveenTechWorld</a>, covering enterprise Linux diagnostics, database reliability, and developer tooling. His engineering guides focus on reproducible, firsthand workbench troubleshooting for modern tech stacks.</p>
+</div>
+
+</body>
+</html>
