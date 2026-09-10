@@ -1,65 +1,163 @@
 ---
 export interface Props {
   headings: Array<{ depth: number; slug: string; text: string }>;
+  isMobile?: boolean;
 }
 
-const { headings } = Astro.props;
+const { headings = [], isMobile = false } = Astro.props;
+const filteredHeadings = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
 ---
 
 {
-  headings.length > 0 && (
-    <div class="toc-wrapper">
-      <button
-        id="toc-toggle"
-        class="flex w-full items-center justify-between rounded-xl border border-border bg-surface-alt p-3 dark:border-border-dark dark:bg-surface-dark-alt lg:hidden"
-        aria-expanded="false"
-        aria-controls="toc-content"
-      >
-        <span class="text-xs font-semibold uppercase tracking-wider text-text-muted dark:text-text-dark-muted">
-          On this page
-        </span>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="toc-chevron" class="transition-transform text-text-muted dark:text-text-dark-muted">
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
-      </button>
-      <nav
-        id="toc-content"
-        class="mt-1 hidden rounded-xl border border-border bg-surface-alt p-4 dark:border-border-dark dark:bg-surface-dark-alt lg:mt-0 lg:block"
-        aria-label="Table of contents"
-      >
-        <p class="mb-3 hidden text-xs font-semibold uppercase tracking-wider text-text-muted dark:text-text-dark-muted lg:block">
-          On this page
-        </p>
-        <ul class="space-y-1.5">
-          {headings
-            .filter((h) => h.depth <= 3)
-            .map((heading) => (
+  filteredHeadings.length > 0 && (
+    isMobile ? (
+      <details class="toc-mobile-card group my-6 rounded-xl border border-border bg-surface-alt/70 p-4 dark:border-border-dark dark:bg-surface-dark-alt/70 backdrop-blur-sm transition-all lg:hidden">
+        <summary class="flex cursor-pointer items-center justify-between font-semibold text-xs uppercase tracking-wider text-text-muted select-none dark:text-text-dark-muted">
+          <span class="flex items-center gap-2 text-text dark:text-text-dark">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-brand-600 dark:text-brand-400">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            <span>On This Page ({filteredHeadings.length} sections)</span>
+          </span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-muted transition-transform duration-200 group-open:rotate-180 dark:text-text-dark-muted">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </summary>
+        <nav class="mt-3 pt-3 border-t border-border/60 dark:border-border-dark/60" aria-label="Mobile table of contents">
+          <ul class="space-y-1">
+            {filteredHeadings.map((heading) => (
               <li>
                 <a
                   href={`#${heading.slug}`}
-                  class="block text-sm text-text-muted transition-colors hover:text-brand-600 dark:text-text-dark-muted dark:hover:text-brand-400"
-                  style={{ paddingLeft: `${(heading.depth - 2) * 1}rem` }}
+                  class={`block text-xs leading-relaxed transition-colors hover:text-brand-600 dark:hover:text-brand-400 ${
+                    heading.depth === 2
+                      ? "font-medium text-text dark:text-text-dark py-1"
+                      : "text-text-muted dark:text-text-dark-muted pl-4 py-0.5"
+                  }`}
                 >
                   {heading.text}
                 </a>
               </li>
             ))}
-        </ul>
+          </ul>
+        </nav>
+      </details>
+    ) : (
+      <nav
+        id="toc-desktop"
+        class="toc-desktop-container rounded-xl border border-border/80 bg-surface-alt/60 p-4 dark:border-border-dark/80 dark:bg-surface-dark-alt/60 backdrop-blur-sm"
+        aria-label="Table of contents"
+      >
+        <div class="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-dark-muted">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-brand-600 dark:text-brand-400">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span>On this page</span>
+        </div>
+        <div class="max-h-[calc(100vh-14rem)] overflow-y-auto pr-1 text-xs scrollbar-thin">
+          <ul class="relative border-l border-border/70 dark:border-border-dark/70 ml-1 space-y-0.5">
+            {filteredHeadings.map((heading) => (
+              <li>
+                <a
+                  href={`#${heading.slug}`}
+                  data-heading-slug={heading.slug}
+                  class={`toc-link block leading-snug transition-all duration-150 border-l-2 border-transparent -ml-px ${
+                    heading.depth === 2
+                      ? "py-1.5 pl-3 text-[13px] font-medium text-text-muted hover:text-brand-600 dark:text-text-dark-muted dark:hover:text-brand-400"
+                      : "py-1 pl-6 text-[12px] text-text-muted/80 hover:text-brand-600 dark:text-text-dark-muted/80 dark:hover:text-brand-400"
+                  }`}
+                >
+                  {heading.text}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       </nav>
-    </div>
+    )
   )
 }
 
-<script>
-  const toggle = document.getElementById("toc-toggle");
-  const content = document.getElementById("toc-content");
-  const chevron = document.getElementById("toc-chevron");
-  if (toggle && content && chevron) {
-    toggle.addEventListener("click", () => {
-      const expanded = toggle.getAttribute("aria-expanded") === "true";
-      toggle.setAttribute("aria-expanded", String(!expanded));
-      content.classList.toggle("hidden");
-      chevron.classList.toggle("rotate-180");
-    });
+<style>
+  :global(.toc-link.toc-active) {
+    border-color: #2563eb !important;
+    color: #2563eb !important;
+    font-weight: 600 !important;
+    background: rgba(37, 99, 235, 0.08);
+    border-radius: 0 4px 4px 0;
   }
+  :global(.dark .toc-link.toc-active) {
+    border-color: #60a5fa !important;
+    color: #60a5fa !important;
+    background: rgba(96, 165, 250, 0.12);
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.4);
+    border-radius: 20px;
+  }
+</style>
+
+<script>
+  function setupTocScrollspy() {
+    const links = document.querySelectorAll<HTMLAnchorElement>(".toc-link");
+    if (!links.length) return;
+
+    const slugs = Array.from(links).map((link) => link.getAttribute("data-heading-slug")).filter(Boolean);
+    const headings = slugs
+      .map((slug) => document.getElementById(slug!))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (!headings.length) return;
+
+    let activeSlug = "";
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            activeSlug = entry.target.id;
+          }
+        });
+
+        if (activeSlug) {
+          links.forEach((link) => {
+            if (link.getAttribute("data-heading-slug") === activeSlug) {
+              link.classList.add("toc-active");
+            } else {
+              link.classList.remove("toc-active");
+            }
+          });
+        }
+      },
+      {
+        rootMargin: "0px 0px -65% 0px",
+        threshold: 0.1,
+      }
+    );
+
+    headings.forEach((heading) => observer.observe(heading));
+  }
+
+  setupTocScrollspy();
+  document.addEventListener("astro:page-load", setupTocScrollspy);
 </script>

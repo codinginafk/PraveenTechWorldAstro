@@ -44,6 +44,8 @@ references:
 
 On our workbench, we spent the morning stress-testing the new `deepseek-flash` API endpoint, analyzing the open-weights repository on Hugging Face, and running multi-step developer agent loops. Below is our complete engineering breakdown of the architecture, memory compression mechanics, benchmark results, and production migration runbook.
 
+> **Behind Our Cover Illustration:** Readers often ask what the optical neural prism on our cover represents. Just as an optical prism splits a single beam of light into distinct color wavelengths, DeepSeek-V4.1-Flash refracts monolithic transformer processing into two distinct execution beams: an ultra-fast **8B prefill beam (amber)** that ingests 1,000,000 tokens with 114ms latency, and a deep **16B autoregressive decode beam (crimson)** that synthesizes 122 tokens per second while compressing Key-Value (KV) cache memory overhead by 75%.
+
 ---
 
 ## The Architectural Pivot: Asymmetric Causal Encoder-Decoder MoE
@@ -53,6 +55,9 @@ On our workbench, we spent the morning stress-testing the new `deepseek-flash` A
 In standard decoder-only models (like Llama 3, GPT-4o, and DeepSeek-V3), every token must traverse the same fixed number of active parameters regardless of whether the model is ingesting a massive 100,000-token codebase or generating a single word. This creates an expensive tradeoff: either you keep the model small for fast interactive chat, or make it huge for deep reasoning at the cost of slow prompt ingestion.
 
 DeepSeek's engineering team solved this tension by splitting V4.1-Flash into two distinct asymmetrical execution stages:
+
+![DeepSeek-V4.1-Flash Asymmetric Causal MoE Architecture Diagram with DeepSeek Whale Logo](/images/articles/deepseek-v4-1-flash-asymmetric-moe-architecture.svg)
+*Figure 1: DeepSeek-V4.1-Flash architectural pipeline—demonstrating how the 20-layer Causal Encoder pins projected global KV attention states to feed the 20-layer MoE Decoder without re-indexing.*
 
 ```
 +-------------------------------------------------------------------------+
