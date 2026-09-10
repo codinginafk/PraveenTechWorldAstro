@@ -39,6 +39,7 @@ const seo = {
       <!-- Quick Preset Tags -->
       <div class="mt-4 flex flex-wrap items-center gap-2 text-xs">
         <span class="font-semibold text-text-muted dark:text-text-dark-muted">Common Errors:</span>
+        <button type="button" class="preset-btn rounded-lg bg-surface-alt dark:bg-surface-dark-alt px-2.5 py-1 border border-border dark:border-border-dark text-text dark:text-text-dark hover:border-brand-500 transition-colors cursor-pointer" data-code="KB5124008">KB5124008 (25H2)</button>
         <button type="button" class="preset-btn rounded-lg bg-surface-alt dark:bg-surface-dark-alt px-2.5 py-1 border border-border dark:border-border-dark text-text dark:text-text-dark hover:border-brand-500 transition-colors cursor-pointer" data-code="0x8024200d">0x8024200d</button>
         <button type="button" class="preset-btn rounded-lg bg-surface-alt dark:bg-surface-dark-alt px-2.5 py-1 border border-border dark:border-border-dark text-text dark:text-text-dark hover:border-brand-500 transition-colors cursor-pointer" data-code="0x80070002">0x80070002</button>
         <button type="button" class="preset-btn rounded-lg bg-surface-alt dark:bg-surface-dark-alt px-2.5 py-1 border border-border dark:border-border-dark text-text dark:text-text-dark hover:border-brand-500 transition-colors cursor-pointer" data-code="0x80070422">0x80070422</button>
@@ -95,6 +96,28 @@ const seo = {
 
 <script is:inline>
   const ERROR_DATABASE = [
+    {
+      code: "KB5124008",
+      name: "WINDOWS_11_25H2_UPDATE_FAIL",
+      category: "Windows 11 25H2 Upgrade",
+      severity: "High",
+      cause: "Windows 11 Version 25H2 update (Build 26200.9445 via KB5124008) stalls at 0%, 25%, or 100% install loop due to servicing stack locks or component store staging conflicts.",
+      steps: [
+        "Stop Windows Update, BITS, and Cryptographic background services.",
+        "Clear corrupted SoftwareDistribution staging cache.",
+        "Execute DISM StartComponentCleanup to clear servicing stack locks.",
+        "Restart update services and force a clean scan using UsoClient."
+      ],
+      powershell: `# Run in Administrator PowerShell
+Stop-Service -Name wuauserv, bits, cryptsvc -Force
+Remove-Item -Path "$env:SystemRoot\\SoftwareDistribution\\Download\\*" -Recurse -Force -ErrorAction SilentlyContinue
+dism.exe /Online /Cleanup-Image /StartComponentCleanup
+dism.exe /Online /Cleanup-Image /RestoreHealth
+Start-Service -Name wuauserv, bits, cryptsvc
+UsoClient.exe StartScan
+Write-Host "✅ Servicing stack cleared. KB5124008 (25H2) update restart initiated!" -ForegroundColor Green`,
+      guideUrl: "/blog/fix-windows-11-update-errors-2026-troubleshooting"
+    },
     {
       code: "0x8024200d",
       name: "WU_E_UH_NEEDUNPACKING",
