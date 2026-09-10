@@ -1,0 +1,197 @@
+---
+title: "Tuning Linux Page Cache & InnoDB Buffer Pool: Preventing Silent Database OOM Kills"
+description: "Fix silent MySQL and PostgreSQL OOM kills. Learn how to tune Linux page cache, vm.swappiness, dirty ratios, and cgroups to stop kernel memory starvation."
+publishDate: "2026-09-10"
+author: "praveen"
+category: "database-performance"
+tags:
+  - "mysql"
+  - "postgresql"
+  - "linux-kernel"
+  - "sysctl"
+  - "oom-killer"
+  - "innodb"
+  - "database-tuning"
+---
+
+When provisioning production database servers, the standard rule of thumb is straightforward: allocate 70% to 80% of total physical RAM to the `innodb_buffer_pool_size` (or PostgreSQL `shared_buffers`). Yet, in high-throughput production environments, systems with 128GB or 256GB of RAM frequently experience sudden, unexplainable query latency spikes, swap thrashing, or the dreaded Linux kernel Out-Of-Memory (`oom-killer`) terminating the `mysqld` or `postgres` process without warning.
+
+The root cause rarely lies within the database engine itself. Instead, it stems from an unmanaged resource conflict between the **Linux kernel page cache** and the **database buffer pool**. Without proactive kernel virtual memory (`vm`) tuning, Linux will aggressively grow its file-backed page cache until kernel slab memory is exhausted, forcing emergency synchronous reclaim cycles that freeze transactional query threads.
+
+---
+
+## 1. Anatomy of the Kernel-to-Database Memory Conflict
+
+In a dedicated database server, physical host memory is partitioned across three competing consumers:
+
+1. **Database Native Buffer Pool:** The user-space allocation where InnoDB caches table data, secondary indexes, undo logs, and insert buffers (`innodb_buffer_pool_size`).
+2. **Linux OS Page Cache:** The kernel-level cache for filesystem blocks, binary logs, slow query logs, temporary disk tables, and general OS disk I/O.
+3. **Transient Connection Allocations:** Per-thread buffers including `sort_buffer_size`, `join_buffer_size`, `read_rnd_buffer_size`, and temporary hash tables.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                   TOTAL PHYSICAL HOST RAM (100%)                       │
+├───────────────────────────────────────┬─────────────────┬──────────────┤
+│    InnoDB Buffer Pool (User Space)    │ Linux OS Cache  │ Connection   │
+│               (70% - 75%)             │   (15% - 20%)   │ Buffers (5%) │
+├───────────────────────────────────────┴─────────────────┴──────────────┤
+│ ⚠️ DANGER: If OS Page Cache + Transient Buffers > Available Headroom,   │
+│ the Linux Kernel invokes oom-killer and terminates mysqld (PID).       │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+When an active database performs massive table scans or rotates multi-gigabyte binary logs, the kernel eagerly fills all remaining unallocated RAM with dirty file pages. Because Linux treats "free" memory as wasted memory, it will not proactively release page cache pages until the host hits the watermarks defined by `vm.min_free_kbytes`. 
+
+Under sudden transactional query bursts, the kernel fails to allocate memory fast enough, triggering the OOM killer. The Linux kernel scans process `badness` heuristics, identifies the database process as the largest anonymous RSS memory consumer, and issues `SIGKILL`.
+
+---
+
+## 2. Diagnosing Kernel Memory Starvation
+
+Before modifying kernel parameters, capture your current OS page cache and slab consumption using `/proc/meminfo`:
+
+```bash
+# Inspect total, active, and reclaimable slab allocations
+cat /proc/meminfo | grep -E "MemTotal|MemFree|MemAvailable|Buffers|Cached|Slab|SReclaimable"
+```
+
+Next, verify how much memory is trapped inside the kernel's directory entry (`dentry`) and inode caches:
+
+```bash
+# View real-time slab cache consumers sorted by size
+slabtop -sc -o | head -n 15
+```
+
+If `SReclaimable` and `Cached` occupy more than 20% of your system RAM while `MemAvailable` is hovering below 5%, the kernel is failing to evict file cache aggressively enough to satisfy database engine allocations.
+
+In MySQL, correlate this with internal buffer usage:
+
+```sql
+SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_pages_dirty';
+SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_wait_free';
+```
+
+A non-zero value on `Innodb_buffer_pool_wait_free` indicates that transactional threads are stalling because InnoDB is waiting for clean pages to be flushed to disk, exacerbated by OS filesystem writeback backpressure.
+
+---
+
+## 3. Five Critical Linux Kernel Sysctl Tweaks for DBAs
+
+To establish predictable memory boundaries and eliminate OOM kills, apply these five virtual memory (`sysctl`) configurations in `/etc/sysctl.d/99-database-memory.conf`:
+
+### A. Adjusting `vm.swappiness` (Set to 1 or 10)
+By default, standard Linux distributions ship with `vm.swappiness = 60`, which instructs the kernel to swap out anonymous memory (including active database threads) to keep the filesystem page cache warm. On database hosts, swapping causes catastrophic latency jitter.
+
+Set swappiness to 1 (do not set to 0, which entirely disables swap and increases OOM risk):
+
+```bash
+sysctl -w vm.swappiness=1
+```
+
+### B. Throttling Flush Watermarks (`dirty_background_ratio` & `dirty_ratio`)
+Linux default dirty ratios are dangerously high for modern multi-gigabyte database servers (`dirty_ratio = 20` and `dirty_background_ratio = 10`). On a 128GB machine, this allows 25GB of unwritten disk pages to accumulate in RAM before forcing background flushes, causing the kernel to pause I/O completely during writeback bursts.
+
+Switch from percentage-based ratios to explicit byte limits:
+
+```bash
+# Wake up flusher threads when dirty pages exceed 256MB
+sysctl -w vm.dirty_background_bytes=268435456
+
+# Block writing processes when dirty pages exceed 1GB
+sysctl -w vm.dirty_bytes=1073741824
+```
+
+### C. Increasing `vfs_cache_pressure` (Set to 150)
+The `vfs_cache_pressure` variable controls the tendency of the kernel to reclaim memory used for directory and inode caching relative to page cache and swap. Setting this to 150 prioritizes reclaiming inode metadata over paging out transactional memory:
+
+```bash
+sysctl -w vm.vfs_cache_pressure=150
+```
+
+### D. Tuning System Memory Reclaim & Page Fragmentation
+When running hybrid database development environments, containerized testing nodes, or production database instances inside cgroups, memory reclaim stalls can severely bottleneck local read/write execution loops. For an in-depth breakdown of how Linux cgroups and memory reclamation handle background allocations under continuous workloads, review this [Linux kernel memory reclaim and vmmem buffer allocation guide](https://www.praveentechworld.com/blog/why-wsl2-vmmem-wont-free-ram-auto-memory-reclaim-fix/).
+
+### E. Reserving Emergency Headroom (`vm.min_free_kbytes`)
+Ensure the kernel always preserves emergency network and interrupt headroom so it can clean pages without stalling:
+
+```bash
+# Reserve approximately 1.5GB to 2GB for emergency kernel operations
+sysctl -w vm.min_free_kbytes=2097152
+```
+
+---
+
+## 4. Kernel Tuning Matrix for Database Hosts
+
+| Parameter | Linux Default | Production Database Recommended | Impact on Database Engine |
+| :--- | :--- | :--- | :--- |
+| `vm.swappiness` | `60` | `1` to `10` | Prevents InnoDB buffer pool memory from being swapped to disk. |
+| `vm.dirty_background_bytes` | Unset (10%) | `268435456` (256MB) | Initiates early, smooth background disk writeback. |
+| `vm.dirty_bytes` | Unset (20%) | `1073741824` (1GB) | Caps dirty cache to prevent sudden system-wide I/O lockups. |
+| `vm.vfs_cache_pressure` | `100` | `150` | Aggressively purges unused filesystem dentries and inodes. |
+| `vm.min_free_kbytes` | Auto (~67MB) | `1048576` to `2097152` | Provides headroom to prevent instant synchronous OOM kills. |
+
+---
+
+## 5. Storage Subsystem & Direct I/O Considerations
+
+Tuning OS memory works in tandem with database disk presentation. When the database engine writes transaction logs (WAL or binlogs) or flushes dirty buffer pool pages, bypass the OS page cache entirely by configuring Direct I/O.
+
+In MySQL `my.cnf`:
+
+```ini
+[mysqld]
+# Bypass OS Page Cache for data and log writes
+innodb_flush_method = O_DIRECT
+innodb_flush_neighbors = 0
+```
+
+In PostgreSQL `postgresql.conf`:
+
+```ini
+# Enforce immediate synchronization without dual-caching
+wal_sync_method = fdatasync
+synchronous_commit = on
+```
+
+When evaluating underlying storage performance, block sizes, and write amplification during database staging benchmarks, check our detailed engineering analysis on [storage I/O throughput and developer filesystem benchmarks](https://www.praveentechworld.com/blog/windows-11-dev-drive-refs-vs-ntfs-benchmarks-memory-fix/) to quantify how filesystem filter drivers impact random 4KB database writes.
+
+---
+
+## 6. Protecting Database Daemons from OOM Scores
+
+As a final fail-safe, configure the Linux systemd service to decrease the likelihood of the OOM killer targeting your database daemon during unexpected host spikes.
+
+Add an override configuration for MySQL:
+
+```bash
+mkdir -p /etc/systemd/system/mysql.service.d/
+cat <<EOF > /etc/systemd/system/mysql.service.d/override.conf
+[Service]
+# Reduce OOM priority (-1000 completely disables OOM killing)
+OOMScoreAdjust=-900
+LimitMEMLOCK=infinity
+EOF
+
+systemctl daemon-reload
+systemctl restart mysql
+```
+
+Verify that the process score has taken effect:
+
+```bash
+cat /proc/$(pgrep mysqld)/oom_score_adj
+# Output should return -900
+```
+
+---
+
+## Conclusion & Implementation Checklist
+
+Eliminating database memory stalls requires harmonizing the Linux virtual memory manager with the database's native caching mechanisms. Before scaling up hardware or blaming query performance, ensure your host implements:
+
+1. **Explicit buffer bounds:** Reserve 20% of host RAM for the OS, transient connections, and kernel page caches.
+2. **Deterministic writeback limits:** Cap dirty page generation using `vm.dirty_background_bytes` and `vm.dirty_bytes`.
+3. **Low swappiness (`1-10`):** Ensure the host never swaps out active InnoDB buffer pages.
+4. **Direct I/O (`O_DIRECT`):** Eliminate dual-caching between Linux and database engines.
+5. **OOM Protection:** Configure `OOMScoreAdjust=-900` on critical production database services.
