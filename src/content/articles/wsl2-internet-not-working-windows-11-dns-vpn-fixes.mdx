@@ -1,18 +1,18 @@
 ---
-title: "WSL2 No Internet? How to Fix DNS, VPN, and Mirrored Networking on Windows 11"
-description: "WSL2 has no internet or DNS resolution? Step-by-step triage for Windows 11: fix corporate VPNs, MTU clipping, mirrored networking, and .wslconfig in 5 minutes."
+title: "Fix WSL2 DNS Issues & No Internet on Windows 11 (5 Fixes)"
+description: "WSL2 has no internet or DNS resolution on Windows 11? Fix corporate VPNs, MTU clipping, mirrored networking, and .wslconfig with our team's tested steps."
 publishDate: "2026-08-26"
-updatedDate: "2026-09-06"
+updatedDate: "2026-09-12"
 author: "praveen"
 category: "windows-fixes"
 pillarId: "windows-fixes"
 problem_id: "PTW-WIN-WSL2-NET-101"
-target_query: "wsl2 no internet"
+target_query: "windows wsl2 dns issue"
 tags: ["wsl2", "windows-11", "dns", "networking", "vpn", "troubleshooting", "mirrored-networking", "devops"]
-coverImage: "/images/generated/wsl2-internet-not-working-windows-11-dns-vpn-fixes.png"
-imageAlt: "Minimal flat editorial illustration of two ethernet cable plugs disconnected with a severed red spark gap"
+coverImage: "/images/articles/wsl2-internet-not-working-windows-11-dns-vpn-fixes.jpg"
+imageAlt: "Minimal flat editorial illustration of an ethernet cable plug with a severed wire and an amber indicator on an off-white background"
 draft: false
-seoTitle: "WSL2 No Internet on Windows 11: Fix DNS, VPN & Mirrored Mode"
+seoTitle: "Fix WSL2 DNS Issues & No Internet on Windows 11 (5 Fixes)"
 socialHook: "WSL2 suddenly has no internet on Windows 11? Before you blow away resolv.conf, here is our team's definitive triage guide: mirrored networking, corporate VPN MTU clamping, and DNS tunneling."
 faq:
   - question: "Why does WSL2 say temporary failure in name resolution?"
@@ -84,7 +84,7 @@ Before you destroy your `/etc/resolv.conf` with random public DNS servers or unr
 +-----------------------------------------------------------------------------------+
 ```
 
-## 🏆 WSL2 Network Triage Decision Matrix
+## WSL2 Network Triage Decision Matrix
 
 Before applying random registry tweaks or editing Linux system files, test your failure symptoms against our team's verified decision matrix:
 
@@ -193,7 +193,7 @@ curl -I --max-time 10 https://archive.ubuntu.com
 
 > **Workbench Rule:** Do **not** touch `/etc/resolv.conf` or disable `generateResolvConf` in `/etc/wsl.conf` while testing DNS tunneling. WSL needs to generate its internal tunnel stub to bridge into the Windows host resolver.
 
-## 4. Fix Corporate VPN MTU Clipping (The "Black-Hole Router" Trap)
+## 4. Fix Corporate VPN MTU Packet Clipping
 
 **If `ping 1.1.1.1` passes but `apt update`, `git clone`, or `curl` hangs during TLS handshakes, clamp the Linux interface MTU to 1400.**
 
@@ -335,7 +335,7 @@ sudo chattr +i /etc/resolv.conf
 
 From PowerShell, restart WSL with `wsl --shutdown`.
 
-## 8. Windows Filtering Platform (WFP) & Hyper-V Virtual Switch Recovery
+## 8. Reset Hyper-V Switch and Windows Filtering
 
 **When the Hyper-V virtual switch corrupts or Windows Defender Firewall blocks the virtual interface, restart the Host Network Service (HNS).**
 
@@ -367,7 +367,7 @@ If corporate firewall policies have disabled the rule, re-enable it:
 Set-NetFirewallRule -DisplayName "*WSL*" -Enabled True
 ```
 
-## 9. Automated WSL2 Network Health Diagnostic Harness (`Test-WSLNetworkStack.ps1`)
+## 9. Automated WSL2 Network Diagnostic Script
 
 **Run our automated health probe in PowerShell to isolate host, virtual switch, guest routing, DNS tunneling, and MTU clipping in 5 seconds.**
 
@@ -456,7 +456,7 @@ Save this script as `Test-WSLNetworkStack.ps1` in your dev toolkit to run whenev
 - **Do not disable Windows Defender Firewall globally.** Modern Windows 11 updates rely on WFP rules for Hyper-V packet filtering; turning off the firewall breaks virtual switch routing.
 - **Do not mix manual DNS edits with DNS tunneling.** If `generateResolvConf=false` is set in `/etc/wsl.conf`, DNS tunneling cannot update the guest stub resolver.
 
-## Summary & Related Dev Environment Guides
+## Related Guides & Diagnostics
 
 To maintain rock-solid WSL2 networking on Windows 11, configure `dnsTunneling=true` and `autoProxy=true` in `%UserProfile%\.wslconfig`. If working behind a corporate VPN (Cisco, GlobalProtect, Zscaler), clamp your `eth0` MTU to 1400. Reserve Mirrored mode for environments requiring multi-interface or local LAN discovery.
 
@@ -469,7 +469,7 @@ For containerized developer environments and local AI workflows on Windows 11, e
 
 ---
 
-## FAQ: Frequently Checked WSL2 Network Issues
+## WSL2 Networking FAQ
 
 ### Why does WSL2 say temporary failure in name resolution?
 The WSL virtual network is unable to reach the Windows DNS proxy (`172.x.x.1`). This commonly occurs when a corporate VPN (Cisco AnyConnect, GlobalProtect, Zscaler) routes host traffic through strict split-tunnel NRPT policies that Hyper-V's NAT switch cannot access. Enabling DNS tunneling routes queries directly through the host Windows network stack.
