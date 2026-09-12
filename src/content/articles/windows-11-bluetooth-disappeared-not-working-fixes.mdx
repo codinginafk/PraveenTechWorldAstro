@@ -1,11 +1,11 @@
 ---
-title: "Bluetooth Disappeared on Windows 11? 7 Fixes That Work (2026)"
-description: "Bluetooth disappeared on Windows 11? How our team fixes missing toggles, Device Manager Code 43 errors, driver crashes, and PCIe bus sleep states."
-coverImage: "/images/generated/windows-11-bluetooth-disappeared-not-working-fixes.png"
-imageAlt: "Minimal flat editorial illustration of a USB Bluetooth adapter with broken wireless signal arcs on an off-white background"
+title: "Bluetooth Disappeared on Windows 11? Fix the Missing Toggle"
+description: "Bluetooth disappeared on Windows 11? Fix missing toggle, vanished icon, missing Power Management tab, and Code 43 with our team's tested workbench steps."
+coverImage: "/images/articles/windows-11-bluetooth-disappeared-not-working-fixes.jpg"
+imageAlt: "Minimal flat editorial illustration of a hardware toggle switch with an amber alert indicator on a plain off-white background"
 imageCredit: "Benchmarked on PraveenTechWorld hardware workbench"
 publishDate: "2026-08-26"
-updatedDate: "2026-09-06"
+updatedDate: "2026-09-12"
 author: "praveen"
 category: "windows-fixes"
 pillarId: "windows-fixes"
@@ -24,12 +24,14 @@ socialHook: "Bluetooth toggle vanished from Windows 11 Action Center? Here is ou
 faq:
   - question: "Why did the Bluetooth toggle completely disappear in Windows 11?"
     answer: "The Bluetooth toggle disappears when Windows loses communication with the physical adapter. This is typically triggered by a stalled Bluetooth Support Service (bthserv), an unhandled PCIe/USB sleep state transition, or driver corruption following a Windows cumulative update."
+  - question: "Why is there no Power Management tab for Bluetooth in Device Manager?"
+    answer: "Windows 11 Modern Standby (S0ix) removes the Power Management tab from individual Bluetooth adapters. Power gating is instead managed by the USB Root Hub and ACPI Power Engine Plugin (PEP). To prevent the radio from cutting out after sleep, disable selective suspend on the parent USB Root Hub."
   - question: "How do I fix Device Manager Error Code 43 on a Bluetooth adapter?"
     answer: "Code 43 indicates the driver crashed or the hardware reported a fatal bus failure. Fix it by uninstalling the adapter in Device Manager, shutting down completely, unplugging all cables, and holding the power button for 30 seconds to drain motherboard residual capacitor charge."
   - question: "Can a Windows Update remove Bluetooth functionality?"
     answer: "Yes. Major Windows updates frequently install generic Microsoft Bluetooth drivers over vendor-specific Intel, Realtek, or MediaTek packages, causing the radio to become unresponsive or hidden under Other Devices."
   - question: "Why does Bluetooth disappear specifically after my laptop wakes from sleep?"
-    answer: "Windows 11 Modern Standby (S0ix) often powers down the internal USB bus hosting the Bluetooth controller. If the driver lacks proper wake-up handling, the radio fails to re-initialize upon resume. Disabling USB Selective Suspend and unchecking power-saving options in Device Manager resolves this."
+    answer: "Windows 11 Modern Standby (S0ix) often powers down the internal USB bus hosting the Bluetooth controller. If the driver lacks proper wake-up handling, the radio fails to re-initialize upon resume. Disabling USB Selective Suspend on the USB Root Hub resolves this."
 references:
   - title: "Fix Bluetooth disappeared in Windows"
     url: "https://support.microsoft.com/en-us/windows/hardware/bluetooth/fix-bluetooth-disappeared-in-windows"
@@ -150,6 +152,18 @@ Prevent Windows from cutting power to the Bluetooth radio during idle periods:
 3. Uncheck **"Allow the computer to turn off this device to save power"**.
 4. Press `Windows + R`, type `powercfg.cpl`, and click **Change plan settings > Change advanced power settings**.
 5. Expand **USB settings > USB selective suspend setting** and set it to **Disabled**.
+
+#### What If There Is No Power Management Tab in Device Manager?
+On many Windows 11 systems running Modern Standby (S0ix), Microsoft removed the individual Power Management tab from the Bluetooth radio node. If you only see General, Advanced, Driver, Details, and Events tabs:
+1. In Device Manager, scroll down and expand **Universal Serial Bus controllers**.
+2. Right-click **USB Root Hub (USB 3.0)** or **Generic USB Hub** and select **Properties**.
+3. Open the **Power Management** tab on the root hub (which is always present) and uncheck **"Allow the computer to turn off this device to save power"**.
+4. To permanently disable Modern Standby network/bus sleep in PowerShell (Administrator), run:
+```powershell
+powercfg /setacvalueindex scheme_current 2a737441-1930-4402-8d77-b08208b34821 48e6b7a6-50f5-4760-a579-99c420066b0e 0
+powercfg /setactive scheme_current
+```
+This forces Windows to maintain continuous power across internal USB bus lines, stopping the Bluetooth radio from dropping offline after sleep or display turn-off.
 
 ### Fix 5: Verify Fast Startup & BIOS/UEFI Radio State
 Windows Fast Startup uses a hybrid hibernation state that can freeze corrupted driver memory across reboots:
