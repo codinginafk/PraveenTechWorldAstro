@@ -1,6 +1,6 @@
 # 🚨 Google Search Console CTR & Click Watchdog Report
 
-**Generated At:** `2026-09-13T01:45:35.771604+00:00`  
+**Generated At:** `2026-09-13T07:45:42.299645+00:00`  
 **Comparing:** Current 7-Day Window (`2026-09-04` -> `2026-09-10`) vs Previous 7-Day Window (`2026-08-28` -> `2026-09-03`)
 
 ---
