@@ -1,7 +1,7 @@
 # 🚨 Google Search Console CTR & Click Watchdog Report
 
-**Generated At:** `2026-09-12T22:45:31.932167+00:00`  
-**Comparing:** Current 7-Day Window (`2026-09-03` -> `2026-09-09`) vs Previous 7-Day Window (`2026-08-27` -> `2026-09-02`)
+**Generated At:** `2026-09-13T01:45:35.771604+00:00`  
+**Comparing:** Current 7-Day Window (`2026-09-04` -> `2026-09-10`) vs Previous 7-Day Window (`2026-08-28` -> `2026-09-03`)
 
 ---
 
@@ -9,10 +9,10 @@
 
 | Metric | Previous 7 Days | Current 7 Days | Change | Status |
 | :--- | :---: | :---: | :---: | :---: |
-| **Total Clicks** | **74** | **107** | **+33.0** | 🟢 Growing |
-| **Impressions** | **8,027** | **12,877** | **+4850.0** | 🟢 Growing |
-| **Average CTR** | **0.92%** | **0.83%** | **-0.09%** | 🟡 Low CTR Watch |
-| **Avg Position** | **19.7** | **8.4** | **+11.3** | 🟢 Improving |
+| **Total Clicks** | **74** | **130** | **+56.0** | 🟢 Growing |
+| **Impressions** | **8,386** | **15,971** | **+7585.0** | 🟢 Growing |
+| **Average CTR** | **0.88%** | **0.81%** | **-0.07%** | 🟡 Low CTR Watch |
+| **Avg Position** | **18.4** | **7.7** | **+10.7** | 🟢 Improving |
 
 ---
 
@@ -21,21 +21,21 @@
 
 | Query | Page | Pos | Imp | Clicks | CTR | Priority |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| `bluetooth disappeared windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 10.5 | 60 | 0 | 0% | **5.71** |
-| `guide fix android` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 7.0 | 31 | 0 | 0% | **4.43** |
+| `inpoutx64` | [/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash](https://www.praveentechworld.com/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash) | 8.3 | 54 | 0 | 0% | **6.51** |
+| `bluetooth disappeared windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 10.4 | 56 | 0 | 0% | **5.38** |
 | `windows wsl2 dns issue` | [/blog/wsl2-internet-not-working-windows-11-dns-vpn-fixes](https://www.praveentechworld.com/blog/wsl2-internet-not-working-windows-11-dns-vpn-fixes) | 8 | 35 | 0 | 0% | **4.38** |
-| `android guide fix` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 4.8 | 20 | 0 | 0% | **4.17** |
-| `android fix guide` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.1 | 24 | 0 | 0% | **3.93** |
-| `0x800f0915` | [/blog/fix-dism-0x800f0915-efi-system-partition-too-small](https://www.praveentechworld.com/blog/fix-dism-0x800f0915-efi-system-partition-too-small) | 10.3 | 40 | 0 | 0% | **3.88** |
-| `guide android fix` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.9 | 26 | 0 | 0% | **3.77** |
-| `windows 11 bluetooth disappeared` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 10.9 | 40 | 0 | 0% | **3.67** |
-| `inpoutx64` | [/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash](https://www.praveentechworld.com/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash) | 9.1 | 29 | 0 | 0% | **3.19** |
-| `does reinstalling windows remove viruses` | [/blog/does-resetting-windows-remove-viruses-completely](https://www.praveentechworld.com/blog/does-resetting-windows-remove-viruses-completely) | 5.3 | 13 | 0 | 0% | **2.45** |
-| `audiodg` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 9.4 | 20 | 0 | 0% | **2.13** |
-| `volume slider not working windows 11` | [/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026](https://www.praveentechworld.com/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026) | 6.2 | 13 | 0 | 0% | **2.1** |
-| `bluetooth toggle missing windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 8.1 | 16 | 0 | 0% | **1.98** |
-| `windows 11 volume control not working` | [/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026](https://www.praveentechworld.com/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026) | 7.1 | 14 | 0 | 0% | **1.97** |
-| `windows 11 volume slider not working` | [/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026](https://www.praveentechworld.com/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026) | 7.9 | 14 | 0 | 0% | **1.77** |
+| `0x800f0915` | [/blog/fix-dism-0x800f0915-efi-system-partition-too-small](https://www.praveentechworld.com/blog/fix-dism-0x800f0915-efi-system-partition-too-small) | 9.0 | 39 | 0 | 0% | **4.33** |
+| `guide fix android` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.9 | 29 | 0 | 0% | **4.2** |
+| `guide android fix` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.9 | 27 | 0 | 0% | **3.91** |
+| `android fix guide` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.1 | 22 | 0 | 0% | **3.61** |
+| `windows 11 bluetooth disappeared` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 11.0 | 39 | 0 | 0% | **3.55** |
+| `android guide fix` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 5.1 | 18 | 0 | 0% | **3.53** |
+| `does reinstalling windows remove viruses` | [/blog/does-resetting-windows-remove-viruses-completely](https://www.praveentechworld.com/blog/does-resetting-windows-remove-viruses-completely) | 4.7 | 15 | 0 | 0% | **3.19** |
+| `volume slider not working windows 11` | [/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026](https://www.praveentechworld.com/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026) | 5.2 | 16 | 0 | 0% | **3.08** |
+| `audiodg` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 9.5 | 25 | 0 | 0% | **2.63** |
+| `audiodg.exe` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 13.8 | 32 | 0 | 0% | **2.32** |
+| `bluetooth toggle missing windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 8.8 | 20 | 0 | 0% | **2.27** |
+| `windows 11 volume control not working` | [/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026](https://www.praveentechworld.com/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026) | 6.7 | 15 | 0 | 0% | **2.24** |
 
 ---
 
@@ -44,18 +44,18 @@
 
 | Query | Page | Pos | Imp | Clicks | CTR | Action Required |
 | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| `bluetooth disappeared windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 10.5 | 60 | 0 | 0% | Make title match exact query string verbatim |
-| `0x800f0915` | [/blog/fix-dism-0x800f0915-efi-system-partition-too-small](https://www.praveentechworld.com/blog/fix-dism-0x800f0915-efi-system-partition-too-small) | 10.3 | 40 | 0 | 0% | Make title match exact query string verbatim |
-| `windows 11 bluetooth disappeared` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 10.9 | 40 | 0 | 0% | Make title match exact query string verbatim |
+| `bluetooth disappeared windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 10.4 | 56 | 0 | 0% | Make title match exact query string verbatim |
+| `inpoutx64` | [/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash](https://www.praveentechworld.com/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash) | 8.3 | 54 | 0 | 0% | Make title match exact query string verbatim |
+| `0x800f0915` | [/blog/fix-dism-0x800f0915-efi-system-partition-too-small](https://www.praveentechworld.com/blog/fix-dism-0x800f0915-efi-system-partition-too-small) | 9.0 | 39 | 0 | 0% | Make title match exact query string verbatim |
+| `windows 11 bluetooth disappeared` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 11.0 | 39 | 0 | 0% | Make title match exact query string verbatim |
 | `windows wsl2 dns issue` | [/blog/wsl2-internet-not-working-windows-11-dns-vpn-fixes](https://www.praveentechworld.com/blog/wsl2-internet-not-working-windows-11-dns-vpn-fixes) | 8 | 35 | 0 | 0% | Make title match exact query string verbatim |
-| `guide fix android` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 7.0 | 31 | 0 | 0% | Make title match exact query string verbatim |
-| `inpoutx64` | [/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash](https://www.praveentechworld.com/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash) | 9.1 | 29 | 0 | 0% | Make title match exact query string verbatim |
-| `guide android fix` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.9 | 26 | 0 | 0% | Make title match exact query string verbatim |
-| `android fix guide` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.1 | 24 | 0 | 0% | Make title match exact query string verbatim |
-| `audiodg.exe` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 14.9 | 24 | 0 | 0% | Make title match exact query string verbatim |
-| `android guide fix` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 4.8 | 20 | 0 | 0% | Make title match exact query string verbatim |
-| `audiodg` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 9.4 | 20 | 0 | 0% | Make title match exact query string verbatim |
-| `bluetooth toggle missing windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 8.1 | 16 | 0 | 0% | Make title match exact query string verbatim |
+| `audiodg.exe` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 13.8 | 32 | 0 | 0% | Make title match exact query string verbatim |
+| `guide fix android` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.9 | 29 | 0 | 0% | Make title match exact query string verbatim |
+| `guide android fix` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.9 | 27 | 0 | 0% | Make title match exact query string verbatim |
+| `audiodg` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 9.5 | 25 | 0 | 0% | Make title match exact query string verbatim |
+| `android fix guide` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 6.1 | 22 | 0 | 0% | Make title match exact query string verbatim |
+| `bluetooth toggle missing windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 8.8 | 20 | 0 | 0% | Make title match exact query string verbatim |
+| `android guide fix` | [/guides/android-fixes](https://www.praveentechworld.com/guides/android-fixes) | 5.1 | 18 | 0 | 0% | Make title match exact query string verbatim |
 
 ---
 
@@ -64,12 +64,9 @@
 
 | Query | Page | Current Clicks | Prior Clicks | Drop | Current Pos |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `bluetooth disappeared windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 0 | 1 | **-1** | 10.5 |
-| `dism 0x800f0915` | [/blog/fix-dism-0x800f0915-efi-system-partition-too-small](https://www.praveentechworld.com/blog/fix-dism-0x800f0915-efi-system-partition-too-small) | 0 | 1 | **-1** | 8.1 |
-| `does reinstalling windows remove viruses` | [/blog/does-resetting-windows-remove-viruses-completely](https://www.praveentechworld.com/blog/does-resetting-windows-remove-viruses-completely) | 0 | 1 | **-1** | 5.3 |
-| `gemini ai image generator free chatgpt` | [/blog/best-free-ai-image-generators-better-than-chatgpt-and-gemini](https://www.praveentechworld.com/blog/best-free-ai-image-generators-better-than-chatgpt-and-gemini) | 0 | 1 | **-1** | 9.9 |
+| `does reinstalling windows remove viruses` | [/blog/does-resetting-windows-remove-viruses-completely](https://www.praveentechworld.com/blog/does-resetting-windows-remove-viruses-completely) | 0 | 1 | **-1** | 4.7 |
+| `gemini ai image generator free chatgpt` | [/blog/best-free-ai-image-generators-better-than-chatgpt-and-gemini](https://www.praveentechworld.com/blog/best-free-ai-image-generators-better-than-chatgpt-and-gemini) | 0 | 1 | **-1** | 9.5 |
 | `how to fix bluetooth disappeared windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 0 | 1 | **-1** | 10 |
-| `windows 11 volume slider not showing` | [/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026](https://www.praveentechworld.com/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026) | 0 | 1 | **-1** | 5 |
 
 ---
 
@@ -78,13 +75,13 @@
 
 | Emerging Query | Page | Impressions | Current Position |
 | :--- | :--- | :---: | :---: |
-| `inpoutx64` | [/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash](https://www.praveentechworld.com/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash) | 29 | 9.1 |
-| `audiodg.exe` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 24 | 14.9 |
-| `audiodg` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 20 | 9.4 |
-| `bluetooth toggle missing windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 16 | 8.1 |
+| `inpoutx64` | [/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash](https://www.praveentechworld.com/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash) | 54 | 8.3 |
+| `audiodg.exe` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 32 | 13.8 |
+| `audiodg` | [/blog/how-to-fix-audiodg-exe-high-cpu-windows-11](https://www.praveentechworld.com/blog/how-to-fix-audiodg-exe-high-cpu-windows-11) | 25 | 9.5 |
+| `bluetooth toggle missing windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 20 | 8.8 |
+| `"deepseek-v4.1-flash" "llama.cpp"` | [/blog/deepseek-v4-1-flash-benchmarks-architecture-guide](https://www.praveentechworld.com/blog/deepseek-v4-1-flash-benchmarks-architecture-guide) | 9 | 7.2 |
+| `bluetooth toggle failed` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 9 | 7.7 |
+| `inpoutx64.sys` | [/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash](https://www.praveentechworld.com/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash) | 9 | 7.7 |
+| `parsing failed deepseek` | [/blog/fix-deepseek-r1-tool-calling-ollama-thinking-budget](https://www.praveentechworld.com/blog/fix-deepseek-r1-tool-calling-ollama-thinking-budget) | 9 | 5.2 |
 | `windows 11 bluetooth missing` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 9 | 9.3 |
-| `"no web processes running` | [/guides/it-operations](https://www.praveentechworld.com/guides/it-operations) | 8 | 22.2 |
-| `bluetooth toggle failed` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 8 | 7.8 |
-| `kb 5120998` | [/blog/windows-11-kb5120998-black-screen-cursor-fixes](https://www.praveentechworld.com/blog/windows-11-kb5120998-black-screen-cursor-fixes) | 8 | 5.1 |
-| `best free vpn 2026 proton vpn free windscribe free privacy limits` | [/blog/best-free-vpn-services-in-2026-complete-comparison-and-privacy-guide](https://www.praveentechworld.com/blog/best-free-vpn-services-in-2026-complete-comparison-and-privacy-guide) | 6 | 9.3 |
-| `bluetooth switch missing windows 11` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 6 | 16.5 |
+| `windows 11 turn on bluetooth missing` | [/blog/windows-11-bluetooth-disappeared-not-working-fixes](https://www.praveentechworld.com/blog/windows-11-bluetooth-disappeared-not-working-fixes) | 9 | 8.4 |
