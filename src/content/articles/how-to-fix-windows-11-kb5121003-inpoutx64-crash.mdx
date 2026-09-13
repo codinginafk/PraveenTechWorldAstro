@@ -4,17 +4,16 @@ description: "Windows 11 KB5121003 causing game crashes with inpoutx64.sys? Our 
 coverImage: "/images/articles/how-to-fix-windows-11-kb5121003-inpoutx64-crash.jpg"
 imageAlt: "Minimal flat editorial illustration of a computer motherboard PCIe contact bus with an amber alert indicator on an off-white background"
 publishDate: "2026-08-17"
-updatedDate: "2026-09-13"
+updatedDate: "2026-09-14"
 author: "praveen"
 category: "windows-fixes"
 pillarId: "windows-fixes"
-target_query: "inpoutx64"
+target_query: "kb5121003"
 tags:
   - "windows-fixes"
   - "windows-update"
   - "bsod"
   - "driver-issues"
-  - "troubleshooting"
 draft: false
 seoTitle: "Fix Windows 11 KB5121003 & Inpoutx64 Game Crashes"
 socialHook: "Windows 11 KB5121003 making games freeze or reboot? Microsoft links the issue to RGB-related inpoutx64 drivers. Try this reversible workaround before removing the security update."
@@ -76,6 +75,7 @@ Microsoft added the known issue on August 20, 2026 and confirmed the reversible 
 | [Fault Event]                                                v                    |
 |  +------------------------------------------------------------------------------+ |
 |  | EXCEPTION_ACCESS_VIOLATION (0xC0000005) -> Game Crash-to-Desktop (CTD) / BSOD | |
+|  +------------------------------------------------------------------------------+ |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -89,7 +89,7 @@ Microsoft added the known issue on August 20, 2026 and confirmed the reversible 
 | **BSoD `KMODE_EXCEPTION_NOT_HANDLED`** | Kernel access violation during sleep/wake resume | Run `Get-WinEvent -FilterHashtable @{LogName='System'; Id=1001}` | Disable `inpoutx64` + inspect minidump stack | Requires clean driver reinstall if vendor releases patched `.sys` |
 | **Random Graphics Hang (No inpout entry)** | NVIDIA/AMD GPU TDR timeout, not KB5121003 driver | Run `Get-WinEvent -FilterHashtable @{LogName='System'; Id=13}` | Follow [nvlddmkm Event ID 13 GPU diagnostic runbook](/blog/how-to-fix-nvlddmkm-sys-event-id-13-gpu-driver-crashes-windows-11) | Hardware-specific triage; do not modify registry driver keys |
 
-## Sysadmin & Gamer Diagnostic Decision Flowchart
+## Diagnostic Decision Flowchart
 
 ```
 +---------------------------------------------------------------------------------------------------+
@@ -146,7 +146,7 @@ Microsoft added the known issue on August 20, 2026 and confirmed the reversible 
 +-----------------------------------------------+ +------------------------------------------------+
 ```
 
-## Why KB5121003 Breaks Legacy inpoutx64 Drivers
+## Why KB5121003 Breaks Legacy inpoutx64
 
 **The crash is an active hypervisor trap: Windows 11 24H2 and 25H2 kernel code integrity enforces strict isolation against unsigned physical memory pointers.**
 
@@ -158,7 +158,7 @@ However, `inpoutx64.sys` contains severe architectural vulnerabilities documente
 
 With update **KB5121003**, Microsoft hardened the Windows 11 Hypervisor-Protected Code Integrity (HVCI) subsystem and the Vulnerable Driver Blocklist. Modern anti-cheat systems—such as Easy Anti-Cheat in *THE FINALS* and BattlEye in *ARC Raiders*—monitor kernel memory space aggressively. When the game engine or anti-cheat initializes alongside background RGB lighting sweeps, `inpoutx64.sys` attempts to execute unauthorized Ring 0 physical memory pointers. HVCI instantly traps the instruction, killing the calling game process with `STATUS_ACCESS_VIOLATION (0xC0000005)` or issuing a `SYSTEM_SERVICE_EXCEPTION (0x3B)` bug check to prevent privilege escalation.
 
-## Is your symptom the KB5121003 inpoutx64 issue?
+## Is Your Symptom the KB5121003 Inpout Issue?
 
 **The strongest match is a game problem that began after KB5121003, especially on a PC with RGB or peripheral-control software.** Microsoft’s listed symptoms are:
 
@@ -179,7 +179,7 @@ Get-HotFix -Id KB5121003 -ErrorAction SilentlyContinue |
 
 If the command returns nothing, do not apply this workaround just because a game crashed. Troubleshoot the actual error instead. For general Windows update failures, use [the Windows 11 update troubleshooting guide](/blog/fix-windows-11-update-errors-2026-troubleshooting).
 
-## Which RGB or peripheral software can install inpoutx64?
+## RGB Software Bundling inpoutx64 Drivers
 
 **Look for software that controls lighting, fan curves, sensors, or other low-level peripheral functions.** The driver name may appear in a service entry even when the application uses a different brand name. Microsoft does not publish a complete vendor list, so do not treat a forum list as proof that a particular product is responsible.
 
@@ -207,7 +207,7 @@ Our team cataloged the following third-party software suites that deploy `inpout
 | **OpenRGB (Legacy)** | OpenRGB < v0.9 (WinRing0 / Inpout backend) | `inpoutx64.sys` | Immediate kernel exception if run alongside protected multiplayer titles. Modern builds using WinUSB driver are unaffected. |
 | **Corsair** | Legacy iCUE Motherboard Plugins | `CorsairLLAccess64.sys`, `inpoutx64` | Intermittent crash when syncing DRAM RGB across motherboard SMBus channels. |
 
-## How do you back up the registry before changing Start?
+## Back Up Registry Before Editing Services
 
 **Back up the service key before editing it, because the workaround changes how a kernel driver starts.** Microsoft’s [registry backup guidance](https://support.microsoft.com/en-us/windows/how-to-back-up-and-restore-the-registry-in-windows-855140ad-7a9a-41d0-8079-3b4b2a9f8f34) explains the supported process.
 
@@ -219,7 +219,7 @@ Our team cataloged the following third-party software suites that deploy `inpout
 
 If the `inpoutx64` service key does not exist, stop. Do not create it and do not disable a similarly named service without evidence that it belongs to the affected RGB or peripheral component.
 
-## How do you apply Microsoft’s inpoutx64 workaround?
+## Apply the Official Inpoutx64 Workaround
 
 **Set the driver’s `Start` value to 4, then restart Windows.** Microsoft documents this exact workaround for the KB5121003 known issue.
 
@@ -312,7 +312,7 @@ if ($currentStart -ne 4) {
 }
 ```
 
-## What does changing Start to 4 actually test?
+## What Changing Start to 4 Actually Tests
 
 **It tests whether the named service is involved without removing the driver package.** Windows reads the service’s `Start` value during boot. In this Microsoft workaround, `4` prevents the `inpoutx64` service from starting automatically. It does not uninstall KB5121003, erase the `.sys` file, or remove the RGB application. That distinction makes the result easier to undo and explain to a vendor.
 
@@ -330,7 +330,7 @@ If the key is missing, the service has a different name, or the command returns 
 
 This test also explains why the RGB side effect matters. If the game stops crashing while lighting or fan-control features disappear, you have a reproducible lead for an RGB utility update. If the game still fails and the service state changed to `4`, restore the original value and continue with the graphics-driver, game-file, or anti-cheat checks instead of leaving a security-sensitive component disabled indefinitely.
 
-## How do you restore RGB features after the test?
+## Restore RGB Peripheral Lighting After Tests
 
 **Restore the original `Start` value from your registry backup only after you have closed the game and accepted the risk.** Microsoft says you can restore the key if the workaround causes unintended RGB or peripheral behavior.
 
@@ -373,7 +373,7 @@ if (Test-Path $regPath) {
 }
 ```
 
-## Workbench Lab Benchmarks: 3-Rig Stress & Stability Test
+## Empirical 3-Rig Stress Benchmarks
 
 To measure the real-world impact of the `inpoutx64` registry workaround before and after Windows 11 update KB5121003, our team subjected three diverse test bench configurations to a 30-minute stress session across *THE FINALS*, *ARC Raiders*, and *MARVEL Tōkon: Fighting Souls*.
 
@@ -394,7 +394,7 @@ To measure the real-world impact of the `inpoutx64` registry workaround before a
 | **Rig C (MSI)** | *ARC Raiders* | Yes | `Start=2` (Automatic) | CTD at 1m 20s during shader compilation | **0 Crashes**; Mystic Light dynamic transitions disabled |
 | **Rig C (MSI)** | *MARVEL Tōkon* | Yes | `Start=4` (Workaround) | N/A (Tested directly with workaround active) | **100% Stability across 45 minutes** continuous gameplay |
 
-## What should you update besides the registry?
+## Recommended Drivers and Utility Updates
 
 **Update the game, RGB utility, motherboard firmware, and graphics driver from their official sources, but change one variable at a time.** A vendor may publish a package that avoids the issue without disabling the entire lighting feature. Record each version before and after the update.
 
@@ -408,7 +408,7 @@ If the crash continues with `inpoutx64` disabled, the KB5121003 issue may not be
 
 For related Windows 11 update regressions, compare the symptom before changing the registry: if the taskbar audio slider locks up alongside system freezes, see our verified runbook for [fixing Windows 11 volume control not working](/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026). If you suspect system-wide malware or corrupted system files survived the update cycle, review our empirical testing on [whether resetting Windows removes viruses and malware completely](/blog/does-resetting-windows-remove-viruses-completely). For dedicated patch vulnerabilities, [CVE-2026-68820 Windows zero-day recovery steps](/blog/how-to-fix-cve-2026-68820-windows-zero-day) covers a security issue with a different response, while [the SPLWOW64 0xc0000142 printing error guide](/blog/how-to-fix-splwow64-0xc0000142-error-32-bit-printing) covers a 32-bit printing failure. These links are separate troubleshooting paths, not evidence that either issue caused the game crash.
 
-## Should you uninstall KB5121003?
+## Should You Uninstall KB5121003?
 
 **Use rollback only as a controlled compatibility test or an approved enterprise change; it is not the first-line workaround documented by Microsoft.** KB5121003 contains security fixes and Secure Boot certificate deployment changes. Removing it can restore a game while leaving the PC without current protections, and Windows Update may reinstall it later.
 
@@ -416,7 +416,7 @@ If you must test a rollback, first back up important files and record the curren
 
 After the test, reinstall the update when Microsoft publishes a fix or your administrator approves it. Keep the RGB driver disabled or updated if that is the component causing the conflict. For a separate update reboot loop, see [the Windows update and Secure Boot recovery guide](/blog/why-pc-reboots-3x-after-windows-update-secure-boot-cert-fix).
 
-## How do you report a remaining KB5121003 crash?
+## How to Report Remaining Crash Bugs
 
 **Send Microsoft reproducible details instead of only reporting that “the patch broke games.”** Press **Windows key + F** to open Feedback Hub. Include:
 
@@ -429,7 +429,7 @@ After the test, reinstall the update when Microsoft publishes a fix or your admi
 
 Microsoft says its investigation is ongoing. A later release-note update may change the workaround, affected games, or recommended recovery path. Check the official KB page before repeating an old registry instruction.
 
-## Final KB5121003 checklist
+## Final KB5121003 Diagnostic Checklist
 
 **Confirm the update, identify the RGB-related driver, back up the registry, apply the reversible `Start=4` workaround, and report or roll back only with a reason.**
 
