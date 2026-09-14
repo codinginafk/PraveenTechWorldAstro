@@ -42,7 +42,7 @@ references:
     publisher: "PostgreSQL Global Development Group"
 ---
 
-> **Direct Answer (Preventing Database OOM Kills):** To prevent silent MySQL and PostgreSQL OOM kills on high-memory servers: (1) allocate no more than 70% of host RAM to `innodb_buffer_pool_size`, (2) set `vm.swappiness = 1` to prevent transactional memory paging, (3) cap writeback buffers with `vm.dirty_background_bytes = 268435456` (256MB) and `vm.dirty_bytes = 1073741824` (1GB), (4) raise `vm.vfs_cache_pressure = 150` to aggressively evict filesystem metadata, and (5) set `OOMScoreAdjust = -900` in the database systemd unit.
+> **Direct Answer (Preventing Database OOM Kills):** To prevent silent Linux kernel Out-Of-Memory (OOM) kills on production MySQL and PostgreSQL database hosts, you must restrict the OS filesystem page cache from competing with user-space buffer pools. Rather than allocating 80% of physical RAM to the database engine, cap `innodb_buffer_pool_size` at 65% to 70% of host memory to reserve essential headroom for kernel slab allocations, binary log buffers, and per-connection query threads. In `/etc/sysctl.d/99-database-memory.conf`, reduce `vm.swappiness` to `1` or `10` to stop InnoDB buffer memory from paging out to disk, set explicit byte limits on `vm.dirty_background_bytes` (256MB) and `vm.dirty_bytes` (1GB) to ensure smooth background writeback, and raise `vm.vfs_cache_pressure` to `150` to reclaim unused filesystem dentries and inodes. Finally, configure database systemd units with `OOMScoreAdjust=-900` and enable `O_DIRECT` to eliminate redundant OS page caching.
 
 When provisioning production database servers, the standard rule of thumb is straightforward: allocate 70% to 80% of total physical RAM to the `innodb_buffer_pool_size` (or PostgreSQL `shared_buffers`). Yet, in high-throughput production environments across our infrastructure workbench, systems with 128GB or 256GB of RAM frequently experience sudden, unexplainable query latency spikes, swap thrashing, or the dreaded Linux kernel Out-Of-Memory (`oom-killer`) terminating the `mysqld` or `postgres` process without warning.
 
@@ -242,7 +242,10 @@ Eliminating database memory stalls requires harmonizing the Linux virtual memory
 
 Explore our workbench deep dives on kernel tuning, developer environments, and systems stability:
 
+- [Debloat Windows 11 Without Breaking WSL or Store: 2026 Sysadmin Guide](/blog/debloat-windows-11-sysadmin-guide-2026) — Prune consumer background daemons and protect developer virtualization services.
 - [Why WSL2 vmmem Won't Free RAM: Auto Memory Reclaim Fix](/blog/why-wsl2-vmmem-wont-free-ram-auto-memory-reclaim-fix) — Fix runaway Hyper-V and Linux container memory consumption.
-- [Dev Drive ReFS vs NTFS Benchmarks for High I/O Stacks](/blog/windows-11-dev-drive-refs-vs-ntfs-benchmarks-memory-fix) — Throughput and copy-on-write gains for local developer workflows.
 - [How to Run DeepSeek-R1 on 8GB VRAM: Local AI Benchmarks](/blog/how-to-run-deepseek-r1-locally-on-8gb-vram) — Quantization, KV-cache tuning, and PCIe memory spillover prevention.
+- [Best Free VPNs in 2026: 5 Tested Safe & Unlimited Plans](/blog/best-free-vpn-services-in-2026-complete-comparison-and-privacy-guide) — WireGuard throughput, DNS leak testing, and remote dev connection security.
+- [Fix CLOCK_WATCHDOG_TIMEOUT (0x101) Blue Screen Error in Windows 11](/blog/how-to-fix-clock-watchdog-timeout-0x101-blue-screen-error-windows-11) — Triage hardware thread deadlocks and firmware voltage stability.
+- [Dev Drive ReFS vs NTFS Benchmarks for High I/O Stacks](/blog/windows-11-dev-drive-refs-vs-ntfs-benchmarks-memory-fix) — Throughput and copy-on-write gains for local developer workflows.
 - [Fix nvlddmkm Event ID 13 GPU Driver Crashes in Windows 11](/blog/how-to-fix-nvlddmkm-sys-event-id-13-gpu-driver-crashes-windows-11) — TDR timeout recovery, DDU wipes, and PCIe power rail troubleshooting.
