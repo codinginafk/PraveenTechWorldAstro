@@ -4,7 +4,7 @@ description: "Can you run DeepSeek-R1 on 8GB VRAM? Our workbench benchmarks 8B &
 coverImage: "/images/articles/deepseek-r1-8gb-vram-benchmark.jpg"
 imageAlt: "Minimal flat editorial illustration of a computer GPU silicon chip die with an amber 8GB VRAM capacity threshold line on an off-white background"
 publishDate: "2026-07-21"
-updatedDate: "2026-09-07"
+updatedDate: "2026-09-14"
 author: "praveen"
 category: "ai-automation"
 pillarId: "ai"
@@ -76,7 +76,19 @@ Below is our complete empirical benchmark data across 5 consumer GPUs, our physi
 
 ---
 
-## 🗺️ Physical VRAM Architecture: How 8,192 MB Is Allocated
+**Jump to a section:**
+- [Physical VRAM Architecture for 8GB GPUs](#physical-vram-architecture-for-8gb-gpus)
+- [Five-GPU Hardware Benchmark Comparison](#five-gpu-hardware-benchmark-comparison)
+- [Quantization Matrix and Reasoning Retention](#quantization-matrix-and-reasoning-retention)
+- [Preventing PCIe Memory Spillover Slowdowns](#preventing-pcie-memory-spillover-slowdowns)
+- [Python VRAM and Speed Benchmark Script](#python-vram-and-speed-benchmark-script)
+- [Windows PowerShell VRAM Triage Script](#windows-powershell-vram-triage-script)
+- [Step-by-Step Setup for 8B and 14B Models](#step-by-step-setup-for-8b-and-14b-models)
+- [Related Local AI and Hardware Runbooks](#related-local-ai-and-hardware-runbooks)
+
+---
+
+## Physical VRAM Architecture for 8GB GPUs
 
 **Direct Answer:** An 8GB GPU has exactly 8,192 MB of physical GDDR memory; running DeepSeek-R1 safely requires maintaining at least 1,500 MB of headroom for the Windows/Linux desktop compositor and CUDA scratch buffers.
 
@@ -108,7 +120,7 @@ When total allocation stays below **7,200 MB**, all weights, KV-cache tensors, a
 
 ---
 
-## 📊 Empirical 5-GPU Benchmark: 8GB Hardware Head-to-Head
+## Five-GPU Hardware Benchmark Comparison
 
 **Direct Answer:** In our hands-on test bench runs, the older RTX 3070 8GB beat the newer RTX 4060 8GB by 18% in token generation speed (40.5 vs 34.2 tok/s) due to its 256-bit memory bus width.
 
@@ -129,7 +141,7 @@ Our team benchmarked `DeepSeek-R1-Distill-Llama-8B (Q4_K_M)` with a fixed 4,096-
 
 ---
 
-## 🔬 Quantization Matrix: Speed, VRAM & Reasoning Retention
+## Quantization Matrix and Reasoning Retention
 
 **Direct Answer:** `Q4_K_M` is the definitive sweet spot for 8GB cards: it retains 98.2% of full FP16 mathematical reasoning accuracy on AIME/GSM8K while slashing memory consumption by 69%.
 
@@ -151,7 +163,7 @@ As shown in the data, dropping from FP16 to `Q4_K_M` results in only an impercep
 
 ---
 
-## ⚠️ The PCIe Spillover Trap: Why Your 34 tok/s Drops to 3.6 tok/s
+## Preventing PCIe Memory Spillover Slowdowns
 
 **Direct Answer:** If background apps or oversized context windows push total memory beyond 8,192 MB, Windows pages active weights into System RAM over PCIe, causing a catastrophic 90% speed collapse.
 
@@ -178,7 +190,7 @@ If you ever experience severe display stuttering or driver timeouts while diagno
 
 ---
 
-## 🛠️ Developer Artifact 1: Python VRAM & Speed Benchmark Script
+## Python VRAM and Speed Benchmark Script
 
 **Direct Answer:** Run our standalone Python tool to stream reasoning output, calculate Time-to-First-Token (TTFT), measure tokens/sec, and alert you if PCIe VRAM spillover occurs.
 
@@ -304,7 +316,7 @@ if __name__ == "__main__":
 
 ---
 
-## 🖥️ Developer Artifact 2: Windows PowerShell Triage Script
+## Windows PowerShell VRAM Triage Script
 
 **Direct Answer:** Run `Test-DeepSeekVRAM.ps1` to inspect hardware VRAM capacity, configure single-stream memory flags, and launch the Ollama server safely.
 
@@ -368,7 +380,7 @@ if ($LaunchServer) {
 
 ---
 
-## 🚀 Step-by-Step Setup: Step 1 to Step 6
+## Step-by-Step Setup for 8B and 14B Models
 
 ### Step 1: Install Ollama & Verify Compute Runtime
 
@@ -520,7 +532,7 @@ if __name__ == "__main__":
 
 ---
 
-## 🔗 Related Local AI & Systems Engineering Runbooks
+## Related Local AI and Hardware Runbooks
 
 Continue expanding your local AI inference, homelab architecture, and workstation stability with our workbench guides:
 
