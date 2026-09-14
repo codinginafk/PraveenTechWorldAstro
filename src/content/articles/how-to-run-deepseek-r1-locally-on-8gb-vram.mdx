@@ -1,5 +1,5 @@
 ---
-title: "How to Run DeepSeek-R1 on 8GB VRAM (Ollama, vLLM & AMD Benchmarks)"
+title: "How to Run DeepSeek-R1 on 8GB VRAM: Ollama & vLLM Benchmarks"
 description: "Can you run DeepSeek-R1 on 8GB VRAM? Our workbench benchmarks 8B & 14B models on RTX 4060 and RX 7600 with reproducible token speeds and VRAM configs."
 coverImage: "/images/articles/deepseek-r1-8gb-vram-benchmark.jpg"
 imageAlt: "Minimal flat editorial illustration of a computer GPU silicon chip die with an amber 8GB VRAM capacity threshold line on an off-white background"
@@ -52,7 +52,7 @@ references:
     publisher: "vLLM Documentation"
 ---
 
-> **Direct Answer (Running DeepSeek-R1 on 8GB VRAM):** To run DeepSeek-R1 locally on an 8GB GPU without crashing: (1) use 4-bit quantized `deepseek-r1:8b` (`Q4_K_M`), (2) lock the context window to 4,096 tokens (`num_ctx 4096`) to keep KV-cache under 650 MB, (3) export `OLLAMA_NUM_PARALLEL=1` and `OLLAMA_FLASH_ATTENTION=1` to eliminate duplicate CUDA buffers, and (4) verify total allocation stays under 7.1 GB to prevent PCIe system RAM spillover.
+> **Direct Answer (Running DeepSeek-R1 on 8GB VRAM):** To run DeepSeek-R1 locally on an 8GB GPU without crashing, deploy the 4-bit quantized DeepSeek-R1-Distill-Llama-8B model (Q4_K_M) and strictly cap your context window to 4,096 tokens via `num_ctx 4096`. Out of the box, DeepSeek-R1 weights require 4.92 GB of VRAM, while a 4k context buffer consumes 640 MB of KV cache. Setting the runtime environment variables `OLLAMA_NUM_PARALLEL=1` and `OLLAMA_FLASH_ATTENTION=1` prevents duplicate CUDA memory allocations, capping total peak VRAM consumption at 6.2 GB. This reserves 1.8 GB of physical headroom for your operating system's desktop display compositor, completely preventing sluggish PCIe system RAM spillover. On our test bench using an NVIDIA RTX 4060 8GB, this configuration delivers 34.2 tokens per second with full reasoning trace retention. For larger 14B models, applying hybrid offloading with 32 GPU layers yields 12.4 tokens per second.
 
 When our engineering team first pulled the `deepseek-r1:8b` model onto an NVIDIA GeForce RTX 4060 8GB test bench in our hardware lab, we ran headfirst into the dreaded CUDA out-of-memory crash:
 
@@ -537,8 +537,9 @@ if __name__ == "__main__":
 Continue expanding your local AI inference, homelab architecture, and workstation stability with our workbench guides:
 
 - [Local AI VRAM & Quantization Calculator Tool](/tools/vram-calculator) — Calculate instant memory requirements across 8B, 14B, 32B, and 70B models.
+- [Debloat Windows 11 Without Breaking WSL or Store: 2026 Sysadmin Guide](/blog/debloat-windows-11-sysadmin-guide-2026) — Prune consumer background daemons to free up 1.6 GB RAM for local LLM inference.
+- [Why WSL2 vmmem Won't Free RAM and Auto Memory Reclaim Fix](/blog/why-wsl2-vmmem-wont-free-ram-auto-memory-reclaim-fix) — Configure auto-memory reclamation for Ollama and container workloads.
 - [Ollama vs vLLM vs LM Studio Windows 11 WSL2 Benchmark](/blog/ollama-vs-vllm-vs-lm-studio-windows-11-wsl2-benchmark) — Compare throughput, TTFT, and concurrency on local rigs.
-- [Why Our Dev Team Quit Docker Desktop: WSL2 & Podman](/blog/why-our-dev-team-quit-docker-desktop) — How we reduced developer workstation RAM bloat by 4.2 GB.
+- [Fix CLOCK_WATCHDOG_TIMEOUT (0x101) Blue Screen Error in Windows 11](/blog/how-to-fix-clock-watchdog-timeout-0x101-blue-screen-error-windows-11) — Resolve CPU thread stall bugchecks during intensive inference compile passes.
 - [Fix nvlddmkm Event ID 13 GPU Driver Crashes in Windows 11](/blog/how-to-fix-nvlddmkm-sys-event-id-13-gpu-driver-crashes-windows-11) — TDR timeout recovery, DDU wipes, and PCIe power rail troubleshooting.
-- [Why Does My PC Keep Crashing? RAM vs. Driver Diagnostic Runbook](/blog/pc-keeps-crashing-how-to-tell-if-it-s-a-ram-issue-or-a-bad-driver) — Separate failing DDR5 memory modules from corrupt GPU drivers using our 104-rig dataset.
 - [WSL2 No Internet? How to Fix DNS, VPN, and Gateway Breakages](/blog/wsl2-internet-not-working-windows-11-dns-vpn-fixes) — Recover local Linux containers and AI workers behind enterprise VPNs.

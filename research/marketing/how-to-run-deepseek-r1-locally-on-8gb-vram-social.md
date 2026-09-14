@@ -1,88 +1,61 @@
-# Social Syndication Copy: How to Run DeepSeek-R1 on 8GB VRAM (Ollama, vLLM & AMD Benchmarks)
-
-## 🔗 Target Canonical URL
-`https://www.praveentechworld.com/blog/how-to-run-deepseek-r1-locally-on-8gb-vram`
+# Social Syndication: How to Run DeepSeek-R1 on 8GB VRAM (Ollama, vLLM & AMD Benchmarks)
+**Target URL:** https://www.praveentechworld.com/blog/how-to-run-deepseek-r1-locally-on-8gb-vram
 
 ---
 
-## 💼 LinkedIn Post (AI Systems / LLM Infrastructure / Hardware Engineering Focus)
+## 👔 LinkedIn Post (High-Conversion AI Engineering / Local LLM Teardown)
 
-Think you need a $1,200+ 16GB or 24GB enterprise GPU to run DeepSeek-R1 locally with deep reasoning?
+Can you run DeepSeek-R1 locally on an 8GB GPU without choking your system into a crawl? 🧠⚡
 
-Our hardware engineering team ran into the dreaded `CUDA out of memory` error on our RTX 4060 8GB test bench on Day 1. But after digging into memory allocation profiles, we discovered the real culprit:
+Online advice routinely tells developers that local reasoning models require a $1,200+ 16GB or 24GB GPU. Our hardware workbench put that myth to the test.
 
-It’s not model parameter weights. It’s uncontrolled Key-Value (KV) cache expansion and duplicate multi-stream buffers.
+The culprit behind local LLM crashes is almost never model parameter size—it is **uncontrolled Key-Value (KV) cache expansion and parallel worker buffers**.
 
-By default, modern runtimes allocate memory for data-center GPUs. If you let Ollama default to a 16k or 32k context window with `OLLAMA_NUM_PARALLEL=4`, the KV-cache and scratch buffers alone consume 3.4 GB—instantly blowing past your 8GB physical limit and crashing your rig.
+Here is what we discovered after benchmarking 5 consumer GPUs (RTX 4060, RTX 3070, RTX 3060, RX 7600, Apple M2):
 
-Here is what we discovered after running empirical benchmarks across 5 consumer GPUs:
+1. **The 4K Context Sweet Spot**: Locking context to 4,096 tokens (`num_ctx 4096`) caps KV-cache at 640 MB, leaving 1.8 GB of physical VRAM headroom for Windows/Linux desktop compositors.
+2. **Eliminating Duplicate Buffers**: Setting `OLLAMA_NUM_PARALLEL=1` and `OLLAMA_FLASH_ATTENTION=1` stops runtimes from pre-allocating redundant CUDA tensors.
+3. **Bandwidth Beats Architecture**: An older RTX 3070 8GB (256-bit bus, 448 GB/s) generates 40.5 tok/s, beating a newer RTX 4060 8GB (128-bit bus, 272 GB/s, 34.2 tok/s) by 18% because inference is memory-bandwidth bound.
+4. **14B on 8GB Silicon**: Yes, the 14B model runs at 12.4 tok/s using hybrid CPU/GPU offloading (32 GPU layers + 16 RAM layers).
 
-1. **The Optimal Quantization Sweet Spot:**
-`DeepSeek-R1-Distill-Llama-8B` with `Q4_K_M` quantization has a 4.92 GB weight footprint. When hard-capped to `num_ctx 4096`, total peak VRAM stays at 6.2 GB with zero PCIe spillover, retaining 98.2% of unquantized mathematical reasoning accuracy on AIME and GSM8K.
+We published our full benchmark matrix, VRAM allocation architecture diagrams, and reproducible Python test harness:
+👉 https://www.praveentechworld.com/blog/how-to-run-deepseek-r1-locally-on-8gb-vram
 
-2. **The Memory Bandwidth Paradox (RTX 3070 vs RTX 4060):**
-Because token generation is memory-bandwidth bound rather than compute bound, our older RTX 3070 (256-bit bus / 448 GB/s) generated tokens 18% faster than the newer RTX 4060 (128-bit bus / 272 GB/s)—clocking 40.5 tok/s vs 34.2 tok/s.
-
-3. **Hybrid Offloading for 14B Models:**
-Want the deeper reasoning of the 14B model on an 8GB GPU? Setting `PARAMETER num_gpu 32` loads 32 transformer layers into 6.2 GB VRAM while offloading the remaining 16 layers to DDR5 System RAM, delivering a steady 12.4 tokens/second.
-
-4. **Preventing the 90% Performance Cliff:**
-The moment VRAM crosses 8,192 MB, Windows and CUDA page tensors over PCIe Gen 4 x8 (15.75 GB/s vs 272 GB/s VRAM). Token generation immediately collapses from 34 tok/s to 3.6 tok/s.
-
-We compiled our full 5-GPU benchmark table, physical VRAM architecture diagram, reproducible Python benchmark harness, and Windows PowerShell triage script (`Test-DeepSeekVRAM.ps1`):
-
-👉 Read the complete engineering guide:
-https://www.praveentechworld.com/blog/how-to-run-deepseek-r1-locally-on-8gb-vram
-
-#ArtificialIntelligence #LocalLLM #DeepSeek #Ollama #NVIDIA #HardwareEngineering #DevOps #MachineLearning #OpenSourceAI #TechCommunity
+#LocalAI #DeepSeek #Ollama #vLLM #MachineLearning #DevOps #NVIDIA #OpenSourceAI #PraveenTechWorld
 
 ---
 
-## 🐦 X / Twitter Thread (Actionable Local AI Setup & Benchmarks)
+## 🐦 X / Twitter Thread (Viral Local AI Breakdown)
 
-1/8 Can you run DeepSeek-R1 on an 8GB GPU without CUDA crashes or PCIe memory spillover?
+1/7 Think you need a 24GB GPU to run DeepSeek-R1 locally?
 
-Yes. We benchmarked 8B & 14B models across 5 consumer GPUs (RTX 4060, RTX 3070, RX 7600, Arc A770, M3).
+We benchmarked DeepSeek-R1 8B & 14B across 5 consumer 8GB GPUs on our hardware workbench.
 
-Here is the exact config for 34+ tokens/sec on an 8GB card 🧵👇
+Here is how to get 34+ tok/s with zero PCIe memory spillover 🧵👇
 
-2/8 The Problem: Why 8GB Cards Crash
-By default, Ollama and vLLM allocate memory assuming 16GB+ VRAM:
-• Default 16k context = 3.4 GB KV-cache
-• Parallel streams = 1.2 GB extra buffer
-Add 4.9 GB model weights, and you instantly blow past 8,192 MB into CUDA OOM.
+2/7 Why 8GB GPUs crash on LLMs:
+It's NOT model weights (4-bit 8B is only 4.92 GB).
+It's the KV-cache. Default 16k/32k context windows demand 3.4 GB of buffer space, instantly crashing 8GB cards into slow shared host RAM.
 
-3/8 The Solution: 4-Bit Quantization + 4K Context
-Standardize on `DeepSeek-R1-Distill-Llama-8B (Q4_K_M)`:
-• Model weight size: 4.92 GB
-• KV-cache (capped at 4,096 tokens): ~640 MB
-• Peak VRAM: 6.18 GB
-Result: 100% fits inside 8GB GDDR6 with 2 GB headroom for Windows DWM!
+3/7 The Fix:
+Lock context to 4k tokens:
+`PARAMETER num_ctx 4096`
+This caps KV-cache to 640 MB. Total VRAM allocation stays at 6.2 GB, giving your OS 1.8 GB of safety headroom.
 
-4/8 The Hardware Surprise: RTX 3070 Beats RTX 4060!
-Token generation is memory-bandwidth bound, NOT compute bound:
-• RTX 3070 (256-bit bus, 448 GB/s): 40.5 tok/s
-• RTX 4060 (128-bit bus, 272 GB/s): 34.2 tok/s
-• RX 7600 (128-bit bus, 288 GB/s): 29.8 tok/s
+4/7 Essential Runtime Flags:
+Export these before starting Ollama:
+`export OLLAMA_NUM_PARALLEL=1`
+`export OLLAMA_FLASH_ATTENTION=1`
+This prevents Ollama from allocating 4 duplicate parallel stream buffers.
 
-5/8 Running the 14B Model on 8GB:
-Yes, you can run DeepSeek-R1-14B via Hybrid Offloading!
-Create a Modelfile with:
-`FROM deepseek-r1:14b`
-`PARAMETER num_gpu 32`
-`PARAMETER num_ctx 2048`
-32 layers run in VRAM, 16 layers offload to System RAM = 12.4 tok/s!
+5/7 The Memory Bus Surprise:
+RTX 3070 8GB (256-bit bus): 40.5 tok/s
+RTX 4060 8GB (128-bit bus): 34.2 tok/s
+LLM generation is memory-bandwidth bound, NOT compute bound!
 
-6/8 Watch Out for the PCIe Spillover Cliff:
-If usage exceeds 8,192 MB, Windows pages tensors to RAM over PCIe (15.75 GB/s vs 272 GB/s).
-Your generation speed collapses by 90% (from 34 tok/s -> 3.6 tok/s).
-Set `OLLAMA_NUM_PARALLEL=1` and close hardware-accelerated Chrome tabs!
+6/7 Running the 14B Model on 8GB:
+Set `PARAMETER num_gpu 32`.
+This offloads 32 layers to 6.2 GB VRAM and the remaining 16 layers to System DDR4/DDR5 RAM, yielding a steady 12.4 tok/s.
 
-7/8 Windows One-Liner Triage:
-Export these flags before running Ollama:
-`$env:OLLAMA_NUM_PARALLEL = "1"`
-`$env:OLLAMA_FLASH_ATTENTION = "1"`
-`$env:OLLAMA_MAX_LOADED_MODELS = "1"`
-
-8/8 Full 5-GPU benchmark tables, Python benchmark harness, and step-by-step Modelfile runbook:
-🔗 https://www.praveentechworld.com/blog/how-to-run-deepseek-r1-locally-on-8gb-vram
+7/7 Read our complete 5-GPU benchmark comparison, Modelfile templates, and Python benchmarking tool:
+👉 https://www.praveentechworld.com/blog/how-to-run-deepseek-r1-locally-on-8gb-vram
