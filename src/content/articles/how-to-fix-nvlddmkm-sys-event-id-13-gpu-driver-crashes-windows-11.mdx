@@ -4,7 +4,7 @@ description: "Getting nvlddmkm Event ID 13 GPU driver crashes on Windows 11? Our
 coverImage: "/images/articles/nvlddmkm-gpu-driver-crash-fix.jpg"
 imageAlt: "Minimal vector line drawing of a graphics card with an interrupted signal trace on an off-white background"
 publishDate: "2026-08-04"
-updatedDate: "2026-09-13"
+updatedDate: "2026-09-14"
 author: "praveen"
 category: "windows-fixes"
 problem_id: "PTW-HW-NVIDIA-E13-101"
@@ -49,6 +49,23 @@ Opening Windows Event Viewer (`eventvwr.msc > System`) revealed the underlying e
 
 In our developer and test lab environments, our team treats Event ID 13 as a diagnostic indicator, not an automatic death sentence for your graphics card. Microsoft's [Timeout Detection and Recovery (TDR) documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/timeout-detection-and-recovery) explains that when a GPU task fails to complete within 2 seconds, Windows resets the driver stack (`dxgkrnl.sys`) to avoid a total system lockup.
 
+---
+
+**Jump to a section:**
+- [Windows GPU Sub-System & TDR Fault Traversal](#windows-gpu-sub-system--tdr-fault-traversal)
+- [Event ID 13 Payload Decoding Matrix](#event-id-13-payload-decoding-matrix)
+- [What nvlddmkm Event ID 13 Actually Means](#what-nvlddmkm-event-id-13-actually-means)
+- [Did an Update Trigger the GPU Crash?](#did-an-update-trigger-the-gpu-crash)
+- [When to Use DDU in Safe Mode](#when-to-use-ddu-in-safe-mode)
+- [Avoid Risky TdrDelay Registry Modifications](#avoid-risky-tdrdelay-registry-modifications)
+- [Power, Thermal, and Overclocking Causes](#power-thermal-and-overclocking-causes)
+- [Isolating RAM and PCIe Hardware Faults](#isolating-ram-and-pcie-hardware-faults)
+- [Safe Windows and NVIDIA Settings to Test](#safe-windows-and-nvidia-settings-to-test)
+- [When Event 13 Signals Failing Hardware](#when-event-13-signals-failing-hardware)
+- [Final nvlddmkm Event ID 13 Checklist](#final-nvlddmkm-event-id-13-checklist)
+
+---
+
 ## Windows GPU Sub-System & TDR Fault Traversal
 
 ```text
@@ -89,7 +106,7 @@ Before editing random registry keys, inspect the message string in Event Viewer.
 
 ---
 
-## What does nvlddmkm.sys Event ID 13 tell you?
+## What nvlddmkm Event ID 13 Actually Means
 
 **It tells you the NVIDIA display-driver stack reported an unhandled graphics exception; it does not identify the root cause by itself.** Open **Event Viewer > Windows Logs > System**, select an Event ID 13 entry, and copy the complete message. Record the time, the game or application in use, whether the screen recovered, and any companion display, WHEA, or Kernel-Power events.
 
@@ -132,7 +149,7 @@ During setup, choose **Custom (Advanced)** and enable **Perform a clean installa
 
 Avoid third-party driver packs. They can mix files from different branches and make Event Viewer harder to interpret. Pause optional GPU overlays, capture tools, and tuning utilities during the first test. Re-enable them one at a time later.
 
-## When should you use DDU in Safe Mode?
+## When to Use DDU in Safe Mode
 
 **Use DDU as a second-line cleanup when a normal NVIDIA reinstall leaves a corrupted or conflicting display stack.** Download it from [Wagnardsoft](https://www.wagnardsoft.com/) and create a restore point first. Save the known-good NVIDIA installer locally, then disconnect from the internet so Windows Update does not immediately replace the driver during the test.
 
@@ -144,7 +161,7 @@ Avoid third-party driver packs. They can mix files from different branches and m
 
 DDU removes more of the old package than an ordinary overwrite. It does not repair a weak power supply, damaged VRAM, a bad PCIe slot, or an application that submits an unstable workload. If the same Event ID 13 returns on a clean driver, move to the physical checks rather than running DDU repeatedly.
 
-## Should you increase TdrDelay or TdrDdiDelay?
+## Avoid Risky TdrDelay Registry Modifications
 
 **Do not make TdrDelay the default fix.** Windows’ TDR path uses a timeout so a stuck graphics task does not keep the desktop frozen indefinitely. Microsoft documents the default TDR delay as 2 seconds, but its [TDR registry-key guidance](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/tdr-registry-keys) says those values are intended for driver development and testing and that end users should not manipulate them.
 
@@ -196,7 +213,7 @@ When you capture a “clean” run, define it. A ten-minute test with no event i
 
 Keep the original Event Viewer export as well as the text summary. A support engineer can compare the provider, event ID, driver version, and timestamp even when the screen recovered before you could take a screenshot. That small evidence packet is more useful than a list of registry tweaks because it preserves the conditions that produced the fault.
 
-## When does Event ID 13 point to failing hardware?
+## When Event 13 Signals Failing Hardware
 
 **Suspect hardware when stock settings, a clean driver, and more than one workload still produce the same failure.** Stronger evidence includes artifacts before the crash, repeated failures after a cold boot, WHEA errors, crashes that follow the card into another known-good system, or failures that disappear when a known-good card is installed.
 
@@ -209,7 +226,7 @@ For related hardware and driver diagnostics from our team:
 - [WSL2 Internet Not Working? Fix DNS, VPN & NAT Routing](/blog/wsl2-internet-not-working-windows-11-dns-vpn-fixes)
 - [Windows 11 Volume Control Not Working: 8 Proven Fixes for 2026](/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026)
 
-## Final checklist for nvlddmkm.sys Event ID 13
+## Final nvlddmkm Event ID 13 Checklist
 
 **The shortest safe path is: capture the event, test a supported driver, return hardware to stock, check power and temperatures, then escalate with evidence.**
 
