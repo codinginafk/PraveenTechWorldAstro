@@ -52,6 +52,7 @@ Below is our complete workbench runbook covering what changed, how the servicing
 - [25H2 vs 24H2 Performance Benchmarks](#25h2-vs-24h2-performance-benchmarks)
 - [Windows 11 25H2 Servicing Pipeline](#windows-11-25h2-servicing-pipeline)
 - [Fix KB5124008 Install Loop Errors](#fix-kb5124008-install-loop-errors)
+- [Offline DISM Repair for Error 0x800f081f](#offline-dism-repair-for-error-0x800f081f)
 - [Hardware Requirements & TPM Bypass](#hardware-requirements--tpm-bypass)
 - [Final 25H2 Upgrade Checklist](#final-25h2-upgrade-checklist)
 
@@ -218,6 +219,45 @@ If your system throws a specific hex exception code during the reboot phase, you
 * **`0x80070002` (ERROR_FILE_NOT_FOUND):** Manifest missing from BCD store. Run `chkdsk /f C:` and retry.
 
 For general update troubleshooting principles, review our comprehensive [step-by-step Windows 11 update error guide](/blog/how-to-fix-windows-11-update-errors-in-2026-step-by-step-troubleshooting-guide).
+
+---
+
+## Offline DISM Repair for Error 0x800f081f
+
+**Direct Answer:** When standard online DISM repair fails with error code `0x800f081f` (CBS_E_SOURCE_MISSING), Windows cannot locate replacement component manifests on Microsoft's cloud servers. Mounting a clean Windows 11 25H2 ISO and pointing DISM directly to its `install.wim` (or `install.esd`) with the `/LimitAccess` flag completely bypasses cloud staging and forces local component store restoration.
+
+On our workbench rigs, standard online `dism /Online /Cleanup-Image /RestoreHealth` commands failed on three test machines where previous 24H2 cumulative updates left fragmented Component Store staging trees. 
+
+Follow this exact offline mounting runbook:
+
+1. **Mount the Official ISO in PowerShell (Admin):**
+```powershell
+# Mount the downloaded Windows 11 25H2 ISO image
+$isoPath = "C:\ISO\Windows_11_25H2_x64.iso"
+$mountResult = Mount-DiskImage -ImagePath $isoPath -PassThru
+$driveLetter = ($mountResult | Get-Volume).DriveLetter + ":"
+Write-Host "ISO mounted successfully to drive $driveLetter" -ForegroundColor Green
+```
+2. **Inspect Available Image Indices:**
+Determine whether your installation image uses `install.wim` or compressed `install.esd`, and identify your exact Windows edition index (e.g., Index 1 for Home, Index 6 for Pro):
+```powershell
+$wimPath = "$driveLetter\sources\install.wim"
+if (-not (Test-Path $wimPath)) { $wimPath = "$driveLetter\sources\install.esd" }
+dism.exe /Get-WimInfo /WimFile:$wimPath
+```
+3. **Execute Offline DISM Repair with LimitAccess:**
+Point DISM directly to your mounted index and restrict it from polling Windows Update servers:
+```powershell
+# Replace ':6' with your target edition index from the query above
+dism.exe /Online /Cleanup-Image /RestoreHealth /Source:wim:$wimPath:6 /LimitAccess
+```
+4. **Dismount and Verify System File Integrity:**
+```powershell
+Dismount-DiskImage -ImagePath $isoPath
+sfc /scannow
+```
+
+Once `sfc /scannow` reports "Windows Resource Protection did not find any integrity violations," restart your PC and click **Check for updates**. The KB5124008 25H2 update will download cleanly and install without hitting the 100% rollback loop.
 
 ---
 
