@@ -4,7 +4,7 @@ description: "Fix nvlddmkm Event ID 153 GPU crashes on Windows 11. Learn how to 
 coverImage: "/images/generated/how-to-fix-nvlddmkm-event-id-153-gpu-crashes.jpg"
 imageAlt: "Minimal flat editorial illustration of a modern graphics processing unit PCIe circuit board with an alert amber memory trace line on an off-white background"
 publishDate: "2026-08-15"
-updatedDate: "2026-09-06"
+updatedDate: "2026-09-14"
 author: "praveen"
 category: "hardware-troubleshooting"
 pillarId: "hardware-troubleshooting"
@@ -107,7 +107,20 @@ Here is a safe diagnostic workflow that keeps the driver, workload, power, cooli
 |  +-------------------------------------+   +------------------------------------+ |
 +-----------------------------------------------------------------------------------+
 
-## 📊 NVIDIA Event ID 153 Triage Decision Matrix
+---
+
+**Jump to a section:**
+- [Event ID 153 Triage Decision Matrix](#event-id-153-triage-decision-matrix)
+- [Step 1: Capture Event and Probe Telemetry](#step-1-capture-event-and-probe-telemetry)
+- [Step 2: Test Disabling GPU Scheduling](#step-2-test-disabling-gpu-scheduling)
+- [Step 3: Avoid Risky TDR Registry Hacks](#step-3-avoid-risky-tdr-registry-hacks)
+- [Step 4: Verify PCIe Link and 12V Power](#step-4-verify-pcie-link-and-12v-power)
+- [Step 5: Clean DDU Driver Purge in Safe Mode](#step-5-clean-ddu-driver-purge-in-safe-mode)
+- [Related GPU and Driver Diagnostic Guides](#related-gpu-and-driver-diagnostic-guides)
+
+---
+
+## Event ID 153 Triage Decision Matrix
 
 **Direct Answer:** Use this triage matrix to map the specific symptoms accompanying Event ID 153 to their root mechanical cause and targeted fix.
 
@@ -121,7 +134,7 @@ Here is a safe diagnostic workflow that keeps the driver, workload, power, cooli
 
 ---
 
-## 🔍 Step 1: Capture the event and probe GPU telemetry
+## Step 1: Capture Event and Probe Telemetry
 
 **Direct Answer:** Before making any configuration changes, audit the exact Event ID 153 retry timestamps, check whether retries escalate to Event 4101 TDRs, and query current PCIe link bandwidth.
 
@@ -221,7 +234,7 @@ Write-Host "`n=== Triage Probe Complete ===" -ForegroundColor Cyan
 
 ---
 
-## ⚡ Step 2: Test Hardware-Accelerated GPU Scheduling (HAGS)
+## Step 2: Test Disabling GPU Scheduling
 
 **Direct Answer:** Toggle Hardware-Accelerated GPU Scheduling (HAGS) to Off in Windows Graphics Settings to isolate whether DirectX 12 VRAM paging race conditions are triggering the IO retry warnings.
 
@@ -238,7 +251,7 @@ If Event ID 153 stops occurring, HAGS memory contention was the culprit. If the 
 
 ---
 
-## 🛠️ Step 3: Avoid TDR registry hacks (TdrDelay / TdrLevel)
+## Step 3: Avoid Risky TDR Registry Hacks
 
 **Direct Answer:** Never increase TdrDelay or TdrLevel in the Windows Registry to bypass Event ID 153; artificial delays mask PCIe signal degradation or thermal throttling and turn recoverable driver resets into hard operating system lockups.
 
@@ -248,7 +261,7 @@ When we intentionally added `TdrDelay=10` to an unstable RTX 3080 rig experienci
 
 ---
 
-## ⚙️ Step 4: Verify PCIe link integrity and 12V power stability
+## Step 4: Verify PCIe Link and 12V Power
 
 **Direct Answer:** Eliminate physical PCIe bus degradation and power rail droop by reseating the GPU into the primary x16 motherboard slot, removing flexible riser cables, and verifying that the 12VHPWR/PCIe auxiliary power connectors are fully latched without daisy chaining.
 
@@ -260,7 +273,7 @@ In over 60% of persistent Event ID 153 cases diagnosed in our lab, the underlyin
 
 ---
 
-## 🧹 Step 5: Perform a clean DDU driver purge in Safe Mode
+## Step 5: Clean DDU Driver Purge in Safe Mode
 
 **Direct Answer:** If paging retries persist across multiple game titles or AI frameworks, boot into Windows Safe Mode and run Display Driver Uninstaller (DDU) to wipe corrupt shader caches and stale registry hooks before installing a clean WHQL NVIDIA driver.
 
@@ -276,7 +289,7 @@ Standard driver reinstalls often leave old shader caches, PhysX remnants, and co
 
 ---
 
-## 📋 Summary & Internal Diagnostic Runbooks
+## Related GPU and Driver Diagnostic Guides
 
 `nvlddmkm` Event ID 153 is an early telemetry signal from the Windows Display Driver Model indicating that a VRAM paging request failed to complete on time and had to be retried. By auditing the event frequency with our PowerShell probe, testing HAGS isolation, keeping TDR registry keys clean, and verifying physical PCIe link integrity, you can eliminate the root cause before it escalates into full system crashes.
 
