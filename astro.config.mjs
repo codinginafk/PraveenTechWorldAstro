@@ -29,6 +29,12 @@ export default defineConfig({
   site: "https://www.praveentechworld.com",
   trailingSlash: "never",
   redirects: {
+    "/blog/google-search-alternatives-kagi-brave-duckduckgo-compared": "/blog/degoogle-starter-pack-complete-guide",
+    "/blog/best-gmail-alternatives-proton-tuta-fastmail-migration-guide": "/blog/degoogle-starter-pack-complete-guide",
+    "/blog/google-drive-alternatives-proton-drive-nextcloud-syncthing-guide": "/blog/degoogle-starter-pack-complete-guide",
+    "/blog/google-photos-alternatives-immich-ente-photos-migration-guide": "/blog/degoogle-starter-pack-complete-guide",
+    "/blog/degoogle-android-phone-grapheneos-aurora-store-complete-guide": "/blog/degoogle-starter-pack-complete-guide",
+    "/blog/google-maps-alternatives-organic-maps-osmand-privacy-guide": "/blog/degoogle-starter-pack-complete-guide",
     "/blog/best-password-manager-for-small-business-2026": "/blog/best-password-managers-in-2026-security-features-and-pricing-compared",
     "/blog/how-to-fix-windows-11-update-error-0x800f081f": "/blog/fix-windows-11-update-errors-2026-troubleshooting",
     "/tag/windows performance": "/tag/windows-fixes",
