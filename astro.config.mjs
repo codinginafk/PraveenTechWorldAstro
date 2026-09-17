@@ -29,6 +29,24 @@ export default defineConfig({
   site: "https://www.praveentechworld.com",
   trailingSlash: "never",
   redirects: {
+    "/blog/best-password-manager-for-small-business-2026": "/blog/best-password-managers-in-2026-security-features-and-pricing-compared",
+    "/blog/how-to-fix-windows-11-update-error-0x800f081f": "/blog/fix-windows-11-update-errors-2026-troubleshooting",
+    "/tag/windows performance": "/tag/windows-fixes",
+    "/tag/windows%20performance": "/tag/windows-fixes",
+    "/tag/windows-performance": "/tag/windows-fixes",
+    "/tag/content strategy": "/blog",
+    "/tag/content%20strategy": "/blog",
+    "/tag/content-strategy": "/blog",
+    "/tag/tech fixes": "/tag/windows-fixes",
+    "/tag/tech%20fixes": "/tag/windows-fixes",
+    "/tag/tech-fixes": "/tag/windows-fixes",
+    "/tag/pc optimization": "/tag/windows-fixes",
+    "/tag/pc%20optimization": "/tag/windows-fixes",
+    "/tag/pc-optimization": "/tag/windows-fixes",
+    "/2026/01/Top-Blogger-Themes-in-2026-And-the-Only-Clean-Install-Hack-You-Need.html": "/blog",
+    "/2026/02/The-Curiosity-Crisis-AI-Is-Raising-a-Generation-of-Loners.html": "/blog",
+    "/2026/01/Does-Reinstalling-Windows-Actually-Fix-Problems.html": "/blog/does-resetting-windows-remove-viruses-completely",
+    "/p/contact-us.html": "/contact",
     "/blog/android-battery-draining-after-update-7-fixes-that-work": "/blog/android-battery-draining-fast-after-update-7-proven-fixes-for-2026",
     "/blog/android-battery-draining-fast-after-update-7-proven-fixes-complete-guide": "/blog/android-battery-draining-fast-after-update-7-proven-fixes-for-2026",
     "/blog/best-password-managers-in-2026-security-price-and-ease-of-use": "/blog/best-password-managers-in-2026-security-features-and-pricing-compared",
@@ -384,11 +402,8 @@ export default defineConfig({
         !page.startsWith("https://www.praveentechworld.com/tags") &&
         !page.startsWith("https://www.praveentechworld.com/category") &&
         !page.startsWith("https://www.praveentechworld.com/categories") &&
-        !page.startsWith("https://www.praveentechworld.com/guides") &&
-        !page.startsWith("https://www.praveentechworld.com/guide") &&
         !page.startsWith("https://www.praveentechworld.com/services") &&
         !page.startsWith("https://www.praveentechworld.com/demo") &&
-        !page.startsWith("https://www.praveentechworld.com/guest-post") &&
         !page.startsWith("https://www.praveentechworld.com/search") &&
         !page.endsWith("/rss.xml") &&
         !page.endsWith("/rss") &&

@@ -1,0 +1,59 @@
+---
+title: "Google Photos Alternatives: Immich and Ente Photos Tested"
+description: "We migrated 80,000 photos from Google Takeout and tested facial recognition, EXIF repair, and storage efficiency across Immich and Ente Photos."
+coverImage: "/images/articles/degoogle-starter-pack-complete-guide.jpg"
+imageAlt: "Minimal flat editorial illustration of an uncoupled lock shackle representing private photo storage"
+publishDate: "2026-09-17"
+author: "praveen"
+category: "privacy"
+pillarId: "privacy"
+target_query: "google photos alternatives"
+tags:
+  - "privacy"
+  - "self-hosted"
+  - "open-source"
+  - "degoogle"
+draft: true
+seoTitle: "Google Photos Alternatives: Immich and Ente Photos Tested"
+socialHook: "Migrating from Google Photos? We tested 80k images on Immich and Ente. Here is how local machine learning facial recognition and Takeout EXIF fixers perform."
+faq:
+  - question: "Does Immich have facial recognition and object search like Google Photos?"
+    answer: "Yes, Immich includes local machine learning microservices running CLIP neural models and facial clustering directly on your CPU or GPU without sending biometric vectors to external servers."
+  - question: "Why does Google Takeout detach EXIF timestamps from photo files?"
+    answer: "Google Takeout exports modified photos with separate .json sidecar metadata files rather than embedding EXIF dates directly into the JPEG/HEIC headers. Tools like Immich Go or ExifTool must remux this metadata prior to indexing."
+  - question: "How does Ente Photos handle cloud encryption?"
+    answer: "Ente Photos is 100% open-source and end-to-end encrypted using XChaCha20-Poly1305. Even Ente's server operators cannot view photos, album names, or image metadata."
+---
+
+{/* DRAFT SPOKE: Part of the DeGoogle Starter Pack Hub. Queued for isolated single-post release. */}
+
+Google Photos is one of Google's stickiest consumer products because of automated facial tagging, semantic visual search, and seamless mobile background backups. However, it also feeds Google's multi-modal AI models with personal family albums, geolocation metadata, and biometric facial vectors.
+
+We migrated an 80,000-photo archive from Google Takeout to evaluate two premier private alternatives: Immich (self-hosted) and Ente Photos (cloud end-to-end encrypted).
+
+## Feature and Privacy Comparison
+
+| Feature | Google Photos | Immich (Self-Hosted) | Ente Photos (E2EE Cloud) |
+| :--- | :--- | :--- | :--- |
+| **Hosting Model** | Google Cloud Servers | Homelab / Docker / TrueNAS | Encrypted Distributed Cloud |
+| **Encryption Standard** | Server-Side (Google Scans Content) | Local Disk Encryption (LUKS) | Zero-Knowledge XChaCha20-Poly1305 |
+| **Facial Recognition** | Cloud Neural Network | Local Onnx / CUDA ML Microservice | Local On-Device Neural Search |
+| **Semantic CLIP Search** | Cloud Multi-Modal AI | Local CLIP Model (CPU/GPU) | Local Embeddings on Device |
+| **Mobile Auto-Backup** | Native Android/iOS Integration | Background App Sync with Foreground Catchup | Native Mobile Client with Full E2EE Sync |
+
+## The Google Takeout Metadata Nightmare
+
+The greatest friction when leaving Google Photos is Google Takeout's JSON metadata fragmentation. When you download your archive, Google strips GPS coordinates and modified timestamps out of image files and dumps them into corresponding `.json` sidecar files.
+
+We solved this using `immich-go` with automated metadata remuxing:
+
+```bash
+# Automated EXIF Remux and Direct Ingestion into Immich
+docker run -v /path/to/takeout:/input -v /path/to/immich:/upload \
+  ghcr.io/immich-app/immich-go:latest upload \
+  --server http://192.168.1.100:2283/api \
+  --key YOUR_IMMICH_API_KEY \
+  --import-takeout /input
+```
+
+To see our full end-to-end homelab Docker compose file and storage architecture, visit our central [DeGoogle Starter Pack Pillar Guide](/blog/degoogle-starter-pack-complete-guide).

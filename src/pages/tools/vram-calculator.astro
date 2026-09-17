@@ -268,13 +268,21 @@ const seo = {
 
         <!-- CLI Commands Ready-to-Run Box -->
         <div class="rounded-2xl border border-border bg-surface p-6 shadow-sm dark:border-border-dark dark:bg-surface-dark">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 class="text-base font-bold text-text dark:text-text-dark flex items-center gap-2">
               <span>💻</span> Ready-to-Run CLI Commands
             </h3>
-            <button id="copy-btn" type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 transition dark:bg-brand-500 dark:hover:bg-brand-600 cursor-pointer shadow-sm">
-              <span>📋</span> Copy Ollama
-            </button>
+            <div class="flex items-center gap-1.5">
+              <button id="copy-reddit-btn" type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-2.5 py-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 transition cursor-pointer shadow-sm" title="Copy pre-formatted Reddit Markdown with link">
+                <span>📋</span> Copy Reddit
+              </button>
+              <button id="copy-btn" type="button" class="inline-flex items-center gap-1.5 rounded-lg border border-brand-500/30 bg-brand-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 transition dark:bg-brand-500 dark:hover:bg-brand-600 cursor-pointer shadow-sm">
+                <span>📋</span> Copy Ollama
+              </button>
+              <button id="copy-link-btn" type="button" class="inline-flex items-center gap-1 rounded-lg border border-border dark:border-border-dark bg-surface-alt dark:bg-surface-dark-alt px-2 py-1.5 text-xs font-medium text-text-muted dark:text-text-dark-muted hover:border-brand-500 hover:text-brand-600 transition cursor-pointer shadow-sm" title="Copy shareable permalink">
+                <span>🔗</span> Link
+              </button>
+            </div>
           </div>
 
           <!-- Ollama Command -->
@@ -380,6 +388,49 @@ const seo = {
       const ollamaCmd = document.getElementById("ollama-cmd");
       const llamacppCmd = document.getElementById("llamacpp-cmd");
       const copyBtn = document.getElementById("copy-btn");
+      const copyRedditBtn = document.getElementById("copy-reddit-btn");
+      const copyLinkBtn = document.getElementById("copy-link-btn");
+
+      let currentHeadroomGB = 0;
+      let currentTotalReqGB = 0;
+      let currentTotalGpuGB = 8;
+      let currentModelSpec = MODEL_SPECS["deepseek-r1-7b"];
+      let currentContext = 8192;
+
+      function syncUrlParams() {
+        const url = new URL(window.location.href);
+        url.searchParams.set("gpu", gpuSelect.value);
+        url.searchParams.set("model", modelSelect.value);
+        url.searchParams.set("quant", quantSelect.value);
+        url.searchParams.set("ctx", contextSlider.value);
+        url.searchParams.set("kv", kvSelect.value);
+        window.history.replaceState(null, "", url.toString());
+      }
+
+      function buildRedditMarkdown() {
+        const gpuName = gpuSelect.options[gpuSelect.selectedIndex]?.text || "Custom GPU";
+        const modelName = modelSelect.options[modelSelect.selectedIndex]?.text || "Custom Model";
+        const quantText = quantSelect.options[quantSelect.selectedIndex]?.text || quantSelect.value;
+        const kvText = kvSelect.options[kvSelect.selectedIndex]?.text || kvSelect.value;
+        const shareUrl = window.location.href;
+
+        const verdict = currentHeadroomGB >= 0.8
+          ? "🟢 **100% GPU Offload (Full Hardware Acceleration)**"
+          : (currentHeadroomGB >= -2.0 ? "🟡 **Tight VRAM (Potential CPU Spillover / Recommend FP8 KV)**" : "🔴 **Out of Memory (OOM / Heavy CPU Layer Offload Required)**");
+
+        return `**Local AI VRAM Calculation**: ${modelName} on ${gpuName}
+- **Quantization Precision**: ${quantText}
+- **Context Length**: ${currentContext.toLocaleString()} tokens | **KV Cache**: ${kvText}
+- **Memory Allocation Breakdown**:
+  - Model Weights: ${statWeights.textContent}
+  - KV Cache (Context): ${statKv.textContent}
+  - CUDA Runtime & Buffers: ${statCuda.textContent}
+  - **Total Required VRAM**: ${vramTotalText.textContent}
+- **Hardware Verdict**: ${verdict} (${statHeadroom.textContent} headroom)
+- **Ollama CLI Flag**: \`${ollamaCmd.textContent}\`
+
+📊 *Calculated via [PraveenTechWorld Local AI VRAM Calculator](${shareUrl})*`;
+      }
 
       function updateCalculator() {
         // 1. Get GPU VRAM
@@ -427,6 +478,12 @@ const seo = {
         const headroomGB = totalGpuVram - totalRequiredGB;
         const usagePercent = Math.min(100, Math.max(0, (totalRequiredGB / totalGpuVram) * 100));
 
+        currentHeadroomGB = headroomGB;
+        currentTotalReqGB = totalRequiredGB;
+        currentTotalGpuGB = totalGpuVram;
+        currentModelSpec = spec;
+        currentContext = context;
+
         // Update UI Stats
         statWeights.textContent = weightsGB.toFixed(2) + " GB";
         statKv.textContent = kvGB.toFixed(2) + " GB";
@@ -472,6 +529,45 @@ const seo = {
         if (kvPrecisionBits === 8) llamaKvFlag = " --ctk q8_0 --ctv q8_0";
         else if (kvPrecisionBits === 4) llamaKvFlag = " --ctk q4_0 --ctv q4_0";
         llamacppCmd.textContent = "llama-cli -m " + tag.replace(":", "-") + ".gguf -ngl 99 -c " + context + llamaKvFlag;
+
+        // Keep URL in sync with user selections
+        syncUrlParams();
+      }
+
+      // Initialize from URL search parameters if provided
+      function initFromUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+
+        if (params.has("gpu")) {
+          const gVal = params.get("gpu");
+          if ([...gpuSelect.options].some(o => o.value === gVal)) {
+            gpuSelect.value = gVal;
+          }
+        }
+        if (params.has("model")) {
+          const mVal = params.get("model");
+          if ([...modelSelect.options].some(o => o.value === mVal)) {
+            modelSelect.value = mVal;
+          }
+        }
+        if (params.has("quant")) {
+          const qVal = params.get("quant");
+          if ([...quantSelect.options].some(o => o.value === qVal)) {
+            quantSelect.value = qVal;
+          }
+        }
+        if (params.has("ctx")) {
+          const cVal = parseInt(params.get("ctx"), 10);
+          if (!isNaN(cVal) && cVal >= 2048 && cVal <= 131072) {
+            contextSlider.value = cVal;
+          }
+        }
+        if (params.has("kv")) {
+          const kVal = params.get("kv");
+          if ([...kvSelect.options].some(o => o.value === kVal)) {
+            kvSelect.value = kVal;
+          }
+        }
       }
 
       // Event Listeners
@@ -480,7 +576,7 @@ const seo = {
         el.addEventListener("change", updateCalculator);
       });
 
-      // 1-Click Copy
+      // 1-Click Copy Ollama
       copyBtn.addEventListener("click", () => {
         navigator.clipboard.writeText(ollamaCmd.textContent).then(() => {
           copyBtn.innerHTML = "<span>✅</span> Copied!";
@@ -488,7 +584,25 @@ const seo = {
         });
       });
 
+      // 1-Click Copy Reddit Markdown
+      copyRedditBtn.addEventListener("click", () => {
+        const redditMd = buildRedditMarkdown();
+        navigator.clipboard.writeText(redditMd).then(() => {
+          copyRedditBtn.innerHTML = "<span>✅</span> Copied Reddit!";
+          setTimeout(() => { copyRedditBtn.innerHTML = "<span>📋</span> Copy Reddit"; }, 2000);
+        });
+      });
+
+      // 1-Click Copy Permalink
+      copyLinkBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          copyLinkBtn.innerHTML = "<span>✅</span> Copied!";
+          setTimeout(() => { copyLinkBtn.innerHTML = "<span>🔗</span> Link"; }, 2000);
+        });
+      });
+
       // Initial Call
+      initFromUrlParams();
       updateCalculator();
     })();
   </script>
