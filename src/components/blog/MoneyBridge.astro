@@ -1,0 +1,99 @@
+﻿---
+import campaignsData from "../../data/money-campaigns.json";
+
+interface Props {
+  category?: string;
+  tags?: string[];
+  currentSlug?: string;
+  pillarId?: string;
+}
+
+const { category = "", tags = [], currentSlug = "", pillarId = "" } = Astro.props;
+
+interface Campaign {
+  id: string;
+  target_url: string;
+  intent: string;
+  priority: number;
+  match_categories: string[];
+  match_tags: string[];
+  exclude_slugs: string[];
+  callout_badge: string;
+  lead_text: string;
+  anchors: string[];
+  status: string;
+}
+
+const campaigns: Campaign[] = campaignsData as Campaign[];
+
+// Normalization
+const catNorm = category.toLowerCase().trim();
+const tagsNorm = tags.map(t => t.toLowerCase().trim());
+const cleanSlug = currentSlug.replace(/^\/|\/$/g, "");
+
+// Filter matching active campaigns
+const matchingCampaigns = campaigns.filter(c => {
+  if (c.status !== "active") return false;
+  
+  // Check self-linking & exclusions
+  if (c.target_url.includes(cleanSlug)) return false;
+  if (c.exclude_slugs && c.exclude_slugs.some(s => cleanSlug.includes(s) || s.includes(cleanSlug))) return false;
+
+  // Match on category
+  const matchesCategory = c.match_categories.some(mc => mc.toLowerCase() === catNorm || mc.toLowerCase() === pillarId.toLowerCase());
+  
+  // Match on tags
+  const matchesTag = c.match_tags.some(mt => tagsNorm.some(tn => tn.includes(mt.toLowerCase()) || mt.toLowerCase().includes(tn)));
+
+  return matchesCategory || matchesTag;
+});
+
+// Sort by priority descending
+matchingCampaigns.sort((a, b) => b.priority - a.priority);
+const activeCampaign = matchingCampaigns[0] || null;
+
+// Deterministic anchor selection using string hash
+function getDeterministicAnchor(slug: string, anchors: string[]): string {
+  if (!anchors || anchors.length === 0) return "Read our full guide →";
+  let hash = 0;
+  for (let i = 0; i < slug.length; i++) {
+    hash = (hash << 5) - hash + slug.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % anchors.length;
+  return anchors[index];
+}
+
+const selectedAnchor = activeCampaign ? getDeterministicAnchor(cleanSlug, activeCampaign.anchors) : "";
+---
+
+{activeCampaign && (
+  <div class="my-6 rounded-xl border border-brand-200/80 bg-gradient-to-r from-brand-50/70 via-surface to-brand-50/40 p-4 sm:p-5 shadow-xs transition-all dark:border-brand-800/40 dark:from-brand-950/20 dark:via-surface-dark dark:to-brand-900/10">
+    <div class="flex items-start gap-3.5">
+      <div class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-600/10 text-brand-600 dark:bg-brand-400/10 dark:text-brand-400">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+        </svg>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="inline-flex items-center rounded-md bg-brand-600/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-brand-700 dark:bg-brand-400/10 dark:text-brand-300">
+            {activeCampaign.callout_badge}
+          </span>
+        </div>
+        <p class="text-xs sm:text-sm text-text-muted dark:text-text-dark-muted leading-relaxed mb-2.5">
+          {activeCampaign.lead_text}
+        </p>
+        <a
+          href={activeCampaign.target_url}
+          class="group inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400 dark:hover:text-brand-300 transition-colors"
+        >
+          <span>{selectedAnchor}</span>
+          <svg class="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+)}

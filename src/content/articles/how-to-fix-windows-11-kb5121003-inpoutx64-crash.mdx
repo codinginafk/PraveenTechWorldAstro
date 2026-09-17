@@ -15,6 +15,11 @@ tags:
   - "bsod"
   - "driver-issues"
 draft: false
+quickAnswer:
+  summary: "Games crashing to desktop after Windows Update KB5121003? A legacy RGB driver (inpoutx64.sys) conflicts with Windows memory protection. Disabling its boot service stops the crashes immediately."
+  command: 'Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\inpoutx64" -Name "Start" -Value 4 -Type DWord'
+  hook: "Official Microsoft-verified fix. Reversible and tested across ARC Raiders and THE FINALS."
+  scrollCta: "Need the Registry Editor steps or verification checks? Full guide below ↓"
 seoTitle: "KB5121003 Update: Fix Windows 11 Game Crashes & Inpoutx64"
 socialHook: "Windows 11 KB5121003 making games freeze or reboot? Microsoft links the issue to RGB-related inpoutx64 drivers. Try this reversible workaround before removing the security update."
 faq:
@@ -43,7 +48,11 @@ references:
 
 ---
 
-> **Direct Answer (KB5121003 inpoutx64 Crash):** If games freeze, crash to desktop with `EXCEPTION_ACCESS_VIOLATION` (`0xC0000005`), or trigger random machine reboots after installing Windows 11 update KB5121003, the root cause is a kernel memory protection conflict with legacy RGB peripheral helper drivers named `inpoutx64.sys`. Under KB5121003's hardened Hypervisor-Protected Code Integrity (HVCI) rules, unauthorized direct Ring 0 port I/O calls from bundled RGB utilities (like Gigabyte RGB Fusion, ASUS Armoury Crate plugins, or OpenRGB) are trapped and terminated by the Windows kernel. On our diagnostic workbench, Microsoft's verified reversible workaround resolves the crash in under two minutes: (1) press `Win + R`, type `regedit`, and hit Enter, (2) navigate to `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\inpoutx64`, (3) double-click the `Start` DWORD value and change it to `4` (Disabled), and (4) restart your workstation. This eliminates anti-cheat boot blocks and game crashes immediately while leaving your core hardware intact until peripheral vendors release WHQL-certified driver updates.
+If your games started crashing to desktop or freezing right after installing Windows 11 update KB5121003, you're not alone.
+
+On our gaming workbench rigs, *THE FINALS* and *ARC Raiders* started crashing within 3 minutes of launching. Microsoft confirmed the culprit: older RGB lighting software (bundled with Gigabyte RGB Fusion, ASUS Armoury Crate, or OpenRGB) uses a legacy helper driver called `inpoutx64.sys` that clashes with Windows 11's memory protections.
+
+You do not need to uninstall the entire security update. Here is the fast, two-minute registry fix we used to stop the game crashes completely.
 
 On our workbench test rigs running Windows 11 24H2 and 25H2 (Build 26100), updating to KB5121003 triggered immediate crash-to-desktop (CTD) events in *THE FINALS* and *ARC Raiders* within 3 to 5 minutes of entering a multiplayer match. Our team traced the crash dumps directly to `inpoutx64.sys`—a ubiquitous legacy 64-bit parallel port / direct memory I/O driver bundled into third-party RGB software (such as Gigabyte RGB Fusion, ASUS Armoury Crate plugins, and older OpenRGB builds). Under KB5121003's updated kernel memory protection rules, unauthorized Ring 0 port calls immediately trigger an unhandled kernel trap or crash the calling game process.
 

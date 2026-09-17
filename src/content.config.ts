@@ -26,6 +26,14 @@ const articles = defineCollection({
     canonical: z.url().optional(),
     socialHook: z.string().optional(),
     readingTime: z.number().optional(),
+    quickAnswer: z
+      .object({
+        summary: z.string(),
+        command: z.string().optional(),
+        hook: z.string().optional(),
+        scrollCta: z.string().optional(),
+      })
+      .optional(),
     faq: z
       .array(
         z.object({
