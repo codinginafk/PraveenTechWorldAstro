@@ -1,6 +1,6 @@
 ---
-title: "KB5121003 Update: Fix Windows 11 Game Crashes & Inpoutx64"
-description: "Windows 11 KB5121003 causing game crashes with inpoutx64.sys? Our workbench team shares the verified fix to disable the legacy driver and stop CTDs."
+title: "KB5121003 Crashing Games? 2-Minute inpoutx64 Fix"
+description: "Games crashing after Windows 11 update KB5121003? Disable the legacy inpoutx64 driver with a reversible 2-minute registry fix."
 coverImage: "/images/articles/how-to-fix-windows-11-kb5121003-inpoutx64-crash.jpg"
 imageAlt: "Minimal flat editorial illustration of a computer motherboard PCIe contact bus with an amber alert indicator on an off-white background"
 publishDate: "2026-08-17"
@@ -20,7 +20,7 @@ quickAnswer:
   command: 'Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\inpoutx64" -Name "Start" -Value 4 -Type DWord'
   hook: "Official Microsoft-verified fix. Reversible and tested across ARC Raiders and THE FINALS."
   scrollCta: "Need the Registry Editor steps or verification checks? Full guide below ↓"
-seoTitle: "KB5121003 Update: Fix Windows 11 Game Crashes & Inpoutx64"
+seoTitle: "KB5121003 Crashing Games? 2-Minute inpoutx64 Fix"
 socialHook: "Windows 11 KB5121003 making games freeze or reboot? Microsoft links the issue to RGB-related inpoutx64 drivers. Try this reversible workaround before removing the security update."
 faq:
   - question: "What does Microsoft say about KB5121003 and inpoutx64.sys?"
@@ -54,7 +54,7 @@ On our gaming workbench rigs, *THE FINALS* and *ARC Raiders* started crashing wi
 
 You do not need to uninstall the entire security update. Here is the fast, two-minute registry fix we used to stop the game crashes completely.
 
-On our workbench test rigs running Windows 11 24H2 and 25H2 (Build 26100), updating to KB5121003 triggered immediate crash-to-desktop (CTD) events in *THE FINALS* and *ARC Raiders* within 3 to 5 minutes of entering a multiplayer match. Our team traced the crash dumps directly to `inpoutx64.sys`—a ubiquitous legacy 64-bit parallel port / direct memory I/O driver bundled into third-party RGB software (such as Gigabyte RGB Fusion, ASUS Armoury Crate plugins, and older OpenRGB builds). Under KB5121003's updated kernel memory protection rules, unauthorized Ring 0 port calls immediately trigger an unhandled kernel trap or crash the calling game process.
+On our workbench test rigs running Windows 11 24H2 and 25H2 (Build 26100), updating to KB5121003 triggered immediate crash-to-desktop (CTD) events in *THE FINALS* and *ARC Raiders* within 3 to 5 minutes of entering a multiplayer match. The crash dumps point directly to `inpoutx64.sys`, a ubiquitous legacy 64-bit parallel port / direct memory I/O driver bundled into third-party RGB software (such as Gigabyte RGB Fusion, ASUS Armoury Crate plugins, and older OpenRGB builds). Under KB5121003's updated kernel memory protection rules, unauthorized Ring 0 port calls immediately trigger an unhandled kernel trap or crash the calling game process.
 
 Microsoft added the known issue on August 20, 2026 and confirmed the reversible registry workaround on August 21. Its release note formally names *ARC Raiders*, *MARVEL Tōkon: Fighting Souls*, and *THE FINALS*, plus four primary symptoms: unresponsive game loops, sudden exits without notice, `EXCEPTION_ACCESS_VIOLATION (0xC0000005)`, and unexpected machine reboots. If your system is also experiencing black desktop screens or frozen mouse pointers from the late August servicing stack, check our companion runbook on [resolving Windows 11 KB5120998 desktop and cursor glitches](/blog/windows-11-kb5120998-black-screen-cursor-fixes).
 
@@ -184,7 +184,7 @@ However, `inpoutx64.sys` contains severe architectural vulnerabilities documente
 1. **Unchecked Port I/O**: Any unprivileged application can call `CreateFile("\\\\.\\inpoutx64")` and issue raw `DeviceIoControl` commands to read and write physical CPU I/O ports.
 2. **Arbitrary Physical Memory Mapping**: Threat actors or malicious payloads can abuse the driver's exposed control codes to map raw physical memory pages directly into user-mode address space, defeating Kernel Address Space Layout Randomization (KASLR) and hypervisor security boundaries.
 
-With update **KB5121003**, Microsoft hardened the Windows 11 Hypervisor-Protected Code Integrity (HVCI) subsystem and the Vulnerable Driver Blocklist. Modern anti-cheat systems—such as Easy Anti-Cheat in *THE FINALS* and BattlEye in *ARC Raiders*—monitor kernel memory space aggressively. When the game engine or anti-cheat initializes alongside background RGB lighting sweeps, `inpoutx64.sys` attempts to execute unauthorized Ring 0 physical memory pointers. HVCI instantly traps the instruction, killing the calling game process with `STATUS_ACCESS_VIOLATION (0xC0000005)` or issuing a `SYSTEM_SERVICE_EXCEPTION (0x3B)` bug check to prevent privilege escalation.
+With update **KB5121003**, Microsoft hardened the Windows 11 Hypervisor-Protected Code Integrity (HVCI) subsystem and the Vulnerable Driver Blocklist. Modern anti-cheat systems, such as Easy Anti-Cheat in *THE FINALS* and BattlEye in *ARC Raiders*, monitor kernel memory space aggressively. When the game engine or anti-cheat initializes alongside background RGB lighting sweeps, `inpoutx64.sys` attempts to execute unauthorized Ring 0 physical memory pointers. HVCI instantly traps the instruction, killing the calling game process with `STATUS_ACCESS_VIOLATION (0xC0000005)` or issuing a `SYSTEM_SERVICE_EXCEPTION (0x3B)` bug check to prevent privilege escalation.
 
 ## Is Your Symptom the KB5121003 Inpout Issue?
 
