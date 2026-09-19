@@ -115,6 +115,43 @@ runCheck("Astro & TypeScript Diagnostics", () => {
   execSync("npx astro check", { cwd: projectRoot, stdio: "pipe" });
 });
 
+// 7. Lexical Integrity & Anti-Slop Guard
+runCheck("Lexical Integrity & Slop-Gate", () => {
+  const bannedPatterns = [
+    { pattern: /\bcompletely stops\b/i, reason: "Unverified absolute claim ('completely stops')" },
+    { pattern: /\bgame-changer\b/i, reason: "Banned hype word ('game-changer')" },
+    { pattern: /\btestament to\b/i, reason: "Banned AI cliché ('testament to')" },
+    { pattern: /\btapestry of\b/i, reason: "Banned AI cliché ('tapestry of')" },
+    { pattern: /\bdelve into\b/i, reason: "Banned AI cliché ('delve into')" },
+    { pattern: /\bit is crucial to\b/i, reason: "Banned AI cliché ('it is crucial to')" },
+    { pattern: /\bvital role in\b/i, reason: "Banned AI cliché ('vital role in')" }
+  ];
+
+  let filesToCheck = [];
+  try {
+    const status = execSync("git status --porcelain src/content/articles", { cwd: projectRoot, stdio: "pipe" }).toString().trim();
+    if (status) {
+      filesToCheck = status.split("\n").map(line => line.substring(3).trim()).filter(f => f.endsWith(".mdx") || f.endsWith(".md"));
+    }
+  } catch {}
+
+  const violations = [];
+  for (const relPath of filesToCheck) {
+    const fullPath = path.resolve(projectRoot, relPath);
+    if (!fs.existsSync(fullPath)) continue;
+    const content = fs.readFileSync(fullPath, "utf8");
+    for (const { pattern, reason } of bannedPatterns) {
+      if (pattern.test(content)) {
+        violations.push(`${relPath}: ${reason}`);
+      }
+    }
+  }
+
+  if (violations.length > 0) {
+    throw new Error(`Slop-Gate detected promotional or banned AI phrases:\n` + violations.map(v => `   - ${v}`).join("\n"));
+  }
+});
+
 console.log("=================================================");
 if (failedPoints > 0) {
   console.error(`🚨 PRE-FLIGHT AUDIT FAILED: ${failedPoints} critical failure point(s) detected!`);
