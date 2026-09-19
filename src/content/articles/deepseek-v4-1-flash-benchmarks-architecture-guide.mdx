@@ -109,7 +109,7 @@ DeepSeek's engineering team solved this tension by splitting V4.1-Flash into two
 
 **By projecting the decoder's global key-value states directly from the final encoder hidden layers, DeepSeek-V4.1-Flash slashes KV cache memory overhead to 25% of standard multi-head attention systems.**
 
-In long-context agentic workloads, the single biggest hardware bottleneck is not compute—it is Key-Value (KV) cache memory exhaustion. As we previously documented in our analysis of [why 32k context crashes local LLMs](/blog/why-32k-context-crashes-local-llm-vram-kv-cache-fix/), standard FP16 KV cache consumption scales linearly with context length:
+In long-context agentic workloads, the single biggest hardware bottleneck is not compute—it is Key-Value (KV) cache memory exhaustion. As we previously documented in our analysis of [why 32k context crashes local LLMs](/blog/why-32k-context-crashes-local-llm-vram-kv-cache-fix), standard FP16 KV cache consumption scales linearly with context length:
 ```text
 KV_Cache_Bytes = 2 * Layers * Model_Dim * Heads * Sequence_Length * Bytes_Per_Element
 ```
@@ -124,7 +124,7 @@ DeepSeek-V4.1-Flash overcomes this constraint through two synchronized innovatio
 | **Multi-Turn KV Reuse Penalty** | High (Full re-indexing) | **Near Zero (Encoder KV Pinning)** | **Instant Cache Warmup** |
 | **Max Native Output Capacity** | 8K – 16K tokens | **384,000 tokens** | **24x Larger Output** |
 
-By pinning the encoder's compressed KV projections, agent pipelines running repeated tool calls (such as SWE-bench loops or CI/CD test triage) do not need to recompute the system prompt and codebase history on every iteration. This works in a direct combined effect with modern inference frameworks like [vLLM PagedAttention and SGLang RadixAttention](/blog/vllm-pagedattention-vs-sglang-radixattention-benchmarks/), allowing servers to host 4x more concurrent user sessions on the same physical hardware.
+By pinning the encoder's compressed KV projections, agent pipelines running repeated tool calls (such as SWE-bench loops or CI/CD test triage) do not need to recompute the system prompt and codebase history on every iteration. This works in a direct combined effect with modern inference frameworks like [vLLM PagedAttention and SGLang RadixAttention](/blog/vllm-pagedattention-vs-sglang-radixattention-benchmarks), allowing servers to host 4x more concurrent user sessions on the same physical hardware.
 
 ---
 
@@ -148,7 +148,7 @@ Our team compared DeepSeek-V4.1-Flash against the leading frontier and efficient
 
 ### Key Benchmark Takeaways
 1. **Coding Reliability (DeepSWE 74.2%):** The 5.8-point jump over V4 Pro is primarily driven by the model's ability to maintain context coherence over massive multi-file patches without dropping variable references.
-2. **Terminal-Bench & Sysadmin Tooling (90.6%):** When evaluating complex Bash, PowerShell, and Docker orchestration commands, V4.1-Flash generated valid one-shot commands without the syntax degradation common in earlier quantized models, matching our empirical testing on [local DeepSeek-R1 benchmarks](/blog/deepseek-r1-vs-gemini-3-6-flash-local-ai-benchmarks/).
+2. **Terminal-Bench & Sysadmin Tooling (90.6%):** When evaluating complex Bash, PowerShell, and Docker orchestration commands, V4.1-Flash generated valid one-shot commands without the syntax degradation common in earlier quantized models, matching our empirical testing on [local DeepSeek-R1 benchmarks](/blog/deepseek-r1-vs-gemini-3-6-flash-local-ai-benchmarks).
 3. **CyberGym Security Diagnostics (88.1%):** The model excels at identifying subtle buffer overflows, race conditions, and privilege escalation vulnerabilities in enterprise application code.
 
 ---
@@ -290,7 +290,7 @@ if __name__ == "__main__":
 
 **While the full unquantized 552B backbone requires enterprise server clusters, running V4.1-Flash at FP8 or Q4 quantization is significantly easier than traditional 405B dense models due to its 16B active decode envelope.**
 
-Many sysadmins and developers ask whether they can run DeepSeek-V4.1-Flash locally, similar to our guides on [running DeepSeek-R1 locally on 8GB VRAM](/blog/how-to-run-deepseek-r1-locally-on-8gb-vram/). 
+Many sysadmins and developers ask whether they can run DeepSeek-V4.1-Flash locally, similar to our guides on [running DeepSeek-R1 locally on 8GB VRAM](/blog/how-to-run-deepseek-r1-locally-on-8gb-vram). 
 
 Here is the exact hardware matrix required to host the open-weights release:
 
@@ -312,7 +312,7 @@ Here is the exact hardware matrix required to host the open-weights release:
 ### Why Local MoE Compute Differs from Dense Models
 Because only **16B parameters are active per decode step**, token generation speed does not require the GPU to execute 552B floating-point operations per token. The primary bottleneck is purely memory bus bandwidth to fetch the selected expert weights.
 
-On enterprise nodes utilizing NVLink or PCIe Gen 5 topologies with modern engines like [vLLM and SGLang](/blog/vllm-pagedattention-vs-sglang-radixattention-benchmarks/), DeepSeek-V4.1-Flash sustains generation speeds that would be impossible on dense 400B+ models.
+On enterprise nodes utilizing NVLink or PCIe Gen 5 topologies with modern engines like [vLLM and SGLang](/blog/vllm-pagedattention-vs-sglang-radixattention-benchmarks), DeepSeek-V4.1-Flash sustains generation speeds that would be impossible on dense 400B+ models.
 
 ---
 

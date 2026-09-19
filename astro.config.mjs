@@ -29,7 +29,6 @@ export default defineConfig({
   site: "https://www.praveentechworld.com",
   trailingSlash: "never",
   redirects: {
-    "/blog/google-search-alternatives-kagi-brave-duckduckgo-compared": "/blog/degoogle-starter-pack-complete-guide",
     "/blog/best-gmail-alternatives-proton-tuta-fastmail-migration-guide": "/blog/degoogle-starter-pack-complete-guide",
     "/blog/google-drive-alternatives-proton-drive-nextcloud-syncthing-guide": "/blog/degoogle-starter-pack-complete-guide",
     "/blog/google-photos-alternatives-immich-ente-photos-migration-guide": "/blog/degoogle-starter-pack-complete-guide",

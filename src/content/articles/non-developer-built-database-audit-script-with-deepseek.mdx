@@ -33,15 +33,15 @@ references:
     publisher: "The PostgreSQL Global Development Group"
 ---
 
-> **Direct Answer (Building Database Audit Scripts with DeepSeek):** When asking DeepSeek to generate a multi-engine database audit script (MySQL, PostgreSQL, Oracle), AI-generated code consistently fails in three areas: (1) crashing immediately when proprietary drivers like `cx_Oracle` are missing, (2) mixing vendor-specific SQL syntax (such as executing Oracle's `dba_tables` against MySQL), and (3) producing unstructured or unimported CSV outputs. By supplying schema-specific SQL queries in the prompt, implementing dynamic driver importing via `__import__()`, and enforcing strict ISO-8601 JSON schemas, we produced a standalone Python audit CLI running across three database engines in **2.3 seconds**.
+> **Direct Answer:** AI code generators often stumble on multi-database scripts. When we prompted DeepSeek for a database audit tool, its first draft failed in three ways. First, it crashed when drivers were missing. Second, it mixed Oracle SQL syntax into MySQL queries. Third, it failed to export clean data. We fixed these bugs with dynamic driver imports and engine-specific SQL queries. Our final script audits three database engines in just 2.3 seconds.
 
-Every week on our IT operations team, our engineers spend hours manually inspecting relational database instances across MySQL, PostgreSQL, and Oracle to identify table bloat, deprecated data types, and dormant schemas.
+Every week, our IT operations team inspects dozens of database servers. We check MySQL, PostgreSQL, and Oracle for table bloat and old schemas. Doing these checks by hand is tedious.
 
-While our team understands SQL and database administration, writing a resilient, modular Python command-line utility from scratch was a bottleneck.
+We asked DeepSeek to write a Python database audit tool (`db_audit.py`). The first version crashed on missing drivers and mixed up SQL dialects. 
 
-We tasked **DeepSeek-Coder** with creating a lightweight, multi-database auditing utility (`db_audit.py`). The initial drafts failed due to missing binary drivers and hallucinated cross-engine SQL queries, but after three rounds of prompt refinement, we achieved a production-hardened auditing suite.
+We refined the prompts and fixed the error handling in our lab.
 
-Below is our complete architectural post-mortem, benchmark comparison matrix, and the final production script.
+Below is our breakdown of the bugs, our prompt adjustments, and the final Python code.
 
 ---
 

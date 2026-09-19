@@ -45,7 +45,7 @@ export async function GET() {
       </channel>
     </rss>`,
     {
-      headers: { "Content-Type": "application/xml" },
+      headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
     }
   );
 }
