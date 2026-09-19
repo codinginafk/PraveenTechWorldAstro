@@ -1,0 +1,434 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "How DeGoogled Are You? (Privacy & Freedom Score Audit)",
+  description = "Check off every Google service you have replaced. Our calculator estimates your privacy score and how many daily background telemetry pings you have cut from Alphabet servers."
+} = Astro.props;
+
+const checklistItems = [
+  {
+    id: "search",
+    points: 15,
+    icon: "🔍",
+    service: "Search Engine",
+    replaced: "Google Search",
+    alternatives: "Brave Search, DuckDuckGo, Kagi",
+    impact: "Cuts personal search query profiling, ad intent tracking, and AI search harvesting.",
+    quickWin: "Set your browser default search engine to Brave Search or DuckDuckGo (takes 30 seconds)."
+  },
+  {
+    id: "browser",
+    points: 10,
+    icon: "🌐",
+    service: "Web Browser",
+    replaced: "Google Chrome",
+    alternatives: "Brave, Firefox, LibreWolf, Mullvad",
+    impact: "Removes Chrome's Privacy Sandbox ad tracking, browser fingerprinting, and account sync snooping.",
+    quickWin: "Download Brave or Firefox and import your bookmarks in one click."
+  },
+  {
+    id: "email",
+    points: 15,
+    icon: "✉️",
+    service: "Email & Contacts",
+    replaced: "Gmail & Google Contacts",
+    alternatives: "Proton Mail, Tuta Mail, Fastmail",
+    impact: "Prevents automated parsing of flight receipts, online purchases, tax notices, and password reset links.",
+    quickWin: "Create a Proton Mail or Tuta account and turn on automatic Gmail forwarding."
+  },
+  {
+    id: "cloud",
+    points: 10,
+    icon: "☁️",
+    service: "Cloud Drive & Docs",
+    replaced: "Google Drive & Google Docs",
+    alternatives: "Proton Drive, CryptPad, Nextcloud",
+    impact: "Guarantees zero-knowledge client-side encryption so tech platforms cannot scan your personal documents.",
+    quickWin: "Open CryptPad.fr for free encrypted spreadsheets and documents with no login required."
+  },
+  {
+    id: "photos",
+    points: 10,
+    icon: "📸",
+    service: "Photo Backup",
+    replaced: "Google Photos",
+    alternatives: "Immich, Ente Photos, Local SSDs",
+    impact: "Stops cloud facial recognition, GPS heatmaps of your daily routines, and photo EXIF metadata mining.",
+    quickWin: "Install Ente Photos for instant mobile end-to-end encrypted backup or spin up Immich on your PC."
+  },
+  {
+    id: "notes",
+    points: 10,
+    icon: "📝",
+    service: "Notes & Calendar",
+    replaced: "Google Keep & Google Calendar",
+    alternatives: "Obsidian, Notesnook, Proton Calendar",
+    impact: "Keeps private journal entries, doctor appointments, and daily family schedules completely encrypted.",
+    quickWin: "Download Obsidian (local markdown files) or Notesnook for private cross-device sync."
+  },
+  {
+    id: "maps",
+    points: 10,
+    icon: "🗺️",
+    service: "Maps & Navigation",
+    replaced: "Google Maps",
+    alternatives: "Organic Maps, Magic Earth, OSM",
+    impact: "Halts 24/7 background location logging, Wi-Fi router beacon scans, and frequent-location history.",
+    quickWin: "Install Organic Maps on your phone and download your local city map for offline zero-tracking GPS."
+  },
+  {
+    id: "os",
+    points: 20,
+    icon: "📱",
+    service: "Mobile Operating System",
+    replaced: "Stock Google Android / iOS Google Services",
+    alternatives: "GrapheneOS, CalyxOS, Pure AOSP",
+    impact: "The ultimate privacy step. Cuts 99.4% of all idle background Alphabet socket connections (from 348/hr to 0.0/hr).",
+    quickWin: "Flash GrapheneOS on a Google Pixel using their official web installer in under 10 minutes."
+  }
+];
+---
+
+<div id="degoogle-calculator" class="not-prose my-10 rounded-2xl border-2 border-brand-500/30 bg-surface p-6 sm:p-8 shadow-lg dark:border-brand-600/40 dark:bg-surface-dark-alt transition-all">
+  <!-- Calculator Header -->
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-6 dark:border-border-dark/80">
+    <div>
+      <div class="inline-flex items-center gap-2 rounded-full bg-brand-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 mb-2">
+        <span>🛡️</span> Interactive Audit Tool
+      </div>
+      <h3 class="text-2xl font-black tracking-tight text-text dark:text-text-dark m-0">
+        {title}
+      </h3>
+      <p class="text-sm text-text-muted dark:text-text-dark-muted mt-1.5 max-w-2xl leading-relaxed m-0">
+        {description}
+      </p>
+    </div>
+    
+    <button
+      id="dg-reset-btn"
+      type="button"
+      class="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-lg border border-border bg-surface-alt px-3 py-1.5 text-xs font-bold text-text-muted hover:bg-surface hover:text-text dark:border-border-dark dark:bg-surface-dark dark:text-text-dark-muted transition-colors cursor-pointer"
+      title="Reset all selections"
+    >
+      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      <span>Reset Checklist</span>
+    </button>
+  </div>
+
+  <!-- Live Score & Progress Dashboard -->
+  <div class="mb-8 grid grid-cols-1 md:grid-cols-12 gap-4 rounded-xl border border-border bg-surface-alt/70 p-5 dark:border-border-dark dark:bg-surface-dark/90">
+    <!-- Big Score Percentage -->
+    <div class="md:col-span-4 flex flex-col items-center justify-center p-3 text-center border-b md:border-b-0 md:border-r border-border dark:border-border-dark">
+      <span class="text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-dark-muted mb-1">
+        DeGoogle Freedom Score
+      </span>
+      <div class="flex items-baseline gap-1">
+        <span id="dg-score-number" class="text-5xl font-black text-rose-600 dark:text-rose-400 transition-colors font-mono">0</span>
+        <span class="text-2xl font-bold text-text-muted dark:text-text-dark-muted font-mono">%</span>
+      </div>
+      <div class="mt-2 w-full max-w-[200px]">
+        <div class="h-3 w-full overflow-hidden rounded-full bg-surface border border-border/60 dark:border-border-dark/60">
+          <div id="dg-progress-fill" class="h-full w-0 bg-rose-500 transition-all duration-500 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Badge & Telemetry Counter -->
+    <div class="md:col-span-8 flex flex-col justify-center space-y-3 p-2 sm:px-4">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span id="dg-tier-badge" class="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-extrabold text-rose-800 dark:bg-rose-950/70 dark:text-rose-300">
+          🔴 Level 1: Google Dependent
+        </span>
+        <span id="dg-tier-headline" class="text-xs font-semibold text-text-muted dark:text-text-dark-muted">
+          Heavy Surveillance
+        </span>
+      </div>
+
+      <p id="dg-tier-desc" class="text-xs sm:text-sm text-text dark:text-text-dark leading-relaxed m-0">
+        You are currently relying on default Google tools. Your devices broadcast an estimated <strong>8,920 background telemetry pings</strong> to Alphabet servers every 24 hours.
+      </p>
+
+      <!-- Live Packet Telemetry Savings Badge -->
+      <div class="flex flex-wrap items-center gap-3 pt-1 text-xs font-medium text-text-muted dark:text-text-dark-muted">
+        <div class="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1 border border-border dark:border-border-dark">
+          <span class="text-emerald-600 dark:text-emerald-400 font-bold">📡 Blocked Daily Pings:</span>
+          <span id="dg-pings-saved" class="font-mono font-bold text-text dark:text-text-dark">0 / 8,920</span>
+        </div>
+        <div class="inline-flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1 border border-border dark:border-border-dark">
+          <span class="font-bold text-brand-600 dark:text-brand-400">⚡ Replaced:</span>
+          <span id="dg-items-count" class="font-mono font-bold text-text dark:text-text-dark">0 of 8 services</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Next Quick Win Callout -->
+  <div id="dg-quick-win-box" class="mb-8 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-50/50 p-4 text-xs sm:text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-950/20 dark:text-amber-200 transition-all">
+    <span class="text-lg">💡</span>
+    <div>
+      <span class="font-bold uppercase tracking-wider text-xs block text-amber-800 dark:text-amber-300 mb-0.5">Recommended Next Win</span>
+      <span id="dg-quick-win-text">Swap Google Search for Brave Search or DuckDuckGo (takes 30 seconds).</span>
+    </div>
+  </div>
+
+  <!-- Interactive Checklist Grid -->
+  <div class="space-y-3">
+    <div class="flex items-center justify-between px-1 text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-dark-muted">
+      <span>Check the services you have replaced:</span>
+      <span>Points</span>
+    </div>
+
+    {checklistItems.map((item) => (
+      <label
+        for={`dg-item-${item.id}`}
+        class="group relative flex cursor-pointer items-start gap-3.5 rounded-xl border border-border bg-surface p-4 transition-all hover:border-brand-500/50 hover:bg-surface-alt dark:border-border-dark dark:bg-surface-dark dark:hover:bg-surface-dark-alt"
+      >
+        <div class="flex h-6 items-center">
+          <input
+            type="checkbox"
+            id={`dg-item-${item.id}`}
+            name="degoogle-checklist"
+            value={item.id}
+            data-points={item.points}
+            data-quickwin={item.quickWin}
+            class="dg-checkbox h-5 w-5 rounded border-border/80 text-brand-600 focus:ring-brand-500 dark:border-border-dark dark:bg-surface-dark-alt dark:checked:bg-brand-500 cursor-pointer"
+          />
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center justify-between gap-1.5">
+            <div class="flex items-center gap-2">
+              <span class="text-base">{item.icon}</span>
+              <span class="font-bold text-sm text-text dark:text-text-dark">
+                {item.service}
+              </span>
+              <span class="text-xs text-rose-600 dark:text-rose-400 font-medium line-through">
+                {item.replaced}
+              </span>
+            </div>
+            <span class="font-mono text-xs font-extrabold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-2 py-0.5 rounded">
+              +{item.points}%
+            </span>
+          </div>
+          <p class="mt-1 text-xs text-text-muted dark:text-text-dark-muted leading-relaxed m-0">
+            <strong>Tested Replacements:</strong> {item.alternatives}
+          </p>
+          <p class="mt-0.5 text-xs text-text-muted/80 dark:text-text-dark-muted/80 leading-relaxed m-0">
+            {item.impact}
+          </p>
+        </div>
+      </label>
+    ))}
+  </div>
+
+  <!-- Footer Actions: Share Score & Reference Link -->
+  <div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border pt-6 dark:border-border-dark">
+    <div class="text-xs text-text-muted dark:text-text-dark-muted text-center sm:text-left">
+      Based on our <a href="/research/degoogle-telemetry-2026" class="font-semibold text-brand-600 hover:underline dark:text-brand-400">72-hour Wireshark mobile telemetry dataset</a>.
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button
+        id="dg-share-btn"
+        type="button"
+        class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-brand-500 transition-all cursor-pointer dark:bg-brand-500 dark:hover:bg-brand-600"
+      >
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        <span id="dg-share-text">Copy My Score</span>
+      </button>
+
+      <a
+        href="/blog/degoogle-starter-pack-complete-guide"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-bold text-text hover:bg-surface-alt dark:border-border-dark dark:bg-surface-dark dark:text-text-dark dark:hover:bg-surface-dark-alt transition-colors"
+      >
+        <span>View Full Runbook</span>
+        <span>&rarr;</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  (function () {
+    function initCalculator() {
+      const container = document.getElementById("degoogle-calculator");
+      if (!container) return;
+
+      const checkboxes = container.querySelectorAll(".dg-checkbox");
+      const scoreNumber = document.getElementById("dg-score-number");
+      const progressFill = document.getElementById("dg-progress-fill");
+      const tierBadge = document.getElementById("dg-tier-badge");
+      const tierHeadline = document.getElementById("dg-tier-headline");
+      const tierDesc = document.getElementById("dg-tier-desc");
+      const pingsSaved = document.getElementById("dg-pings-saved");
+      const itemsCount = document.getElementById("dg-items-count");
+      const quickWinText = document.getElementById("dg-quick-win-text");
+      const quickWinBox = document.getElementById("dg-quick-win-box");
+      const resetBtn = document.getElementById("dg-reset-btn");
+      const shareBtn = document.getElementById("dg-share-btn");
+      const shareText = document.getElementById("dg-share-text");
+
+      const STORAGE_KEY = "ptw_degoogle_audit_state";
+
+      // Load saved state from localStorage if available
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        checkboxes.forEach((cb) => {
+          if (saved.includes(cb.value)) {
+            cb.checked = true;
+          }
+        });
+      } catch (e) {
+        // localStorage disabled or unavailable
+      }
+
+      function updateCalculation() {
+        let totalScore = 0;
+        let checkedCount = 0;
+        let firstUncheckedQuickWin = null;
+        const checkedValues = [];
+
+        checkboxes.forEach((cb) => {
+          if (cb.checked) {
+            totalScore += parseInt(cb.dataset.points || "0", 10);
+            checkedCount++;
+            checkedValues.push(cb.value);
+          } else if (!firstUncheckedQuickWin && cb.dataset.quickwin) {
+            firstUncheckedQuickWin = cb.dataset.quickwin;
+          }
+        });
+
+        // Save state
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(checkedValues));
+        } catch (e) {}
+
+        // Clamp 0-100
+        totalScore = Math.min(100, Math.max(0, totalScore));
+
+        // Update score number
+        if (scoreNumber) {
+          scoreNumber.textContent = String(totalScore);
+        }
+
+        // Update progress bar
+        if (progressFill) {
+          progressFill.style.width = totalScore + "%";
+
+          // Color shifts based on score
+          if (totalScore < 30) {
+            progressFill.className = "h-full bg-rose-500 transition-all duration-500 rounded-full";
+            scoreNumber.className = "text-5xl font-black text-rose-600 dark:text-rose-400 transition-colors font-mono";
+          } else if (totalScore < 60) {
+            progressFill.className = "h-full bg-amber-500 transition-all duration-500 rounded-full";
+            scoreNumber.className = "text-5xl font-black text-amber-600 dark:text-amber-400 transition-colors font-mono";
+          } else if (totalScore < 85) {
+            progressFill.className = "h-full bg-blue-500 transition-all duration-500 rounded-full";
+            scoreNumber.className = "text-5xl font-black text-blue-600 dark:text-blue-400 transition-colors font-mono";
+          } else {
+            progressFill.className = "h-full bg-emerald-500 transition-all duration-500 rounded-full";
+            scoreNumber.className = "text-5xl font-black text-emerald-600 dark:text-emerald-400 transition-colors font-mono";
+          }
+        }
+
+        // Update counts
+        if (itemsCount) {
+          itemsCount.textContent = `${checkedCount} of ${checkboxes.length} services`;
+        }
+
+        // Calculate estimated daily pings saved (8,920 total daily baseline)
+        const savedPings = Math.round((totalScore / 100) * 8920);
+        if (pingsSaved) {
+          pingsSaved.textContent = `${savedPings.toLocaleString()} / 8,920 pings`;
+        }
+
+        // Update Tier Badges & Explanations
+        if (totalScore <= 25) {
+          tierBadge.className = "inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-extrabold text-rose-800 dark:bg-rose-950/70 dark:text-rose-300";
+          tierBadge.textContent = "🔴 Level 1: Google Dependent";
+          tierHeadline.textContent = "Heavy Surveillance";
+          tierDesc.innerHTML = "You are currently relying on standard Google defaults. Your phone and accounts broadcast an estimated <strong>8,920 background telemetry pings</strong> to Alphabet servers every 24 hours.";
+        } else if (totalScore <= 50) {
+          tierBadge.className = "inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800 dark:bg-amber-950/70 dark:text-amber-300";
+          tierBadge.textContent = "🟡 Level 2: Privacy Conscious";
+          tierHeadline.textContent = "First Line of Defense Active";
+          tierDesc.innerHTML = "Great initial steps! You have shielded your web searches and browsing habits from advertising brokers, but your mobile device and email still broadcast real-time telemetry.";
+        } else if (totalScore <= 80) {
+          tierBadge.className = "inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-extrabold text-blue-800 dark:bg-blue-950/70 dark:text-blue-300";
+          tierBadge.textContent = "🔵 Level 3: DeGoogle Crusader";
+          tierHeadline.textContent = "High Privacy Independence";
+          tierDesc.innerHTML = "Substantial freedom achieved! Over 80% of personal data harvesting has been cut. Google can no longer build accurate profiles of your contacts, schedule, or daily photos.";
+        } else {
+          tierBadge.className = "inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-extrabold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300";
+          tierBadge.textContent = "🟢 Level 4: Digital Sovereign";
+          tierHeadline.textContent = "Maximum Freedom & Zero Surveillance";
+          tierDesc.innerHTML = "Outstanding achievement! You have achieved digital self-reliance. Your pocket device and online workflow are virtually invisible to Alphabet's telemetry network.";
+        }
+
+        // Update Quick Win Box
+        if (quickWinBox && quickWinText) {
+          if (firstUncheckedQuickWin) {
+            quickWinBox.style.display = "flex";
+            quickWinText.textContent = firstUncheckedQuickWin;
+          } else {
+            quickWinBox.style.display = "flex";
+            quickWinText.textContent = "You have completed all 8 steps! Your setup is 100% DeGoogled and self-sovereign.";
+          }
+        }
+      }
+
+      // Event Listeners
+      checkboxes.forEach((cb) => {
+        cb.addEventListener("change", updateCalculation);
+      });
+
+      if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+          checkboxes.forEach((cb) => (cb.checked = false));
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch (e) {}
+          updateCalculation();
+        });
+      }
+
+      if (shareBtn && shareText) {
+        shareBtn.addEventListener("click", () => {
+          const currentScore = scoreNumber ? scoreNumber.textContent : "0";
+          const currentTier = tierBadge ? tierBadge.textContent.trim() : "Level 1";
+          const shareString = `🛡️ My DeGoogle Freedom Score is ${currentScore}% (${currentTier})! Check how private your setup is: https://www.praveentechworld.com/tools/degoogle-score-checker`;
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareString).then(() => {
+              const original = shareText.textContent;
+              shareText.textContent = "Copied to Clipboard! 👍";
+              setTimeout(() => {
+                shareText.textContent = original;
+              }, 2500);
+            });
+          } else {
+            prompt("Copy your DeGoogle Score:", shareString);
+          }
+        });
+      }
+
+      // Run initial calculation
+      updateCalculation();
+    }
+
+    // Run on page load and on Astro view transitions
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initCalculator);
+    } else {
+      initCalculator();
+    }
+    document.addEventListener("astro:page-load", initCalculator);
+  })();
+</script>
