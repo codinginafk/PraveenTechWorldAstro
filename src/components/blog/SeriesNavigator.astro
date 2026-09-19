@@ -1,0 +1,230 @@
+---
+interface Props {
+  currentSlug: string;
+  position?: "top" | "bottom";
+}
+
+const { currentSlug = "", position = "top" } = Astro.props;
+
+interface SeriesStep {
+  step: number;
+  title: string;
+  shortTitle: string;
+  slug: string;
+  description: string;
+  isLive: boolean;
+  statusText: string;
+}
+
+const seriesSteps: SeriesStep[] = [
+  {
+    step: 1,
+    title: "The Master Blueprint & 72-Hour Telemetry Audit",
+    shortTitle: "Master Blueprint & Audit",
+    slug: "degoogle-starter-pack-complete-guide",
+    description: "Hard data on 348 background outbound requests/hour and the complete 6-layer decoupling architecture.",
+    isLive: true,
+    statusText: "Live Guide",
+  },
+  {
+    step: 2,
+    title: "Google Search Alternatives: Kagi, Brave & SearXNG",
+    shortTitle: "Search Alternatives",
+    slug: "google-search-alternatives-kagi-brave-duckduckgo-compared",
+    description: "50-query developer recall benchmark, zero-ad index testing, and local Docker SearXNG setup.",
+    isLive: true,
+    statusText: "Live Guide",
+  },
+  {
+    step: 3,
+    title: "Gmail Alternatives: Proton, Tuta & Fastmail",
+    shortTitle: "Encrypted Email",
+    slug: "best-gmail-alternatives-proton-tuta-fastmail-migration-guide",
+    description: "Zero-knowledge mail, custom domain DNS records, and IMAP bridge configuration.",
+    isLive: false,
+    statusText: "In Roadmap",
+  },
+  {
+    step: 4,
+    title: "Google Drive & Docs: Nextcloud & Proton Drive",
+    shortTitle: "Cloud Storage & Docs",
+    slug: "google-drive-alternatives-proton-drive-nextcloud-syncthing-guide",
+    description: "Encrypted sync, self-hosted Docker Nextcloud Hub, and peer-to-peer Syncthing.",
+    isLive: false,
+    statusText: "In Roadmap",
+  },
+  {
+    step: 5,
+    title: "Google Photos: Immich & Ente Media Backup",
+    shortTitle: "Photos & Local AI",
+    slug: "google-photos-alternatives-immich-ente-photos-migration-guide",
+    description: "Local machine-learning facial recognition, auto-upload, and Takeout EXIF metadata repair.",
+    isLive: false,
+    statusText: "In Roadmap",
+  },
+  {
+    step: 6,
+    title: "Android OS: GrapheneOS & Sandboxed Google Play",
+    shortTitle: "GrapheneOS Mobile",
+    slug: "degoogle-android-phone-grapheneos-aurora-store-complete-guide",
+    description: "Verified hardware boot, sandboxed Play apps, banking app integrity, and Aurora Store.",
+    isLive: false,
+    statusText: "In Roadmap",
+  },
+  {
+    step: 7,
+    title: "Google Maps: Organic Maps & OsmAnd",
+    shortTitle: "Offline Maps & GPS",
+    slug: "google-maps-alternatives-organic-maps-osmand-privacy-guide",
+    description: "100% offline vector navigation, battery life gains, and OpenStreetMap search.",
+    isLive: false,
+    statusText: "In Roadmap",
+  },
+];
+
+const cleanSlug = currentSlug.replace(/^\/|\/$/g, "").replace(/^blog\//, "");
+const currentIndex = seriesSteps.findIndex((s) => s.slug === cleanSlug || cleanSlug.includes(s.slug));
+const currentStep = currentIndex !== -1 ? seriesSteps[currentIndex] : seriesSteps[0];
+const nextStep = currentIndex !== -1 && currentIndex + 1 < seriesSteps.length ? seriesSteps[currentIndex + 1] : null;
+const prevStep = currentIndex > 0 ? seriesSteps[currentIndex - 1] : null;
+---
+
+{position === "top" ? (
+  <div class="my-8 rounded-2xl border-2 border-brand-500/30 bg-gradient-to-br from-brand-50/60 via-surface to-brand-50/20 p-5 sm:p-6 shadow-sm dark:border-brand-800/50 dark:from-brand-950/30 dark:via-surface-dark-alt dark:to-brand-900/10">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-border dark:border-border-dark">
+      <div class="flex items-center gap-2.5">
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 text-white dark:bg-brand-500 text-xs font-bold shadow-xs">
+          🛡️
+        </span>
+        <div>
+          <span class="text-[11px] font-black uppercase tracking-wider text-brand-700 dark:text-brand-300">
+            Special Series: The 2026 DeGoogle Migration Runbook
+          </span>
+          <h3 class="text-sm sm:text-base font-bold text-text dark:text-text-dark m-0">
+            Step {currentStep.step} of {seriesSteps.length}: {currentStep.shortTitle}
+          </h3>
+        </div>
+      </div>
+      <span class="inline-flex items-center self-start sm:self-auto rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+        Active Section
+      </span>
+    </div>
+    <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+      {seriesSteps.map((step) => {
+        const isCurrent = step.step === currentStep.step;
+        return (
+          <div
+            class:list={[
+              "relative flex flex-col justify-between rounded-xl p-2.5 text-xs transition-all",
+              isCurrent
+                ? "bg-brand-600 text-white font-bold shadow-sm ring-2 ring-brand-600 dark:bg-brand-500"
+                : step.isLive
+                ? "bg-surface dark:bg-surface-dark border border-brand-200 hover:border-brand-500 hover:shadow-xs text-text dark:text-text-dark dark:border-border-dark"
+                : "bg-surface/50 dark:bg-surface-dark/40 border border-border/40 dark:border-border-dark/40 text-text-muted dark:text-text-dark-muted opacity-75"
+            ]}
+          >
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class:list={["text-[10px] uppercase tracking-wider font-extrabold", isCurrent ? "text-white/80" : "text-brand-600 dark:text-brand-400"]}>
+                  Step {step.step}
+                </span>
+                {step.isLive && !isCurrent && (
+                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                )}
+              </div>
+              <p class:list={["leading-snug line-clamp-2", isCurrent ? "text-white" : "text-text dark:text-text-dark"]}>
+                {step.shortTitle}
+              </p>
+            </div>
+            <div class="mt-2 pt-1.5 border-t border-current/10">
+              {step.isLive ? (
+                isCurrent ? (
+                  <span class="text-[10px] text-white/90">Reading now</span>
+                ) : (
+                  <a
+                    href={`/blog/${step.slug}`}
+                    class="inline-flex items-center gap-0.5 text-[10px] font-bold text-brand-600 hover:underline dark:text-brand-400"
+                  >
+                    <span>Read guide</span>
+                    <span>&rarr;</span>
+                  </a>
+                )
+              ) : (
+                <span class="text-[10px] text-text-muted dark:text-text-dark-muted">Roadmap</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <p class="mt-3.5 mb-0 text-xs text-text-muted dark:text-text-dark-muted leading-relaxed">
+      <strong>Pro Tip:</strong> We recommend going step-by-step. Don't try to change everything in one weekend. Start with search and browser changes today, then tackle email and phone settings next week.
+    </p>
+  </div>
+) : (
+  <div class="my-10 rounded-2xl border-2 border-brand-500 bg-gradient-to-r from-brand-900 via-slate-950 to-brand-950 p-6 sm:p-8 text-white shadow-xl">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+      <div>
+        <span class="inline-flex items-center gap-1.5 rounded-md bg-brand-500/30 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-brand-300">
+          <span>DeGoogle Runbook</span>
+          <span>&bull;</span>
+          <span>Next Recommended Step</span>
+        </span>
+        <h4 class="text-xl sm:text-2xl font-black tracking-tight text-white mt-2 mb-1">
+          {nextStep ? `Step ${nextStep.step}: ${nextStep.title}` : "You Completed the DeGoogle Core Overview!"}
+        </h4>
+      </div>
+      {nextStep && nextStep.isLive && (
+        <span class="shrink-0 rounded-full bg-emerald-500/20 border border-emerald-400/30 px-3 py-1 text-xs font-bold text-emerald-300">
+          ✓ Available Now
+        </span>
+      )}
+    </div>
+
+    {nextStep ? (
+      <div class="mt-4 space-y-4">
+        <p class="text-sm sm:text-base text-slate-300 leading-relaxed max-w-3xl">
+          {nextStep.description}
+        </p>
+
+        <div class="flex flex-wrap items-center gap-4 pt-2">
+          {nextStep.isLive ? (
+            <a
+              href={`/blog/${nextStep.slug}`}
+              class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm sm:text-base font-extrabold text-white shadow-lg shadow-brand-500/30 transition-all hover:bg-brand-400 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <span>Continue to Step {nextStep.step} ({nextStep.shortTitle})</span>
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </a>
+          ) : (
+            <div class="inline-flex items-center gap-2 rounded-xl bg-slate-800 border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-300">
+              <span>Step {nextStep.step} is currently queued in our workbench testing lab</span>
+            </div>
+          )}
+
+          {prevStep && (
+            <a
+              href={`/blog/${prevStep.slug}`}
+              class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+            >
+              <span>&larr;</span>
+              <span>Back to Step {prevStep.step}: {prevStep.shortTitle}</span>
+            </a>
+          )}
+        </div>
+      </div>
+    ) : (
+      <div class="mt-4 flex flex-wrap items-center gap-4">
+        <a
+          href="/blog/degoogle-starter-pack-complete-guide"
+          class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-6 py-3.5 text-sm font-extrabold text-white shadow-lg transition-all hover:bg-brand-400"
+        >
+          <span>Return to Master Blueprint & Telemetry Data &rarr;</span>
+        </a>
+      </div>
+    )}
+  </div>
+)}

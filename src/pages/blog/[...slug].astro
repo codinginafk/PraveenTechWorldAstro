@@ -17,6 +17,7 @@ import NewsletterLeadMagnet from "@components/blog/NewsletterLeadMagnet.astro";
 import TechAdUnit from "@components/ads/TechAdUnit.astro";
 import QuickAnswer from "@components/blog/QuickAnswer.astro";
 import MoneyBridge from "@components/blog/MoneyBridge.astro";
+import SeriesNavigator from "@components/blog/SeriesNavigator.astro";
 
 export async function getStaticPaths() {
   const articles = await getCollection("articles");
@@ -36,6 +37,15 @@ const readingTime = article.data.readingTime || calculateReadingTime(article.bod
 const articleUrl = buildCanonical("https://www.praveentechworld.com", `/blog/${article.id}`);
 const headings = extractHeadings(article.body || "");
 const isDubaiArticle = article.data.category === "business" || (article.data.tags && article.data.tags.some((t: string) => t.toLowerCase().includes("dubai") || t.toLowerCase().includes("uae")));
+const isDeGoogleSeries = [
+  "degoogle-starter-pack-complete-guide",
+  "google-search-alternatives-kagi-brave-duckduckgo-compared",
+  "best-gmail-alternatives-proton-tuta-fastmail-migration-guide",
+  "google-drive-alternatives-proton-drive-nextcloud-syncthing-guide",
+  "google-photos-alternatives-immich-ente-photos-migration-guide",
+  "degoogle-android-phone-grapheneos-aurora-store-complete-guide",
+  "google-maps-alternatives-organic-maps-osmand-privacy-guide",
+].some((slug) => article.id.includes(slug));
 
 const categoryTitle = (article.data.category || "").replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
 const breadcrumbItems = [
@@ -206,11 +216,13 @@ const howToData = howToSteps ? {
           currentSlug={article.id}
           pillarId={article.data.pillarId}
         />
+        {isDeGoogleSeries && <SeriesNavigator currentSlug={article.id} position="top" />}
         <div class="prose max-w-none dark:prose-invert">
           <Fragment set:html="<!--email_off-->" />
           <Content />
           <Fragment set:html="<!--/email_off-->" />
         </div>
+        {isDeGoogleSeries && <SeriesNavigator currentSlug={article.id} position="bottom" />}
 
         <!-- In-Article Contextual High-Converting Tech Sponsor / Ad Slot -->
         <TechAdUnit category={article.data.category} tags={article.data.tags} slotType="in-article" />
