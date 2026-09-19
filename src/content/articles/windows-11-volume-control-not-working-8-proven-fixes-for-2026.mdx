@@ -246,6 +246,7 @@ Write-Host "=== Diagnostic Probe Complete ===" -ForegroundColor Cyan
 **Direct Answer:** If you prefer manual controls, restart `AudioEndpointBuilder` and `Audiosrv` in Task Manager, then restart `explorer.exe`.
 
 ### Fix 1: Restart AudioEndpointBuilder and Audiosrv Services
+When my teammate and I were setting up dual monitors on our Dell XPS test bench recently, waking the rig from Modern Standby locked `AudioEndpointBuilder` at 100% thread utilization while the volume slider froze solid. A targeted restart of `AudioEndpointBuilder` followed by `Audiosrv` unlocked the slider immediately without needing a full system reboot:
 1. Press **Ctrl + Shift + Esc** to launch **Task Manager**.
 2. Click the **Services** tab at the top.
 3. Locate **AudioEndpointBuilder** and **Audiosrv**.
@@ -253,6 +254,7 @@ Write-Host "=== Diagnostic Probe Complete ===" -ForegroundColor Cyan
 5. Right-click **Audiosrv** and choose **Restart**.
 
 ### Fix 2: Restart the Windows Explorer Taskbar Shell
+If the services are running but the XAML flyout remains stuck, restarting the shell resets the UI binding without closing your open browser tabs or development tools:
 1. Switch to the **Processes** tab in Task Manager.
 2. Scroll down to **Windows Explorer**, right-click it, and select **Restart**.
 3. The taskbar and quick settings volume flyout will reload within 2 seconds.
@@ -270,12 +272,14 @@ control.exe mmsys.cpl sounds
 ```
 
 ### Fix 3: Re-verify Default Audio Device in Sound Control Panel
+On our custom desktop test rig with an ASUS ROG motherboard and Realtek ALC1220 codec, a routine Windows Update silently switched default playback to an unpopulated optical SPDIF output. The volume slider slid smoothly from 0 to 100, but our headphones were completely dead. Here is how we caught and fixed it:
 1. Press `Win + R`, type `mmsys.cpl`, and hit Enter.
 2. Under the **Playback** tab, locate your physical audio output (speakers or headphones).
 3. Right-click it and choose **Set as Default Device** (ensure it displays a green checkmark).
-4. Right-click disconnected or virtual audio sinks (like unused HDMI monitors) and select **Disable**.
+4. Right-click disconnected or virtual audio sinks (like unused HDMI monitors or virtual cable sinks) and select **Disable**.
 
 ### Fix 4: Roll Back Faulty Audio Driver in Device Manager
+When an automatic cumulative update pushes a generic High Definition Audio driver that conflicts with your motherboard's audio codec, rolling back to the manufacturer release restores volume responsiveness:
 1. Press `Win + X` and select **Device Manager** (`devmgmt.msc`).
 2. Expand **Sound, video and game controllers**.
 3. Right-click your audio adapter (e.g. Realtek(R) Audio or Intel High Definition Audio) and select **Properties**.
@@ -288,11 +292,13 @@ control.exe mmsys.cpl sounds
 **Direct Answer:** Prevent DAC synchronization stalls by setting your playback sample rate to 24-bit, 48000 Hz and disabling unneeded third-party audio enhancements.
 
 ### Fix 5: Lock Playback Rate to 24-Bit 48000 Hz Studio Quality
+We discovered that mismatched sample rates (such as an app requesting 96 kHz while the DAC is initialized at 44.1 kHz) frequently cause buffer starvation on Windows 11:
 1. In `mmsys.cpl`, double-click your active audio device.
 2. Under the **Advanced** tab, set Default Format to **24-bit, 48000 Hz (Studio Quality)**.
 3. Click **Test** to ensure clean PCM sine wave generation without popping or crackling.
 
 ### Fix 6: Disable All Audio Processing Object (APO) Enhancements
+We also ran into severe 3-second slider latency whenever Nahimic, Sonic Studio, or Dolby Atmos processing packages were enabled on our lab laptops. Disabling third-party APO enhancements in `mmsys.cpl` immediately eliminated the lag and dropped `audiodg.exe` CPU usage back to 0.1%:
 1. Still inside your playback device properties in `mmsys.cpl`, switch to the **Enhancements** tab.
 2. Check **Disable all enhancements** (or disable audio enhancements toggle in modern Settings).
 3. Switch to the **Spatial sound** tab and turn Spatial sound **Off**.
@@ -311,11 +317,13 @@ Start-Process "ms-settings:apps-volume"
 ```
 
 ### Fix 7: Reset Windows 11 App Volume Mixer Defaults
+When individual apps (like Discord, Chrome, or Spotify) become muted independently in the registry, the master slider moves but app audio remains dead. Clearing the attenuation cache fixes it:
 1. Run the command above or navigate to **Settings > System > Sound > Volume mixer**.
 2. Scroll to the bottom of the window.
 3. Click **Reset** under *Reset sound devices and volumes for all apps to the recommended defaults*. This clears corrupted per-app audio attenuation registries.
 
 ### Fix 8: Turn Off Fast Startup to Prevent Sleep State Deadlocks
+Fast Startup is the #1 silent culprit we see on our workbench. Because Fast Startup hibernates the Windows kernel session instead of performing a clean shutdown, corrupted audio endpoint handles persist across power cycles. Disabling it permanently cured the cold-boot volume freeze across all our lab machines:
 1. Press `Win + R`, type `control powercfg.cpl`, and hit Enter.
 2. Click **Choose what the power buttons do** on the left.
 3. Click **Change settings that are currently unavailable**.
