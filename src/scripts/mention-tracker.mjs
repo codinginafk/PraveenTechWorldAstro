@@ -51,7 +51,9 @@ const sources = {
 
   async reddit() {
     const out = [];
-    for (const q of ["praveentechworld", "DeGoogle Starter Pack"]) {
+    // NOTE: domain-only queries. "DeGoogle Starter Pack" matches generic usage
+    // ("here is my degoogle starter pack") — too noisy for alerting.
+    for (const q of ["praveentechworld.com", "praveentechworld"]) {
       for (const kind of ["comment", "submission"]) {
         try {
           const d = await get(`https://api.pullpush.io/reddit/${kind}/search/?q=${encodeURIComponent(q)}&limit=40&sort=desc`);
@@ -148,10 +150,12 @@ const sources = {
   async github() {
     const out = [];
     try {
-      const raw = execSync(`gh api "search/code?q=${encodeURIComponent("praveentechworld")}+in:file&per_page=20" --jq '.items[] | [.path, .repository.full_name, .html_url] | @tsv'`, { encoding: "utf8", timeout: 30000 });
-      for (const line of raw.trim().split("\n").filter(Boolean)) {
-        const [p, repo, url] = line.split("\t");
-        out.push({ id: `gh:${repo}:${p}`, source: "GitHub code", title: `${repo} — ${p}`, url, author: (repo || "").split("/")[0], points: null, date: "", text: "" });
+      const raw = execSync(`gh search code praveentechworld --limit 20 --json path,url,repository`, { encoding: "utf8", timeout: 60000, windowsHide: true });
+      const items = JSON.parse(raw);
+      for (const it of items) {
+        const repo = it.repository?.nameWithOwner || "";
+        if (/^codinginafk\//i.test(repo)) continue; // own repos: not mentions
+        out.push({ id: `gh:${repo}:${it.path}`, source: "GitHub code", title: `${repo} — ${it.path}`, url: it.url, author: repo.split("/")[0], points: null, date: "", text: "" });
       }
     } catch { /* gh not authed here or no hits */ }
     return out;
