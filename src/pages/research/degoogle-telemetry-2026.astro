@@ -689,6 +689,41 @@ print(df.groupby("target_service")["payload_bytes"].sum())</pre>
             Our team used a <strong>zero-agent external hardware wiretap</strong>: the phones were connected to a dedicated physical Wi-Fi AP broadcast from an enterprise pfSense firewall on an isolated VLAN. All egress traffic was mirrored into Wireshark running on a separate host machine. We parsed the resulting pcap files using custom Python scripts (<code class="text-xs bg-surface dark:bg-surface-dark px-1 py-0.5 rounded font-mono">pyshark</code> and <code class="text-xs bg-surface dark:bg-surface-dark px-1 py-0.5 rounded font-mono">dpkt</code>) cross-referenced against Alphabet's published BGP ASN 15169 routing tables.
           </p>
         </div>
+
+        <div class="rounded-xl border border-border/70 bg-surface-alt/40 p-5 dark:border-border-dark/70 dark:bg-surface-dark/40">
+          <h3 class="text-base font-bold text-text dark:text-text-dark m-0 mb-2">
+            Q: "If phone traffic is encrypted with TLS 1.3, how can you tell what Google is collecting?"
+          </h3>
+          <p class="text-sm text-text-muted dark:text-text-dark-muted leading-relaxed m-0">
+            This was the #1 technical question asked on Hacker News and Reddit. Transport Layer Security (TLS 1.3) encrypts the <em>payload content</em> (e.g. the text of an email or photo pixels), but fundamental network routing requirements leave several critical data points visible in the clear to our hardware sniffer:
+          </p>
+          <ul class="mt-2 space-y-1.5 text-xs sm:text-sm text-text-muted dark:text-text-dark-muted list-disc pl-5">
+            <li><strong>Server Name Indication (SNI):</strong> Before encryption keys are negotiated, the phone sends the exact destination hostname in plaintext during the TLS Client Hello handshake (e.g. <code class="text-xs bg-surface dark:bg-surface-dark px-1 py-0.5 rounded font-mono">checkin.gstatic.com</code>, <code class="text-xs bg-surface dark:bg-surface-dark px-1 py-0.5 rounded font-mono">photosdata-pa.googleapis.com</code>).</li>
+            <li><strong>BGP Autonomous System Routing (ASN 15169):</strong> Destination IP addresses route directly into Alphabet data centers, verified against public BGP routing tables.</li>
+            <li><strong>Socket Ports & Protocols:</strong> Port 5228 identifies persistent FCM push sockets, while Port 443 isolates REST API check-in channels.</li>
+            <li><strong>Payload Size & Cadence Signatures:</strong> Repeating transmissions of exactly 890 bytes to <code class="text-xs bg-surface dark:bg-surface-dark px-1 py-0.5 rounded font-mono">checkin.gstatic.com</code> correspond to known Wi-Fi BSSID scan beacon upload schemas.</li>
+          </ul>
+          <p class="text-sm text-text-muted dark:text-text-dark-muted leading-relaxed mt-2 m-0">
+            TLS hides <em>what you type</em>, but packet telemetry unmistakably reveals <em>who your phone dials, how frequently, and which system daemon initiated the transmission</em>.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-border/70 bg-surface-alt/40 p-5 dark:border-border-dark/70 dark:bg-surface-dark/40">
+          <h3 class="text-base font-bold text-text dark:text-text-dark m-0 mb-2">
+            Q: "What about microG and /e/OS? Does microG actually make you anonymous?"
+          </h3>
+          <p class="text-sm text-text-muted dark:text-text-dark-muted leading-relaxed m-0">
+            microG is an open-source reimplementation of Google Play Services libraries used by privacy ROMs like /e/OS and LineageOS for microG. It eliminates Google's proprietary diagnostic agents, Crashlytics, and ad frameworks. However, whether microG is "anonymous" depends on which features you toggle on:
+          </p>
+          <ul class="mt-2 space-y-1.5 text-xs sm:text-sm text-text-muted dark:text-text-dark-muted list-disc pl-5">
+            <li><strong>Cloud Messaging (FCM Push):</strong> If you enable Google push in microG so WhatsApp or Signal receive real-time alerts, microG maintains an active TCP connection to Google servers (<code class="text-xs bg-surface dark:bg-surface-dark px-1 py-0.5 rounded font-mono">mtalk.google.com</code>). Google still logs your IP address and connection heartbeats.</li>
+            <li><strong>SafetyNet / Play Integrity:</strong> Enabling attestation to run banking apps routes device hardware fingerprints through Google's attestation APIs.</li>
+            <li><strong>UnifiedNlp (Geolocation):</strong> microG allows you to route location requests to community backends (like Mozilla Location Services or local beacon databases) rather than Google, cutting Google out of your physical location entirely.</li>
+          </ul>
+          <p class="text-sm text-text-muted dark:text-text-dark-muted leading-relaxed mt-2 m-0">
+            microG gives you control over what leaks. GrapheneOS takes a different architectural approach: running the official, unmodified Google Play Services binary inside a heavily restricted, standard app sandbox with zero special OS privileges. Both /e/OS and microG are in our lab queue for Round 2 network capture.
+          </p>
+        </div>
       </div>
     </section>
 
@@ -767,6 +802,11 @@ print(df.groupby("target_service")["payload_bytes"].sum())</pre>
               <td class="py-2 px-3 font-mono font-bold text-brand-600 dark:text-brand-400">v1.2</td>
               <td class="py-2 px-3">September 20, 2026</td>
               <td class="py-2 px-3">Released downloadable 42-endpoint Pi-hole/DNS blocklist, added community FAQ section (covering Samsung OneUI, iOS, and overblocking risks), and published the Round 2 community device benchmark queue.</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 font-mono font-bold text-brand-600 dark:text-brand-400">v1.3</td>
+              <td class="py-2 px-3">September 21, 2026</td>
+              <td class="py-2 px-3">Added cryptographic packet visibility analysis (TLS 1.3 SNI, BGP routing, byte cadences) and microG / /e/OS network anonymity architecture breakdown responding to Hacker News & Reddit discussions.</td>
             </tr>
           </tbody>
         </table>
