@@ -18,6 +18,7 @@ import { execSync } from "node:child_process";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const STATE = path.join(ROOT, "research/agents/mention-tracker-seen.json");
 const BASELINE = process.argv.includes("--baseline");
+const SHOW_ALL = process.argv.includes("--all");
 
 const QUERIES = ["praveentechworld.com", "praveentechworld", "DeGoogle Starter Pack", "degoogle-telemetry-2026"];
 
@@ -32,7 +33,7 @@ async function get(url, opts = {}) {
 const sources = {
   async hn() {
     const out = [];
-    for (const q of ["praveentechworld", "DeGoogle Starter Pack"]) {
+    for (const q of ["praveentechworld", '"DeGoogle Starter Pack"']) {
       const d = await get(`https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&tags=(story,comment)`);
       for (const h of d.hits || []) {
         out.push({
@@ -166,22 +167,26 @@ let seen = {};
 try { seen = JSON.parse(fs.readFileSync(STATE, "utf8")); } catch { /* first run */ }
 
 const fresh = [], counts = {};
+const day = new Date().toISOString().slice(0, 10);
 for (const [name, fn] of Object.entries(sources)) {
   try {
     const items = await fn();
     counts[name] = items.length;
-    for (const m of items) if (!seen[m.id]) { fresh.push(m); seen[m.id] = new Date().toISOString().slice(0, 10); }
+    for (const m of items) {
+      if (SHOW_ALL) { if (!seen[m.id]) seen[m.id] = day; fresh.push(m); }
+      else if (!seen[m.id]) { fresh.push(m); seen[m.id] = day; }
+    }
   } catch (e) { counts[name] = `ERROR: ${e.message}`; }
   await sleep(1000);
 }
 fs.writeFileSync(STATE, JSON.stringify(seen, null, 1));
 
-const day = new Date().toISOString().slice(0, 10);
 let md = `# Mention report ${day}\n\nScanned: ${Object.entries(counts).map(([k, v]) => `${k} (${v})`).join(" · ")}\n\n`;
 if (BASELINE) md += `BASELINE RUN — ${fresh.length} existing mentions recorded, not reported.\n`;
+else if (SHOW_ALL) md += `FULL LIST — all ${fresh.length} known mention(s) across sources.\n\n`;
 else if (!fresh.length) md += `No NEW mentions since last run. ✅\n`;
-else {
-  md += `## 🔔 ${fresh.length} NEW mention(s)\n\n`;
+else md += `## 🔔 ${fresh.length} NEW mention(s)\n\n`;
+if (!BASELINE && fresh.length) {
   for (const m of fresh) {
     md += `### [${m.title}](${m.url})\n- source: ${m.source}${m.author ? ` · by ${m.author}` : ""}${m.date ? ` · ${m.date}` : ""}${m.points != null ? ` · ${m.points} pts` : ""}\n${m.text ? `> ${m.text}\n` : ""}\n`;
   }
