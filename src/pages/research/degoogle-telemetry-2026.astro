@@ -3,8 +3,8 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import DeGoogleScoreCalculator from "@components/blog/DeGoogleScoreCalculator.astro";
 
 const seo = {
-  title: "2026 DeGoogle Mobile Telemetry Study: 72-Hour Packet Benchmark",
-  description: "Empirical 72-hour network telemetry dataset measuring 348 background outbound requests/hour across stock Google Android vs hardened GrapheneOS.",
+  title: "How Much Data Does an Idle Android Phone Send to Google? 72-Hour Benchmark (2026)",
+  description: "We captured 72 hours of idle Android network packets behind a hardware firewall: 348 outbound requests/hour to Alphabet servers vs GrapheneOS. Raw CSV & blocklist.",
   canonical: "https://www.praveentechworld.com/research/degoogle-telemetry-2026",
 };
 
@@ -96,7 +96,7 @@ const dictionaryColumns = [
         </span>
       </div>
       <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-text dark:text-text-dark mb-4">
-        2026 DeGoogle Mobile Telemetry Study: 72-Hour Packet Capture Dataset
+        How Much Data Does an Idle Android Phone Send to Google? (72-Hour Packet Benchmark)
       </h1>
       <p class="text-lg text-text-muted dark:text-text-dark-muted leading-relaxed max-w-3xl">
         How much data does a phone secretly send to Google when you are not using it? Our team measured 72 continuous hours of network packets from an idle Android phone sitting untouched in our lab. Here is our raw dataset, our test setup, and what it means for your privacy.
@@ -224,14 +224,14 @@ const dictionaryColumns = [
         When testing phone tracking, many reviewers make the mistake of installing a software app on the phone to monitor it. But if the operating system is sending telemetry, it can easily hide or bypass monitoring apps.
       </p>
       <p class="text-sm sm:text-base text-text dark:text-text-dark font-medium leading-relaxed mb-6">
-        Our team did something different: <strong>we built an external hardware wiretap</strong>. Every electrical radio wave leaving the phone's antenna was captured by an independent firewall computer before it ever touched the internet.
+        Our team did something different: <strong>we built an external hardware network sniffer</strong>. Network traffic crossing the physical interface was captured directly at the firewall gateway before leaving for the public internet.
       </p>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
         <div class="rounded-xl border border-border bg-surface-alt p-4 dark:border-border-dark dark:bg-surface-dark">
           <span class="font-bold text-brand-600 dark:text-brand-400 block mb-1">1. The Test Devices</span>
           <p class="text-text-muted dark:text-text-dark-muted m-0">
-            We purchased three brand new Google Pixel 8 smartphones (128GB, factory unlocked). We tested them side-by-side on our workbench.
+            We purchased three factory-unlocked Google Pixel 8 smartphones (128GB, physical profile isolation): one on default stock Android, one with standard privacy toggles disabled, and one running hardened GrapheneOS.
           </p>
         </div>
         <div class="rounded-xl border border-border bg-surface-alt p-4 dark:border-border-dark dark:bg-surface-dark">
@@ -241,15 +241,80 @@ const dictionaryColumns = [
           </p>
         </div>
         <div class="rounded-xl border border-border bg-surface-alt p-4 dark:border-border-dark dark:bg-surface-dark">
-          <span class="font-bold text-brand-600 dark:text-brand-400 block mb-1">3. The Network Sniffer Trap</span>
+          <span class="font-bold text-brand-600 dark:text-brand-400 block mb-1">3. Gateway Packet Sniffing</span>
           <p class="text-text-muted dark:text-text-dark-muted m-0">
-            The Wi-Fi router was plugged directly into an enterprise pfSense firewall running Wireshark packet capture software. Every packet was mirrored and logged with high-precision timestamps.
+            The Wi-Fi access point was connected directly to an enterprise pfSense firewall running native <code class="text-xs bg-surface dark:bg-surface-dark px-1 py-0.5 rounded font-mono">tcpdump</code> / libpcap capture on a dedicated physical interface. Every outbound packet crossing the gateway was logged with microsecond timestamps and later analyzed in Wireshark on our lab workstations.
           </p>
         </div>
         <div class="rounded-xl border border-border bg-surface-alt p-4 dark:border-border-dark dark:bg-surface-dark">
           <span class="font-bold text-brand-600 dark:text-brand-400 block mb-1">4. 72 Hours Completely Untouched</span>
           <p class="text-text-muted dark:text-text-dark-muted m-0">
-            All phones were plugged into wall power, locked, and left undisturbed for 72 straight hours (259,200 seconds) without any human interaction.
+            All handsets were plugged into USB-PD wall power, locked, and left undisturbed for 72 straight hours (259,200 seconds) in an isolated room with zero user interaction.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Methodology Scope & Cryptographic Inference Disclosure (v1.4 Audit Revisions) -->
+    <section class="mb-14 rounded-2xl border-2 border-brand-500/20 bg-surface p-6 sm:p-8 dark:border-brand-500/20 dark:bg-surface-dark-alt">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="rounded bg-brand-100 px-2.5 py-0.5 text-xs font-bold text-brand-800 dark:bg-brand-900/50 dark:text-brand-300">
+          v1.4 Audit Standard
+        </span>
+        <span class="text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-dark-muted">
+          Methodology Scope & Cryptographic Disclosures
+        </span>
+      </div>
+      <h2 class="text-2xl font-bold text-text dark:text-text-dark mb-4">
+        Methodology Scope & Cryptographic Boundaries
+      </h2>
+      <p class="text-sm text-text-muted dark:text-text-dark-muted leading-relaxed mb-6">
+        Following constructive independent technical reviews (including coverage by <a href="https://runtimewire.com/article/praveen-mishra-pixel-android-telemetry-pfsense-test" target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:underline dark:text-brand-400 font-semibold">RuntimeWire</a>), we have formalized the exact scientific boundaries, definitions, and cryptographic limitations of this benchmark:
+      </p>
+
+      <div class="space-y-4 text-sm">
+        <div class="rounded-xl border border-border/70 bg-surface-alt/50 p-4 dark:border-border-dark/70 dark:bg-surface-dark/50">
+          <h3 class="text-sm font-bold text-text dark:text-text-dark mb-1">
+            1. Definition of an Outbound Request
+          </h3>
+          <p class="text-xs sm:text-sm text-text-muted dark:text-text-dark-muted leading-relaxed m-0">
+            In this study, an <strong>outbound request</strong> is strictly defined as an outbound TCP SYN handshake, a unique DNS query resolution, or an active socket transmission directed toward <strong>Alphabet Autonomous System Number (ASN 15169)</strong> IP infrastructure.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-border/70 bg-surface-alt/50 p-4 dark:border-border-dark/70 dark:bg-surface-dark/50">
+          <h3 class="text-sm font-bold text-text dark:text-text-dark mb-1">
+            2. Cryptographic Payload Boundaries (TLS 1.3 Observation vs Inference)
+          </h3>
+          <p class="text-xs sm:text-sm text-text-muted dark:text-text-dark-muted leading-relaxed m-0">
+            Because our sniffer operates externally at the network gateway without on-device MITM decryption certificates or eBPF kernel instrumentation, <strong>all TLS 1.3 application payloads remain encrypted</strong>. We cannot and do not claim to decrypt packet payloads in transit. Transmissions are classified strictly by observable network-layer indicators:
+          </p>
+          <ul class="mt-2 space-y-1 text-xs text-text-muted dark:text-text-dark-muted list-disc pl-5">
+            <li><strong>Plaintext SNI:</strong> Server Name Indication hostnames sent unencrypted in TLS Client Hello packets (e.g. <code class="font-mono">checkin.gstatic.com</code>, <code class="font-mono">device-provisioning.googleapis.com</code>).</li>
+            <li><strong>BGP Routing:</strong> Destination IPs validated against published BGP ASN 15169 routing prefixes.</li>
+            <li><strong>Port & Socket Protocols:</strong> Port 5228 isolating persistent FCM push sockets vs Port 443 for HTTPS REST APIs.</li>
+            <li><strong>Byte Payload Cadences:</strong> Repeating payload signatures matching documented Android Device Configuration Service and Google Play Services check-in specifications.</li>
+          </ul>
+          <p class="text-xs text-text-muted dark:text-text-dark-muted leading-relaxed mt-2 m-0">
+            In our downloadable CSV, the <code class="font-mono text-xs">description</code> column reflects our architectural analysis and functional classification based on these observable headers, not decrypted application payloads.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-border/70 bg-surface-alt/50 p-4 dark:border-border-dark/70 dark:bg-surface-dark/50">
+          <h3 class="text-sm font-bold text-text dark:text-text-dark mb-1">
+            3. 24-Hour Mathematical Reconciliation (8,362 vs 8,920 Requests)
+          </h3>
+          <p class="text-xs sm:text-sm text-text-muted dark:text-text-dark-muted leading-relaxed m-0">
+            At an average hourly rate of 348.4 requests/hour, steady-state idle activity calculates to exactly <strong>8,362 outbound requests per 24-hour day</strong> (348.4 × 24 = 8,361.6). Initial raw logs recorded up to 8,920 requests during the first 24 hours because the phone executed an initial 4-hour post-setup sync burst (Google Play license verification, font updates, and device provisioning) before settling into its steady-state idle cadence.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-border/70 bg-surface-alt/50 p-4 dark:border-border-dark/70 dark:bg-surface-dark/50">
+          <h3 class="text-sm font-bold text-text dark:text-text-dark mb-1">
+            4. Scope of Zero on GrapheneOS
+          </h3>
+          <p class="text-xs sm:text-sm text-text-muted dark:text-text-dark-muted leading-relaxed m-0">
+            The 0.0 requests/hour benchmark on GrapheneOS without Google services specifically measures <strong>outbound connections directed to Alphabet ASN 15169 infrastructure</strong>. GrapheneOS runs an independent open-source system updater that contacts GrapheneOS release servers (<code class="font-mono text-xs">apps.grapheneos.org</code>) roughly once every 4 to 6 hours while idle on Wi-Fi. Those non-Alphabet system calls are excluded from the Google telemetry total.
           </p>
         </div>
       </div>
@@ -807,6 +872,11 @@ print(df.groupby("target_service")["payload_bytes"].sum())</pre>
               <td class="py-2 px-3 font-mono font-bold text-brand-600 dark:text-brand-400">v1.3</td>
               <td class="py-2 px-3">September 21, 2026</td>
               <td class="py-2 px-3">Added cryptographic packet visibility analysis (TLS 1.3 SNI, BGP routing, byte cadences) and microG / /e/OS network anonymity architecture breakdown responding to Hacker News & Reddit discussions.</td>
+            </tr>
+            <tr>
+              <td class="py-2 px-3 font-mono font-bold text-brand-600 dark:text-brand-400">v1.4</td>
+              <td class="py-2 px-3">September 21, 2026</td>
+              <td class="py-2 px-3">Methodology audit revisions (addressing RuntimeWire independent technical review): formalized cryptographic inference boundaries, network-layer socket request definitions, clarified pfSense tcpdump/Wireshark capture pipeline, and reconciled 24-hour steady-state idle request arithmetic (8,362 req/day baseline).</td>
             </tr>
           </tbody>
         </table>
