@@ -44,7 +44,6 @@ export default defineConfig({
     "/tag/pc optimization": "/tag/windows-fixes",
     "/tag/pc%20optimization": "/tag/windows-fixes",
     "/tag/pc-optimization": "/tag/windows-fixes",
-    "/blog/google-maps-alternatives-organic-maps-osmand-privacy-guide": "/blog/degoogle-starter-pack-complete-guide",
     "/2026/01/Top-Blogger-Themes-in-2026-And-the-Only-Clean-Install-Hack-You-Need.html": "/blog",
     "/2026/02/The-Curiosity-Crisis-AI-Is-Raising-a-Generation-of-Loners.html": "/blog",
     "/2026/01/Does-Reinstalling-Windows-Actually-Fix-Problems.html": "/blog/does-resetting-windows-remove-viruses-completely",
