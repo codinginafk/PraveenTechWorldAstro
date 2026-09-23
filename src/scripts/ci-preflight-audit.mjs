@@ -152,6 +152,12 @@ runCheck("Lexical Integrity & Slop-Gate", () => {
   }
 });
 
+runCheck("Slop-Gate: AI-Detector Scoring on Changed Articles", () => {
+  // Scores every article changed vs origin/main (or worktree) through SlopDetector.
+  // Fails on combined >= 40 or judge likely_ai_raw (high). Infra issues warn-open.
+  execSync("node src/scripts/slop-gate.mjs", { cwd: projectRoot, stdio: "inherit" });
+});
+
 console.log("=================================================");
 if (failedPoints > 0) {
   console.error(`🚨 PRE-FLIGHT AUDIT FAILED: ${failedPoints} critical failure point(s) detected!`);

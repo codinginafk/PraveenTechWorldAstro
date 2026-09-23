@@ -17,10 +17,11 @@ Everyone except the owner must ship through pull requests — `main` is protecte
 - Frontmatter is schema-validated (`src/content.config.ts`, `src/scripts/validate-content-frontmatter.mjs`): `author` is required, dates must be real, and the cover image file must exist in the repo (`lint-missing-images` fails otherwise).
 - Slugs are permanent. Renaming one requires updating the redirect in ALL THREE places or you create chains/404s: `astro.config.mjs`, `vercel.json`, `public/_redirects`.
 
-## Quality gate (required on every content PR)
+## Quality gate (required on every content PR — enforced by CI)
 
-- Run every new/edited article through `https://slopdetector.praveentechworld.com` (URL mode): combined score under 40, judge verdict NOT `likely_ai_raw`.
-- Fix flagged phrases and re-run until it passes. Paste the score in your PR description.
+- Every article you touch is auto-scored by `src/scripts/slop-gate.mjs` inside the preflight audit: **combined under 40 and no `likely_ai_raw` judge verdict**, or the build fails. Banned hype phrases fail instantly.
+- Check a file yourself before pushing: `node src/scripts/slop-gate.mjs --file src/content/articles/<slug>.mdx`.
+- Infra hiccups (API down/rate-limited) warn open and never block merges; `SKIP_SLOP_GATE=1` bypasses explicitly (logged — don't).
 - No filler for word count, no unsourced fake-precise stats, no `paradigm shift / deep dive / crucial / synergy` padding.
 
 ## Off-limits
