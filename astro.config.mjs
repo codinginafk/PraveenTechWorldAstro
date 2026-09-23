@@ -29,7 +29,6 @@ export default defineConfig({
   site: "https://www.praveentechworld.com",
   trailingSlash: "never",
   redirects: {
-                "/blog/google-maps-alternatives-organic-maps-osmand-privacy-guide": "/blog/degoogle-starter-pack-complete-guide",
     "/blog/best-password-manager-for-small-business-2026": "/blog/best-password-managers-in-2026-security-features-and-pricing-compared",
     "/blog/how-to-fix-windows-11-update-error-0x800f081f": "/blog/fix-windows-11-update-errors-2026-troubleshooting",
     "/tag/windows performance": "/tag/windows-fixes",
