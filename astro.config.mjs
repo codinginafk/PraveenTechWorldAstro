@@ -74,6 +74,7 @@ export default defineConfig({
     "/blog/why-dubai-customers-ignore-contact-us-forms-and-text-on-whatsapp": "/contact",
     "/blog/google-business-profile-video-verification-dubai": "/contact",
     "/blog/tiktok-vs-whatsapp-vs-instagram-which-social-platform-dominates-dubai": "/blog",
+    "/blog/automate-weekly-student-grade-reports-with-a-python-script-and-deepseek-prompts": "/blog/automate-student-grade-reports-python-deepseek",
     "/blog/how-i-automated-tls-certificate-renewal-with-deepseek-and-why-it-almost-broke-pr": "/blog/automated-tls-certificate-renewal-with-deepseek",
     "/blog/automate-your-daily-workflow-in-2026-free-tools-and-real-examples": "/blog/how-to-automate-your-daily-workflow-with-free-tools-in-2026-complete-guide",
     "/blog/how-to-fix-windows-11-update-errors-in-2026-complete-troubleshooting-guide": "/blog/fix-windows-11-update-errors-2026-troubleshooting",

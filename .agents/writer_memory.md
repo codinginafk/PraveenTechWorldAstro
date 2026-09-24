@@ -1,4 +1,4 @@
-﻿# Writer Memory & Style Guidelines (PraveenTechWorld)
+# Writer Memory & Style Guidelines (PraveenTechWorld)
 
 ## 1. Brand Voice & Perspective
 - **First-Person Team Perspective:** Always write articles and technical guides from the first-person perspective of 'our team', 'my friends and I', or 'our workbench'. Share real, firsthand dev-ops workbench testing, failure cases, and real benchmarks.
@@ -11,3 +11,9 @@
 - **Metadata Limits:** Frontmatter description must strictly be $\le 165$ characters. 	itle must target the primary search intent.
 - **Reproducible Artifacts:** Include working, tested code (PowerShell, Python, Bash, Docker Compose) and comprehensive benchmark comparison tables.
 - **Single-Post Limit:** Exactly 1 article released/modified per session to ensure isolated Git history.
+
+## 3. The Readability Standard
+- **Sentence Length Target:** Keep average sentence length between 11 and 15 words. Never write a sentence longer than 25 words without breaking it with a period.
+- **First-Person Workbench Experience:** Ground every technical guide in real developer work: "We tested this on Windows 11 24H2", "The script crashed on line 42 because Pandas read empty cells as strings".
+- **Cut the Buzzwords:** Eliminate synergy, paradigm, transformative, testament, landscape, multifaceted, leverage, utilize.
+- **Immediate Direct Answer:** Put the exact PowerShell/Python command or 2-sentence fix in the first 50 words before getting into the architecture.

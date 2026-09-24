@@ -54,6 +54,8 @@ Regardless of the `autoApprove` and `suppressPrompts` configurations above, the 
 3. **Strict Simplicity & Clarity:** One object, one anomaly. Reads cleanly at thumbnail size.
 4. **No Text Overlay:** Banish text titles in cover graphics. Let Astro HTML handles card text overlays.
 
-
-
-
+## The Readability Standard (How We Write Going Forward)
+1. **Sentence Length Target:** Keep average sentence length between 11 and 15 words. Never write a sentence longer than 25 words without breaking it with a period.
+2. **First-Person Workbench Experience:** Ground every technical guide in real developer work: "We tested this on Windows 11 24H2", "The script crashed on line 42 because Pandas read empty cells as strings".
+3. **Cut the Buzzwords:** Eliminate synergy, paradigm, transformative, testament, landscape, multifaceted, leverage, utilize.
+4. **Immediate Direct Answer:** Put the exact PowerShell/Python command or 2-sentence fix in the first 50 words before getting into the architecture.
