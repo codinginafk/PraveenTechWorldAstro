@@ -122,9 +122,11 @@ export default defineConfig({
         !page.startsWith("https://www.praveentechworld.com/services") &&
         !page.startsWith("https://www.praveentechworld.com/demo") &&
         !page.startsWith("https://www.praveentechworld.com/search") &&
+        !page.startsWith("https://www.praveentechworld.com/guides/business") &&
         !page.startsWith("https://www.praveentechworld.com/guides/career-growth") &&
         !page.startsWith("https://www.praveentechworld.com/guides/hosting-infra") &&
         !page.startsWith("https://www.praveentechworld.com/guides/productivity") &&
+        !page.startsWith("https://www.praveentechworld.com/guest-post") &&
         !page.startsWith("https://www.praveentechworld.com/author/abduldiyan") &&
         !page.startsWith("https://www.praveentechworld.com/author/satyam") &&
         !page.endsWith("/rss.xml") &&
