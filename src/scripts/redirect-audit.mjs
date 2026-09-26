@@ -5,9 +5,9 @@
  * and enforces:
  *   FAIL: source slug matches a LIVE (draft:false) article  (the Step-3/4/5 bug class)
  *   FAIL: redirect loops (A->B->A), self-redirects (A->A), intra-file duplicates
+ *   FAIL: destination slug has no published article (draft/renamed target -> live 404)
  *   WARN: cross-config mismatch (same source, different dest / missing somewhere)
  *   WARN: chains (A->B->C, equity leak + latency)
- *   WARN: destination that 404s in sitemap terms (dest slug has no live article and isn't /blog etc.)
  *
  * Usage: node src/scripts/redirect-audit.mjs [--live]
  *   --live also HTTP-checks every source (slower, for manual runs — NOT in CI).
@@ -23,6 +23,8 @@ const EDGE = process.argv.includes("--edge");
 const fails = [], warns = [];
 const fail = (m) => fails.push(m);
 const warn = (m) => warns.push(m);
+// decode %XX so astro (%20) and _redirects (raw space) forms compare equal
+const norm = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
 
 // ---- 1. parse astro.config.mjs redirects block ----
 const astro = fs.readFileSync(path.join(ROOT, "astro.config.mjs"), "utf8");
@@ -65,10 +67,26 @@ if (fs.existsSync(redPath)) {
 
 // ---- live article slugs (draft:false only) ----
 const live = new Set();
+const drafts = new Set();
 const adir = path.join(ROOT, "src/content/articles");
 for (const f of fs.readdirSync(adir).filter((x) => x.endsWith(".mdx"))) {
   const c = fs.readFileSync(path.join(adir, f), "utf8");
-  if (!/^draft:\s*true/m.test(c)) live.add("/blog/" + f.replace(/\.mdx$/, ""));
+  const slug = "/blog/" + f.replace(/\.mdx$/, "");
+  if (/^draft:\s*true/m.test(c)) drafts.add(slug);
+  else live.add(slug);
+}
+
+// ---- 4b. destination must actually be built (a draft slug as destination 404s) ----
+const allRules = [
+  ...[...astroMap.entries()].map(([s, v]) => [s, v.dest]),
+  ...[...vercelMap.entries()].map(([s, v]) => [s, v.dest]),
+  ...[...redirMap.entries()].map(([s, v]) => [s, v.dest]),
+];
+for (const [src, dst] of allRules) {
+  const clean = norm(dst).replace(/[?#].*$/, "").replace(/\/$/, "");
+  if (!/^\/blog\/.+/.test(clean) || /[*(:]/.test(clean)) continue;
+  if (drafts.has(clean)) fail(`DEST-DRAFT: ${src} -> ${clean} is draft:true (never built -> live 404)`);
+  else if (!live.has(clean)) fail(`DEST-404: ${src} -> ${clean} has no published article`);
 }
 
 // ---- 4. live-article shadowing (THE bug class) ----
@@ -79,8 +97,6 @@ for (const [src] of vercelMap) {
 }
 
 // ---- 5. cross-config consistency (exact-path rules only) ----
-// ---- decode %XX so astro (%20) and _redirects (raw space) forms compare equal ----
-const norm = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
 const astroN = new Map([...astroMap.entries()].map(([k, v]) => [norm(k), v]));
 const vercelN = new Map([...vercelMap.entries()].filter(([k]) => !/[(*]/.test(k)).map(([k, v]) => [norm(k), v]));
 const redirN = redirMap; // already decoded at parse
