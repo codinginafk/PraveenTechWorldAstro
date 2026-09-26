@@ -158,6 +158,12 @@ runCheck("Slop-Gate: AI-Detector Scoring on Changed Articles", () => {
   execSync("node src/scripts/slop-gate.mjs", { cwd: projectRoot, stdio: "inherit" });
 });
 
+runCheck("Redirect Registry Consistency (anti-shadow/canonical guard)", () => {
+  // Fails on: live-article shadowing, loops, self-redirects, duplicates,
+  // cross-config mismatches. Static only (no network) — safe in CI.
+  execSync("node src/scripts/redirect-audit.mjs", { cwd: projectRoot, stdio: "inherit" });
+});
+
 console.log("=================================================");
 if (failedPoints > 0) {
   console.error(`🚨 PRE-FLIGHT AUDIT FAILED: ${failedPoints} critical failure point(s) detected!`);

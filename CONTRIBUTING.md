@@ -17,6 +17,22 @@ Everyone except the owner must ship through pull requests — `main` is protecte
 - Frontmatter is schema-validated (`src/content.config.ts`, `src/scripts/validate-content-frontmatter.mjs`): `author` is required, dates must be real, and the cover image file must exist in the repo (`lint-missing-images` fails otherwise).
 - Slugs are permanent. Renaming one requires updating the redirect in ALL THREE places or you create chains/404s: `astro.config.mjs`, `vercel.json`, `public/_redirects`.
 
+## Redirects (triple-config rule — read twice)
+
+Redirects live in THREE places that must agree: `astro.config.mjs` → `vercel.json` → `public/_redirects`.
+`npm run build` equivalent: `node src/scripts/redirect-audit.mjs` runs in CI and FAILS on:
+live-article shadowing (redirecting a published URL = the Step-3/4/5 outage class),
+loops, self-redirects, duplicates, cross-config mismatches. Run it locally before pushing
+any redirect change. Never redirect a `draft:false` URL without drafting it in the same commit.
+
+## New-page launch checklist (do all five before calling it published)
+
+1. IndexNow ping the URL (`node scratch/trigger_indexnow.mjs <url>`).
+2. Link it from ≥3 relevant live pages (no orphans — GSC "Discovered" purgatory starts here).
+3. Confirm it renders real content live (curl the URL: check `<title>` + body bytes, never trust bare HTTP 200).
+4. Confirm it is NOT in any redirect config and its slug has no duplicate/typo twin.
+5. Request indexing in GSC; watch queries weekly, not daily.
+
 ## Quality gate (required on every content PR — enforced by CI)
 
 - Every article you touch is auto-scored by `src/scripts/slop-gate.mjs` inside the preflight audit: **combined under 40 and no `likely_ai_raw` judge verdict**, or the build fails. Banned hype phrases fail instantly.
