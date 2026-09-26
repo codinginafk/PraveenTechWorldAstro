@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const LIVE = process.argv.includes("--live");
+const EDGE = process.argv.includes("--edge");
 const fails = [], warns = [];
 const fail = (m) => fails.push(m);
 const warn = (m) => warns.push(m);
@@ -125,10 +126,54 @@ if (LIVE) {
   console.log(`   live-checked ${res.length} redirect sources`);
 }
 
+// ---- 8. optional: Cloudflare edge rules (the 4th place redirects can live) ----
+if (EDGE) {
+  try {
+    const env = fs.readFileSync(path.join(ROOT, ".env"), "utf8");
+    const tok = (env.match(/^CLOUDFLARE_API_TOKEN=(.*)$/m) || [])[1]?.trim();
+    const zone = (env.match(/^CLOUDFLARE_ZONE_ID=(.*)$/m) || [])[1]?.trim();
+    if (!tok || !zone) warn("EDGE: no CLOUDFLARE_API_TOKEN / CLOUDFLARE_ZONE_ID in .env - edge rules not checked");
+    else {
+      const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${zone}/rulesets`, { headers: { authorization: `Bearer ${tok}` } });
+      const j = await res.json();
+      if (!j.success) warn("EDGE: rulesets read failed: " + JSON.stringify(j.errors?.[0] || ""));
+      else {
+        // repo destinations that point at a different host than the source (host-level rules)
+        const repoHostFlips = [];
+        for (const [src, dst] of vercelMap) if (!src.includes("(") && /^https?:\/\//.test(dst)) repoHostFlips.push([src, dst]);
+        for (const r of astroMap) if (/^https?:\/\//.test(r.dest)) repoHostFlips.push([r.dest]);
+
+        let edgeCount = 0;
+        for (const rs of (j.result || []).filter((x) => x.phase === "http_request_dynamic_redirect")) {
+          for (const r of rs.rules || []) {
+            if (r.action !== "redirect") continue;
+            edgeCount++;
+            const expr = r.expression || "";
+            const srcHost = (expr.match(/http\.request\.host eq "([^"]+)"/) || [])[1] || expr;
+            const t = r.action_parameters?.from_value?.target_url;
+            const target = t?.expression || t?.url || "";
+            const destBase = target.match(/^"([^"]+)"/)?.[1] || target.match(/concat\("([^"]+)"/)?.[1] || target;
+            const destHost = /^https?:\/\/([^/]+)/.exec(destBase)?.[1] || null;
+            if (destHost && destHost === srcHost && !t?.expression) fail(`EDGE LOOP: ${srcHost} rule targets itself (${target})`);
+            for (const [rs2, rd] of repoHostFlips) {
+              const rdHost = /^https?:\/\/([^/]+)/.exec(rd)?.[1];
+              if (destHost && rdHost === srcHost && /^https?:\/\/([^/]+)/.exec(destBase)?.[1] === rdHost) fail(`EDGE/REPO LOOP: edge sends ${srcHost} -> ${destBase}, repo rule sends it back (${rs2} -> ${rd})`);
+            }
+            console.log(`   edge rule: ${srcHost} -> ${destBase} (${r.action_parameters?.from_value?.status_code || 302})`);
+          }
+        }
+        console.log(`   edge: ${edgeCount} Cloudflare redirect rule(s)${edgeCount === 0 ? " (apex handled by vercel.json fallback)" : ""}`);
+      }
+    }
+  } catch (e) {
+    warn("EDGE: " + e.message);
+  }
+}
+
 for (const w of warns) console.log("⚠️  " + w);
 if (fails.length) {
   console.error(`\n❌ REDIRECT-AUDIT FAILED (${fails.length}):`);
   fails.forEach((x) => console.error("   - " + x));
   process.exit(1);
 }
-console.log(`\n✅ Redirect audit passed: ${allSrc.size} sources consistent across astro/vercel/_redirects${LIVE ? " + live" : ""}.`);
+console.log(`\n✅ Redirect audit passed: ${allSrc.size} sources consistent across astro/vercel/_redirects${LIVE ? " + live" : ""}${EDGE ? " + edge" : ""}.`);

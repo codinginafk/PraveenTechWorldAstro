@@ -20,10 +20,21 @@ Everyone except the owner must ship through pull requests — `main` is protecte
 ## Redirects (triple-config rule — read twice)
 
 Redirects live in THREE places that must agree: `astro.config.mjs` → `vercel.json` → `public/_redirects`.
-`npm run build` equivalent: `node src/scripts/redirect-audit.mjs` runs in CI and FAILS on:
+A fourth can appear at the Cloudflare edge (`--edge` reads it; your zone token is read-only).
+`node src/scripts/redirect-audit.mjs` runs in CI and FAILS on:
 live-article shadowing (redirecting a published URL = the Step-3/4/5 outage class),
 loops, self-redirects, duplicates, cross-config mismatches. Run it locally before pushing
-any redirect change. Never redirect a `draft:false` URL without drafting it in the same commit.
+any redirect change (`--edge` locally, static-only in CI). Never redirect a `draft:false`
+URL without drafting it in the same commit.
+
+## GSC stale-state check (weekly, Monday 06:17 UTC)
+
+`node src/scripts/gsc-stale-state-check.mjs` inspects watchlisted URLs
+(`research/agents/gsc-watchlist.json`) and separates **stale report entries**
+(error state + Google's last fetch predates `siteFixedAt` or is >14 days old →
+request recrawl) from **live defects** (recent fetch that still errors → fix the site).
+Fails the workflow on either. Add a URL with `--add <url> [--group name]`;
+`--all` sweeps every sitemap URL. Requires the `GCP_SERVICE_ACCOUNT_JSON` secret.
 
 ## New-page launch checklist (do all five before calling it published)
 

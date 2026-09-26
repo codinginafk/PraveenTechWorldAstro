@@ -1,0 +1,76 @@
+name: GSC Stale-State Check
+
+# Separates stale GSC report entries from live defects. URL Inspection returns the
+# date Googlebot last fetched each URL; an error state older than the watchlist's
+# siteFixedAt (or staleAfterDays) means the report is out of date and the fix is a
+# recrawl request, not a code change. A recent fetch that still errors is a real bug.
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'   # Mondays 06:17 UTC
+  workflow_dispatch:
+    inputs:
+      all:
+        description: 'Sweep every sitemap URL instead of the watchlist'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  stale-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Write GSC service account key
+        env:
+          GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GCP_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::GCP_SERVICE_ACCOUNT_JSON secret is not set"
+            exit 2
+          fi
+          printf '%s' "$GCP_SERVICE_ACCOUNT_JSON" > gcp-service-account.json
+
+      - name: Run stale-state check
+        run: |
+          if [ "${{ inputs.all }}" = "true" ]; then
+            node src/scripts/gsc-stale-state-check.mjs --all
+          else
+            node src/scripts/gsc-stale-state-check.mjs
+          fi
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gsc-stale-report
+          path: research/reports/gsc-stale*.md
+          retention-days: 90
+
+      - name: Remove service account key
+        if: always()
+        run: rm -f gcp-service-account.json
+
+      - name: CI/CD Failure Alert Dispatcher
+        if: failure()
+        run: node scripts/ci_failure_notifier.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}

@@ -210,6 +210,41 @@ export async function checkUrlIndexed(urlPath) {
   };
 }
 
+// Full URL Inspection payload (stored state, not a live test). Needed by the
+// stale-state checker: coverageState alone cannot tell a 3-day-old REDIRECT_ERROR
+// from a 3-month-old one, and only lastCrawlTime makes that distinction.
+export async function inspectUrlDetailed(urlPath) {
+  const saPath = getServiceAccountPath();
+  if (!fs.existsSync(saPath)) return { url: urlPath, error: "no_service_account" };
+  const fullUrl = urlPath.startsWith("http") ? urlPath : `${SITE_URL}${urlPath}`;
+  try {
+    const { google } = await import("googleapis");
+    const auth = new google.auth.GoogleAuth({
+      keyFile: saPath,
+      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
+    });
+    const searchconsole = google.searchconsole({ version: "v1", auth: await auth.getClient() });
+    const res = await searchconsole.urlInspection.index.inspect({
+      requestBody: { inspectionUrl: fullUrl, siteUrl: GSC_SITE_URL },
+    });
+    const ist = res.data.inspectionResult?.indexStatusResult || {};
+    return {
+      url: fullUrl,
+      verdict: ist.verdict || "UNKNOWN",
+      coverageState: ist.coverageState || "unknown",
+      pageFetchState: ist.pageFetchState || "UNKNOWN",
+      lastCrawlTime: ist.lastCrawlTime || null,
+      indexingState: ist.indexingState || null,
+      robotsTxtState: ist.robotsTxtState || null,
+      googleCanonical: ist.googleCanonical || null,
+      userCanonical: ist.userCanonical || null,
+      referringUrls: ist.referringUrls || [],
+    };
+  } catch (err) {
+    return { url: fullUrl, error: err.message };
+  }
+}
+
 export async function getGscPerformance(daysBack = 7) {
   log("[GSC Client] Fetching Search Analytics data...");
   try {
