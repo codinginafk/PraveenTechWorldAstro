@@ -29,6 +29,9 @@ export default defineConfig({
   site: "https://www.praveentechworld.com",
   trailingSlash: "never",
   redirects: {
+    "/blog/what-is-domain-authority-and-how-to-improve-it-in-2026": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
+    "/blog/backlink-building-guide-for-new-websites-get-your-first-quality-links": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
+    "/blog/technical-seo-checklist-for-beginners-fix-these-issues-to-rank-better": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
     "/blog/seo-basics-how-to-rank-higher-on-google-in-2026": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
     "/blog/how-to-write-seo-friendly-blog-posts-that-actually-rank-on-google": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
     "/blog/why-seo-is-evolving-in-the-age-of-ai": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
