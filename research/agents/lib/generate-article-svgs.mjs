@@ -18,7 +18,7 @@ const svgConfigs = {
     category: "AI AUTOMATION",
     emoji: "📊",
     subtext: "Save 60% on your API bills",
-    gradient: "from-[#8b5cf6] to-[#ec4899]",
+    gradient: "from-[#059669] to-[#ec4899]",
     desc: "Cut My API Bill by 60%"
   },
   "what-is-domain-authority-and-how-to-improve-it-in-2026": {
@@ -26,7 +26,7 @@ const svgConfigs = {
     category: "WEBSITE SETUP",
     emoji: "📈",
     subtext: "How I went from 0 to 20+",
-    gradient: "from-[#3b82f6] to-[#10b981]",
+    gradient: "from-[#34d399] to-[#10b981]",
     desc: "SEO Optimization Guide"
   },
   "how-to-set-up-google-search-console-for-your-new-website": {
@@ -42,7 +42,7 @@ const svgConfigs = {
     category: "WEBSITE SETUP",
     emoji: "⚡",
     subtext: "Replacing 2MB bloat with raw HTML",
-    gradient: "from-[#10b981] to-[#6366f1]",
+    gradient: "from-[#10b981] to-[#10b981]",
     desc: "Core Web Vitals Optimization"
   },
   "how-to-use-google-analytics-4-to-improve-your-content-strategy": {
@@ -50,7 +50,7 @@ const svgConfigs = {
     category: "WEBSITE SETUP",
     emoji: "📊",
     subtext: "Turn numbers into ranking articles",
-    gradient: "from-[#6366f1] to-[#3b82f6]",
+    gradient: "from-[#10b981] to-[#34d399]",
     desc: "Google Analytics 4 Guide"
   },
   "backlink-building-guide-for-new-websites-get-your-first-quality-links": {
@@ -58,7 +58,7 @@ const svgConfigs = {
     category: "WEBSITE SETUP",
     emoji: "🔗",
     subtext: "Get your first 10 high-value backlinks",
-    gradient: "from-[#3b82f6] to-[#8b5cf6]",
+    gradient: "from-[#34d399] to-[#059669]",
     desc: "SEO Growth Strategy"
   },
   "how-to-write-seo-friendly-blog-posts-that-actually-rank-on-google": {
@@ -66,7 +66,7 @@ const svgConfigs = {
     category: "WEBSITE SETUP",
     emoji: "📝",
     subtext: "Write articles that search engines love",
-    gradient: "from-[#8b5cf6] to-[#10b981]",
+    gradient: "from-[#059669] to-[#10b981]",
     desc: "Content Writing Optimization"
   },
   "technical-seo-checklist-for-beginners-fix-these-issues-to-rank-better": {
@@ -82,7 +82,7 @@ const svgConfigs = {
     category: "PRODUCTIVITY",
     emoji: "📊",
     subtext: "Learn formulas and macros in seconds",
-    gradient: "from-[#10b981] to-[#3b82f6]",
+    gradient: "from-[#10b981] to-[#34d399]",
     desc: "Smart spreadsheet automation"
   },
   "speed-up-your-slow-pc-in-2026-10-essential-windows-performance-tweaks": {
@@ -90,7 +90,7 @@ const svgConfigs = {
     category: "WINDOWS FIXES",
     emoji: "⚡",
     subtext: "10 essential tweaks for Windows 11",
-    gradient: "from-[#ef4444] to-[#6366f1]",
+    gradient: "from-[#ef4444] to-[#10b981]",
     desc: "Performance tuning guide"
   },
   "microsoft-free-ai-for-teachers-students-how-to-access-and-use-copilot-now": {
@@ -98,7 +98,7 @@ const svgConfigs = {
     category: "AI WEBSITES",
     emoji: "🎓",
     subtext: "Access free AI for teachers and students",
-    gradient: "from-[#3b82f6] to-[#ec4899]",
+    gradient: "from-[#34d399] to-[#ec4899]",
     desc: "Microsoft AI integration"
   },
   "chatgpt-for-excel-how-to-use-new-financial-data-integrations-2024-guide": {
@@ -122,7 +122,7 @@ const svgConfigs = {
     category: "WINDOWS FIXES",
     emoji: "🛠️",
     subtext: "Step-by-step update error fixes",
-    gradient: "from-[#ef4444] to-[#3b82f6]",
+    gradient: "from-[#ef4444] to-[#34d399]",
     desc: "Troubleshoot update stuck loop"
   },
   "android-phone-not-charging-10-fixes-for-2026-complete-troubleshooting-guide": {
@@ -146,7 +146,7 @@ const svgConfigs = {
     category: "AI AUTOMATION",
     emoji: "🤖",
     subtext: "Berkeley students break the chatbox",
-    gradient: "from-[#6366f1] to-[#ec4899]",
+    gradient: "from-[#10b981] to-[#ec4899]",
     desc: "The rise of agentic sandboxes"
   },
   "ai-in-higher-education-protecting-student-data-privacy-tips": {
@@ -154,7 +154,7 @@ const svgConfigs = {
     category: "PRIVACY",
     emoji: "🔒",
     subtext: "Protecting student data in higher ed",
-    gradient: "from-[#3b82f6] to-[#8b5cf6]",
+    gradient: "from-[#34d399] to-[#059669]",
     desc: "Data protection & compliance"
   },
   "how-to-use-chatgpt-to-summarize-long-pdfs-for-free": {
@@ -162,7 +162,7 @@ const svgConfigs = {
     category: "PRODUCTIVITY",
     emoji: "📄",
     subtext: "Summarize 100-page PDFs for free",
-    gradient: "from-[#8b5cf6] to-[#f59e0b]",
+    gradient: "from-[#059669] to-[#f59e0b]",
     desc: "Save hours of reading"
   },
   "chrome-removes-ai-privacy-wording-google-on-device-data": {
@@ -170,7 +170,7 @@ const svgConfigs = {
     category: "PRIVACY",
     emoji: "🌐",
     subtext: "What Google removing privacy wording means",
-    gradient: "from-[#3b82f6] to-[#ef4444]",
+    gradient: "from-[#34d399] to-[#ef4444]",
     desc: "On-device processing details"
   },
   "chatgpt-usage-and-adoption-patterns-at-work-in-2026-what-the-data-shows": {
@@ -178,7 +178,7 @@ const svgConfigs = {
     category: "AI WEBSITES",
     emoji: "🤖",
     subtext: "Workplace data & adoption statistics",
-    gradient: "from-[#6366f1] to-[#10b981]",
+    gradient: "from-[#10b981] to-[#10b981]",
     desc: "How tools are used in 2026"
   },
   "how-to-use-ai-to-write-emails-that-get-replies-2026-guide": {
@@ -186,7 +186,7 @@ const svgConfigs = {
     category: "PRODUCTIVITY",
     emoji: "✉️",
     subtext: "Draft messages that get read & replied to",
-    gradient: "from-[#8b5cf6] to-[#3b82f6]",
+    gradient: "from-[#059669] to-[#34d399]",
     desc: "High-conversion copywriting"
   },
   "how-to-remove-your-personal-information-from-google-search-results-2026-guide": {
@@ -194,7 +194,7 @@ const svgConfigs = {
     category: "PRIVACY",
     emoji: "🛡️",
     subtext: "Remove yourself from Google search results",
-    gradient: "from-[#ef4444] to-[#8b5cf6]",
+    gradient: "from-[#ef4444] to-[#059669]",
     desc: "Privacy protection guide"
   },
   "windows-11-kb5089573-update-errors-slow-internet-fix": {
@@ -210,34 +210,34 @@ const svgConfigs = {
     category: "AI AUTOMATION",
     emoji: "💵",
     subtext: "No-code receipt extraction & automation",
-    gradient: "from-[#10b981] to-[#6366f1]",
+    gradient: "from-[#10b981] to-[#10b981]",
     desc: "DeepSeek automated accounting"
   }
 };
 
 // Colors for raw SVG gradient generation
 const colorMap = {
-  "from-[#8b5cf6] to-[#ec4899]": { c1: "#8b5cf6", c2: "#ec4899", bg: "#fbf8ff" },
-  "from-[#3b82f6] to-[#10b981]": { c1: "#3b82f6", c2: "#10b981", bg: "#f0fcf7" },
+  "from-[#059669] to-[#ec4899]": { c1: "#059669", c2: "#ec4899", bg: "#fbf8ff" },
+  "from-[#34d399] to-[#10b981]": { c1: "#34d399", c2: "#10b981", bg: "#f0fcf7" },
   "from-[#f59e0b] to-[#ef4444]": { c1: "#f59e0b", c2: "#ef4444", bg: "#fff7f5" },
-  "from-[#10b981] to-[#6366f1]": { c1: "#10b981", c2: "#6366f1", bg: "#f4fcf9" },
-  "from-[#6366f1] to-[#3b82f6]": { c1: "#6366f1", c2: "#3b82f6", bg: "#f5f7ff" },
-  "from-[#3b82f6] to-[#8b5cf6]": { c1: "#3b82f6", c2: "#8b5cf6", bg: "#f5f8ff" },
-  "from-[#8b5cf6] to-[#10b981]": { c1: "#8b5cf6", c2: "#10b981", bg: "#f7fbf8" },
+  "from-[#10b981] to-[#10b981]": { c1: "#10b981", c2: "#10b981", bg: "#f4fcf9" },
+  "from-[#10b981] to-[#34d399]": { c1: "#10b981", c2: "#34d399", bg: "#f5f7ff" },
+  "from-[#34d399] to-[#059669]": { c1: "#34d399", c2: "#059669", bg: "#f5f8ff" },
+  "from-[#059669] to-[#10b981]": { c1: "#059669", c2: "#10b981", bg: "#f7fbf8" },
   "from-[#ef4444] to-[#f59e0b]": { c1: "#ef4444", c2: "#f59e0b", bg: "#fffaf5" },
-  "from-[#10b981] to-[#3b82f6]": { c1: "#10b981", c2: "#3b82f6", bg: "#f0fbf7" },
-  "from-[#ef4444] to-[#6366f1]": { c1: "#ef4444", c2: "#6366f1", bg: "#fff5f6" },
-  "from-[#3b82f6] to-[#ec4899]": { c1: "#3b82f6", c2: "#ec4899", bg: "#fbf5ff" },
+  "from-[#10b981] to-[#34d399]": { c1: "#10b981", c2: "#34d399", bg: "#f0fbf7" },
+  "from-[#ef4444] to-[#10b981]": { c1: "#ef4444", c2: "#10b981", bg: "#fff5f6" },
+  "from-[#34d399] to-[#ec4899]": { c1: "#34d399", c2: "#ec4899", bg: "#fbf5ff" },
   "from-[#10b981] to-[#f59e0b]": { c1: "#10b981", c2: "#f59e0b", bg: "#fbfcf6" },
-  "from-[#ef4444] to-[#3b82f6]": { c1: "#ef4444", c2: "#3b82f6", bg: "#fff5f6" },
-  "from-[#6366f1] to-[#ec4899]": { c1: "#6366f1", c2: "#ec4899", bg: "#fbf5ff" },
-  "from-[#6366f1] to-[#10b981]": { c1: "#6366f1", c2: "#10b981", bg: "#f5fcf8" },
-  "from-[#8b5cf6] to-[#3b82f6]": { c1: "#8b5cf6", c2: "#3b82f6", bg: "#f5f7ff" },
-  "from-[#ef4444] to-[#8b5cf6]": { c1: "#ef4444", c2: "#8b5cf6", bg: "#fff5f9" }
+  "from-[#ef4444] to-[#34d399]": { c1: "#ef4444", c2: "#34d399", bg: "#fff5f6" },
+  "from-[#10b981] to-[#ec4899]": { c1: "#10b981", c2: "#ec4899", bg: "#fbf5ff" },
+  "from-[#10b981] to-[#10b981]": { c1: "#10b981", c2: "#10b981", bg: "#f5fcf8" },
+  "from-[#059669] to-[#34d399]": { c1: "#059669", c2: "#34d399", bg: "#f5f7ff" },
+  "from-[#ef4444] to-[#059669]": { c1: "#ef4444", c2: "#059669", bg: "#fff5f9" }
 };
 
 function generateSvgContent(config) {
-  const colors = colorMap[config.gradient] || { c1: "#6366f1", c2: "#a855f7", bg: "#f8fafc" };
+  const colors = colorMap[config.gradient] || { c1: "#10b981", c2: "#34d399", bg: "#f8fafc" };
   
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400">
   <!-- Dynamic Gradient Background -->
