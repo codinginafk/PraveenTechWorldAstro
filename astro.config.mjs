@@ -29,6 +29,9 @@ export default defineConfig({
   site: "https://www.praveentechworld.com",
   trailingSlash: "never",
   redirects: {
+    "/blog/seo-basics-how-to-rank-higher-on-google-in-2026": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
+    "/blog/how-to-write-seo-friendly-blog-posts-that-actually-rank-on-google": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
+    "/blog/why-seo-is-evolving-in-the-age-of-ai": "/blog/why-google-fires-off-topic-websites-niche-purity-audit",
     "/research": "/research/degoogle-telemetry-2026",
     "/blog/best-password-manager-for-small-business-2026": "/blog/best-password-managers-in-2026-security-features-and-pricing-compared",
     "/blog/how-to-fix-windows-11-update-error-0x800f081f": "/blog/fix-windows-11-update-errors-2026-troubleshooting",
