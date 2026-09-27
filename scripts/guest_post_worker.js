@@ -139,7 +139,7 @@ export default {
                   <p><strong>Author:</strong> ${sanitize(name)} (${sanitize(email)})</p>
                   <p><strong>Topic:</strong> ${sanitize(topic)}</p>
                   <p><strong>Outline:</strong></p>
-                  <blockquote style="background:#f4f4f5; padding:12px; border-left:4px solid #059669;">
+                  <blockquote style="background:#f4f4f5; padding:12px; border-left:4px solid #c2410c;">
                     ${sanitize(outline).replace(/\n/g, '<br>')}
                   </blockquote>
                   <p><strong>Google Doc:</strong> <a href="${sanitize(doc_url)}" target="_blank" rel="noopener">${sanitize(doc_url)}</a></p>

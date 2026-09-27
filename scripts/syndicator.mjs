@@ -64,8 +64,8 @@ function generateSVGBanner(title, slug) {
   <rect width="1200" height="630" fill="url(#grad)" />
   <path d="M 0 100 L 1200 100 M 0 200 L 1200 200 M 0 300 L 1200 300 M 0 400 L 1200 400 M 0 500 L 1200 500 M 0 600 L 1200 600" stroke="#334155" stroke-width="1" opacity="0.3" />
   <path d="M 200 0 L 200 630 M 400 0 L 400 630 M 600 0 L 600 630 M 800 0 L 800 630 M 1000 0 L 1000 630" stroke="#334155" stroke-width="1" opacity="0.3" />
-  <circle cx="150" cy="150" r="100" fill="#10b981" opacity="0.1" filter="blur(50px)" />
-  <circle cx="1050" cy="480" r="150" fill="#059669" opacity="0.1" filter="blur(60px)" />
+  <circle cx="150" cy="150" r="100" fill="#f97316" opacity="0.1" filter="blur(50px)" />
+  <circle cx="1050" cy="480" r="150" fill="#ea580c" opacity="0.1" filter="blur(60px)" />
   ${textElements}
   <text x="600" y="570" fill="#a78bfa" font-size="24" font-family="system-ui, -apple-system, sans-serif" font-weight="600" text-anchor="middle" letter-spacing="4">PRAVEENTECHWORLD.COM</text>
 </svg>`;
