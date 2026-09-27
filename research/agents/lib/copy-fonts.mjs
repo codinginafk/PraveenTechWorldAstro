@@ -13,13 +13,17 @@ if (!fs.existsSync(FONTS_DEST)) {
 
 const fontSources = [
   {
-    pkg: 'plus-jakarta-sans',
+    scope: '@fontsource-variable',
+    pkg: 'inter',
     files: [
-      'plus-jakarta-sans-latin-400-normal.woff2',
-      'plus-jakarta-sans-latin-500-normal.woff2',
-      'plus-jakarta-sans-latin-600-normal.woff2',
-      'plus-jakarta-sans-latin-700-normal.woff2',
-      'plus-jakarta-sans-latin-800-normal.woff2',
+      'inter-latin-wght-normal.woff2',
+    ]
+  },
+  {
+    scope: '@fontsource-variable',
+    pkg: 'space-grotesk',
+    files: [
+      'space-grotesk-latin-wght-normal.woff2',
     ]
   },
   {
@@ -34,7 +38,9 @@ const fontSources = [
 let copiedCount = 0;
 
 for (const source of fontSources) {
-  const pkgDir = path.join(PROJECT_ROOT, 'node_modules', '@fontsource', source.pkg, 'files');
+  const pkgDir = source.scope
+  ? path.join(PROJECT_ROOT, 'node_modules', source.scope, source.pkg, 'files')
+  : path.join(PROJECT_ROOT, 'node_modules', '@fontsource', source.pkg, 'files');
   if (!fs.existsSync(pkgDir)) {
     console.error(`Package directory not found: ${pkgDir}`);
     continue;
