@@ -13,6 +13,14 @@ if (!fs.existsSync(GENERATED_DIR)) {
 
 // Map slug to title, category/badge, emoji, and subtext
 const svgConfigs = {
+  "vitamin-tracking-apps-accuracy-limits-health-data-privacy": {
+    title: "Vitamin Tracking Apps",
+    category: "PRIVACY",
+    emoji: "🔒",
+    subtext: "Estimates, not measurements",
+    gradient: "from-[#2563eb] to-[#60a5fa]",
+    desc: "Accuracy limits & health data privacy"
+  },
   "is-chatgpt-safe-2026-security-privacy-guide": {
     title: "AI Token Dashboard",
     category: "AI AUTOMATION",
