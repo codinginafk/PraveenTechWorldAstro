@@ -205,6 +205,14 @@ const svgConfigs = {
     gradient: "from-[#ef4444] to-[#f59e0b]",
     desc: "3-step router & connection fix"
   },
+  "tmog-dave-plummer-cross-platform-task-manager-guide": {
+    title: "TMOG Task Manager OG",
+    category: "IT OPERATIONS",
+    emoji: "🖥️",
+    subtext: "Dave Plummer's cross-platform monitor",
+    gradient: "from-[#2563eb] to-[#60a5fa]",
+    desc: "Verified facts, safety & Pro guide"
+  },
   "ai-powered-expense-report-automation-for-office-workers-no-code-solutions": {
     title: "AI Expense Reports",
     category: "AI AUTOMATION",
