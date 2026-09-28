@@ -5,6 +5,8 @@ export interface SEOMetadata {
   ogDescription?: string;
   ogImage?: string;
   ogType?: string;
+  /** LCP image URL to <link rel="preload"> (hero cover). Separate from ogImage. */
+  preloadImage?: string;
   canonical?: string;
   noindex?: boolean;
 }

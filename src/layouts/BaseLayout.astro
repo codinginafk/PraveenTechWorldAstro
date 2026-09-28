@@ -41,13 +41,21 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
     </script>
     <!-- End Google Tag Manager -->
 
-    <!-- Microsoft Clarity Heatmaps & Session Recording -->
+    <!-- Microsoft Clarity Heatmaps & Session Recording (idle-deferred: never
+         competes with LCP/hero bytes; heatmaps don't need first paint) -->
     <script is:inline>
-      (function(c,l,a,r,i,t,y){
-          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "yf20xj4sle");
+      window.__ptwLoadClarity = function() {
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "yf20xj4sle");
+      };
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(function() { window.__ptwLoadClarity(); }, { timeout: 4000 });
+      } else {
+        setTimeout(window.__ptwLoadClarity, 2500);
+      }
     </script>
     <!-- End Microsoft Clarity -->
 
@@ -66,9 +74,18 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
     <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
     <meta name="view-transition" content="same-origin" />
     <link rel="preconnect" href="https://www.googletagmanager.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://clarity.ms" />
     <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
+    <link rel="dns-prefetch" href="https://analytics.ahrefs.com" />
     {seo?.ogImage && <link rel="preload" as="image" href={seo.ogImage} fetchpriority="high" />}
+    {seo?.preloadImage && <link rel="preload" as="image" href={seo.preloadImage} fetchpriority="high" />}
+
+    <!-- Speculation rules: instant article-to-article navigation.
+         Prerender /blog/* on hover intent only; unsupported browsers ignore.
+         (Turnstile/contact/tools pages excluded — heavy interactive state.) -->
+    <script is:inline type="speculationrules">
+      {"prerender": [{"source": "document", "where": {"href_matches": ["/blog/*"]}, "eagerness": "moderate"}]}
+    </script>
 
     <script is:inline>
       (function () {
@@ -210,6 +227,31 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
           if (banner) banner.classList.add("hidden");
         });
       }
+    </script>
+    <script>
+      // Real-user Core Web Vitals -> GA4 (this IS the p95/p99 instrument).
+      // Fires only after cookie consent (GA itself only loads on accept),
+      // so no tracking without permission. Read p95 in GA4: Explore >
+      // free-form, metric = vital_value, filter vital_name.
+      import { onCLS, onFCP, onINP, onLCP, onTTFB } from "web-vitals";
+      const reportVital = (m: { name: string; value: number; rating: string }) => {
+        try {
+          const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+          if (typeof gtag !== "function") return;
+          if (localStorage.getItem("cookie-consent") !== "accepted") return;
+          gtag("event", "web_vital", {
+            vital_name: m.name,
+            vital_value: Math.round(m.name === "CLS" ? m.value * 1000 : m.value),
+            vital_rating: m.rating,
+            page_path: location.pathname,
+          });
+        } catch { /* measurement must never break the page */ }
+      };
+      onCLS(reportVital);
+      onFCP(reportVital);
+      onINP(reportVital);
+      onLCP(reportVital);
+      onTTFB(reportVital);
     </script>
   </body>
 </html>
