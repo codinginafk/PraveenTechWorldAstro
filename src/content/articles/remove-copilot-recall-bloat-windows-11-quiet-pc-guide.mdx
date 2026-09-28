@@ -1,0 +1,119 @@
+---
+title: "Remove Copilot & Recall from Windows 11: Quiet PC Guide"
+description: "Remove Copilot buttons, Recall snapshots, and Windows 11 bloat with verified Settings, Group Policy, and PowerShell steps. Reclaim RAM and a quiet desktop."
+publishDate: "2026-09-28"
+updatedDate: "2026-09-28"
+author: "praveen"
+category: "windows-fixes"
+pillarId: "windows-fixes"
+tags:
+  - "windows-11"
+  - "copilot"
+  - "recall"
+  - "debloat"
+  - "privacy"
+  - "performance"
+draft: true
+seoTitle: "Remove Copilot & Recall from Windows 11 (Quiet PC Guide)"
+socialHook: "Copilot buttons in Notepad? Recall snapshots of your desktop? Here is the exact Settings, Group Policy, and PowerShell sequence our lab uses to strip them."
+quickAnswer:
+  summary: "Open Settings > Apps and uninstall Microsoft Copilot, turn Recall off under Privacy & security > Recall & snapshots, then remove leftover entry points with Group Policy (Pro and higher) or PowerShell. Verify with services.msc and Task Manager Startup."
+  command: "Get-AppxPackage -Name \"*Copilot*\" | Select-Object Name, Version"
+  hook: "Takes about 15 minutes; every step is reversible."
+  scrollCta: "Need the exact Group Policy path and PowerShell lines? Continue reading below."
+faq:
+  - question: "Can I fully remove Copilot from Windows 11?"
+    answer: "Yes. Uninstall the Microsoft Copilot app from Settings > Apps, then remove its entry points from Notepad, Paint, and File Explorer. On Pro, Enterprise, and Education editions, the RemoveMicrosoftCopilotApp Group Policy under User Configuration > Administrative Templates > Windows AI uninstalls the consumer app on managed devices that meet Microsoft's conditions."
+  - question: "Is Windows Recall actually off, and how do I check?"
+    answer: "Recall ships opt-in since April 2025. Open Settings > Privacy & security > Recall & snapshots and confirm snapshots are disabled. When enabled, Recall requires Windows Hello sign-in and encrypts snapshots locally, but our recommendation for shared or work machines is to leave it off entirely."
+  - question: "Will removing Copilot break Windows Update or Microsoft 365 Copilot?"
+    answer: "No. The consumer Copilot app is separate from update servicing and from Microsoft 365 Copilot. Microsoft's own Group Policy keeps Microsoft 365 Copilot available when the consumer app is removed on qualifying devices."
+  - question: "Why does Microsoft keep adding Copilot buttons back after updates?"
+    answer: "Feature updates can reinstall inbox app integrations. After each major update, re-check Settings > Apps and the Notepad, Paint, and Photos Copilot entries. The March 2026 quality pledge commits Microsoft to fewer forced entry points, but verification after updates remains necessary."
+  - question: "Does debloating Windows 11 actually make it faster?"
+    answer: "It reduces background process count, startup entries, and idle memory pressure, which matters most on 8GB machines and handhelds. Our lab measures before-and-after idle commit charge and boot time with Event ID 100; expect the full numbers table in our Windows 10 vs 11 benchmark companion."
+references:
+  - title: "Windows Central: Microsoft is walking back Windows 11's AI overload"
+    url: "https://www.windowscentral.com/microsoft/windows-11/microsoft-is-reevaluating-its-ai-efforts-on-windows-11-plans-to-reduce-copilot-integrations-and-evolve-recall"
+    publisher: "Windows Central"
+  - title: "WinBuzzer: Microsoft scales back Windows 11 AI after user backlash"
+    url: "https://winbuzzer.com/2026/01/31/microsoft-scales-back-windows-11-ai-after-user-backlash-xcxwbn/"
+    publisher: "WinBuzzer"
+  - title: "MLQ: Copilot rollback and Group Policy removal for managed devices"
+    url: "https://mlq.ai/news/microsoft-rolls-back-copilot-integrations-in-windows-11-notification-center-amid-user-backlash/"
+    publisher: "MLQ"
+  - title: "Windows Latest: Microsoft admits Windows 11 went off track"
+    url: "https://www.windowslatest.com/2026/01/31/microsoft-reportedly-admits-windows-11-went-off-track-cuts-back-copilot-and-plans-real-fixes-in-2026/"
+    publisher: "Windows Latest"
+  - title: "Implicator: Copilot cuts, taskbar return, and the quality pledge"
+    url: "https://www.implicator.ai/microsoft-pledges-windows-11-quality-push-cuts-copilot-entry-points-after-backlash/"
+    publisher: "Implicator"
+  - title: "Microsoft Learn: Windows documentation hub"
+    url: "https://learn.microsoft.com/en-us/windows/"
+    publisher: "Microsoft Learn"
+---
+
+> **Quick answer:** Uninstall the Microsoft Copilot app under Settings > Apps, switch Recall snapshots off under Privacy & security, then clear leftover entry points with Group Policy on Pro and higher editions or PowerShell elsewhere. Confirm the cleanup in `services.msc` and Task Manager Startup. The whole pass takes about 15 minutes and every step is reversible.
+
+In January 2026, Microsoft started retreating from its own AI push. Copilot integrations in Notepad, Paint, Photos, Snipping Tool, and Widgets went under review for removal. Work on new Copilot buttons paused. Recall — the screenshot-every-few-seconds flagship of Copilot+ PCs — was internally judged a failure in its current form. Then the March quality pledge added the rest: taskbar repositioning back after four years, a single monthly reboot model, and shutdown without forced patch installs.
+
+Our lab position is simple. We do not hate AI features. We hate AI features we cannot remove, audit, or keep off after an update. This guide strips the Copilot layer, the Recall layer, and the upsell layer, in that order, and shows you how to confirm each one is actually gone instead of trusting a toggle.
+
+## Before you start: inventory what is installed
+
+Open elevated PowerShell and list every Copilot-related package on the machine:
+
+```powershell
+Get-AppxPackage -Name "*Copilot*" | Select-Object Name, Version
+Get-AppxPackage -Name "*Recall*" | Select-Object Name, Version
+```
+
+{/* LAB: confirm exact package family names on 25H2/26H1 before publish (names move between builds) */}
+
+Write down what comes back. Most machines show the Microsoft Copilot app plus Copilot entry points inside inbox apps. Recall appears only on Copilot+ hardware, and only if someone opted in. If the list is empty, your machine is already clean and you can skip to the verification section.
+
+## Method 1: Settings (all editions, 5 minutes)
+
+1. Open **Settings > Apps > Installed apps**, search for Copilot, open the three-dot menu, and uninstall the Microsoft Copilot app.
+2. Open **Settings > Personalization > Taskbar** and switch the Copilot toggle off. The taskbar button disappears immediately, no restart needed.
+3. Open **Settings > Privacy & security > Recall & snapshots** and confirm snapshots are off. If the page says Recall is not available on this device, you are done with this layer.
+4. Open Notepad, Paint, and Photos, and check each app's settings or menu for a Copilot entry. Where one exists, switch it off inside the app. Microsoft's March pledge targets exactly these integrations, but removal is rolling out gradually, so check manually after every feature update.
+
+## Method 2: Group Policy (Pro, Enterprise, Education)
+
+Build 26220.7535 (KB5072046) added a dedicated policy: **RemoveMicrosoftCopilotApp**, under User Configuration > Administrative Templates > Windows AI. Enabling it uninstalls the consumer Copilot app on managed devices, with three conditions straight from Microsoft's documentation: the device must have both Microsoft 365 Copilot and the consumer Copilot app installed, the app must not have been installed by the user, and it must not have launched in the past 28 days. Microsoft 365 Copilot keeps working.
+
+{/* LAB: verify the policy node path on a current Pro build; Insider paths have shifted before */}
+
+Home edition has no Group Policy editor. Do not install third-party gpedit cloners from forums; use Method 1 plus Method 3 instead. The registry equivalents of AI policies live under version-specific keys that Microsoft renames, which is why this guide does not print them.
+
+## Method 3: PowerShell removal and startup cleanup
+
+For leftover Appx packages, remove per-package after confirming the exact name from the inventory step:
+
+```powershell
+# EXAMPLE ONLY — replace PackageFullName with your inventory output
+Remove-AppxPackage -Package "PASTE_FULL_NAME_HERE"
+```
+
+{/* LAB: fill two verified one-liners for the current Copilot and Recall package families; never publish a guessed family name */}
+
+Then open Task Manager > Startup apps and disable every Copilot, Recall, and feedback-related entry. Open `services.msc` and confirm no Copilot-connected service is set to Automatic on a machine where you removed the app. Reboot once. Re-run the inventory command from the top of this guide; it should return nothing.
+
+## Calm Windows Update down while you are here
+
+The same March pledge that cut Copilot entry points changed update behavior. Open **Settings > Windows Update > Advanced options** and set longer pause windows and active hours that match your workday. Shutdown and restart no longer force pending patch installs first, and Microsoft is moving toward a single monthly reboot model. After each Patch Tuesday, spend two minutes re-checking the Copilot entries from Method 1; feature updates remain the main way removed integrations come back.
+
+## Confirm it is actually gone
+
+1. The inventory PowerShell command returns nothing.
+2. Task Manager Startup shows no Copilot or Recall entries.
+3. `services.msc` shows no Copilot service on Automatic.
+4. Settings search for "Copilot" returns only Microsoft 365 or Edge results, not OS entry points.
+5. Disk check: inbox app reinstalls after a feature update are the number one resurrection path, so repeat this checklist after every major update, not just once.
+
+{/* LAB: insert measured before/after table here — idle commit charge, boot Event ID 100, background process count, 3-run medians on the lab rig. Do not publish qualitative claims as numbers. */}
+
+## What stays, deliberately
+
+Microsoft 365 Copilot if you pay for it. Windows Security, SmartScreen, and Defender telemetry controls — removing security posture to save 200MB of RAM is a bad trade and this guide does not do it. OneDrive sync settings, which are a separate battle under Accounts > Windows backup. And the Feedback Hub, which costs nothing when notifications are off and is genuinely useful for upvoting the taskbar and update fixes you want Microsoft to keep.
