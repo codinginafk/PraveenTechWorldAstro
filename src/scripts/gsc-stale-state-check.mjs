@@ -12,9 +12,9 @@
  *   CLEAN      PASS / submitted and indexed                                -> nothing to do
  *   UNKNOWN    "URL is unknown to Google" / inspect failed                 -> informational
  *
- * Exit codes: 0 clean, 1 STALE or REGRESSION (action required), 2 infra failure.
+ * Exit codes: 0 clean (or stale advisory), 1 LIVE defect or REGRESSION, 2 infra failure.
  * Flags: --all (sweep every sitemap URL), --add <url> [--group <name>],
- *        --days <n>, --report-only (never exit 1), --json
+ *        --days <n>, --report-only (never exit 1), --fail-on-stale, --json
  *
  * Usage: node src/scripts/gsc-stale-state-check.mjs [--all] [--days 14] [--add /blog/x]
  */
@@ -159,10 +159,16 @@ else {
   console.log(`\nreport: ${path.relative(ROOT, reportPath)}`);
 }
 
-const action = stale.length + live.length + reg.length;
-if (action > 0) {
-  console.error(`\nACTION REQUIRED: ${stale.length} stale, ${live.length} live-error, ${reg.length} regression.`);
+const defects = live.length + reg.length;
+if (defects > 0) {
+  console.error(`\nDEFECTS FOUND: ${live.length} live-error, ${reg.length} regression.`);
   if (!mode.reportOnly) process.exit(1);
 }
+
+if (stale.length > 0) {
+  console.warn(`\nACTION ADVISORY: ${stale.length} stale GSC URLs awaiting Google recrawl. No live defects.`);
+  if (flag("--fail-on-stale") && !mode.reportOnly) process.exit(1);
+}
+
 if (errs.length) process.exit(2);
-console.log(`\nOK: ${clean.length} clean, ${unknown.length} unknown, no live defects.`);
+console.log(`\nOK: ${clean.length} clean, ${unknown.length} unknown, ${stale.length} stale (awaiting recrawl), no live defects.`);

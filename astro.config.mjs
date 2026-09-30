@@ -110,6 +110,8 @@ export default defineConfig({
     "/blog/how-to-use-google-analytics-4-to-improve-your-content-strategy": "/blog/ga4-not-tracking-visitors-12-troubleshooting-steps",
     "/blog/ga4-traffic-looks-wrong-check-consent-mode-and-filters": "/blog/ga4-not-tracking-visitors-12-troubleshooting-steps",
     "/blog/ga4-data-delayed-or-missing-check-measurement-id-consent": "/blog/ga4-not-tracking-visitors-12-troubleshooting-steps",
+    "/blog/google-search-alternatives-that-dont-track-you": "/blog/google-search-alternatives-kagi-brave-duckduckgo-compared",
+    "/blog/gmail-alternatives-privacy-focused-email": "/blog/best-gmail-alternatives-proton-tuta-fastmail-migration-guide",
   },
   build: {
     format: "directory",
