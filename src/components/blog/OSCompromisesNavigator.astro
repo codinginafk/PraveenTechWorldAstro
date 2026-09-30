@@ -1,0 +1,186 @@
+---
+import Icon from "@components/common/Icon.astro";
+
+interface Props {
+  currentSlug: string;
+  position?: "top" | "bottom";
+}
+
+const { currentSlug = "", position = "top" } = Astro.props;
+
+interface SeriesStep {
+  step: number;
+  title: string;
+  shortTitle: string;
+  slug: string;
+  description: string;
+  isLive: boolean;
+  statusText: string;
+}
+
+const seriesSteps: SeriesStep[] = [
+  {
+    step: 1,
+    title: "Biggest OS Outages & Compromises: Historical Downtime Tracker",
+    shortTitle: "Master Downtime Tracker",
+    slug: "biggest-os-outages-and-compromises-historical-downtime-tracker",
+    description: "Interactive monitor tracking recovery times, blast radii, CVEs, and failure modes across Windows, Linux, and macOS.",
+    isLive: true,
+    statusText: "Live Hub",
+  },
+  {
+    step: 2,
+    title: "CrowdStrike vs WannaCry: Windows Downtime Postmortem & Fixes",
+    shortTitle: "Windows Outages Deep Dive",
+    slug: "crowdstrike-vs-wannacry-windows-downtime-postmortem",
+    description: "Forensic breakdown comparing kernel driver crashes with SMBv1 worms, with automated Safe Mode BitLocker runbooks.",
+    isLive: false,
+    statusText: "Upcoming Spoke",
+  },
+  {
+    step: 3,
+    title: "Linux Distro Supply Chain Attacks: XZ Utils to Dirty COW",
+    shortTitle: "Linux Distros Forensic Audit",
+    slug: "linux-distro-supply-chain-compromises-xz-utils-audit",
+    description: "How close the XZ Utils backdoor came to taking over Debian, Ubuntu, and Arch, compared against Dirty COW and OpenSSL PRNG flaws.",
+    isLive: false,
+    statusText: "Upcoming Spoke",
+  },
+  {
+    step: 4,
+    title: "Unix & macOS Outages: From Morris Worm to Empty Root Bug",
+    shortTitle: "Unix & macOS Retrospective",
+    slug: "unix-macos-outages-morris-worm-to-blank-root",
+    description: "38-year timeline from the 1988 Morris Worm through the macOS High Sierra blank root authentication bypass.",
+    isLive: false,
+    statusText: "Upcoming Spoke",
+  },
+];
+
+const currentIndex = seriesSteps.findIndex((s) => s.slug === currentSlug);
+const currentStep = currentIndex !== -1 ? seriesSteps[currentIndex] : seriesSteps[0];
+---
+
+{position === "top" ? (
+  <div class="my-8 rounded-2xl border border-border dark:border-border-dark bg-surface-muted/40 dark:bg-surface-dark-muted/30 p-5 md:p-6 not-prose">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-border/60 dark:border-border-dark/60">
+      <div class="flex items-center gap-2">
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:bg-red-400/10 dark:text-red-400">
+          <Icon name="shield" class="w-4 h-4" />
+        </span>
+        <span class="text-xs font-bold uppercase tracking-wider text-text dark:text-text-dark">
+          OS Outages & Compromises Hub Series
+        </span>
+      </div>
+      <span class="text-xs font-medium text-text-muted dark:text-text-dark-muted">
+        Part {currentStep.step} of {seriesSteps.length}
+      </span>
+    </div>
+
+    <!-- Stepper Pipeline -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      {seriesSteps.map((step) => {
+        const isCurrent = step.slug === currentSlug;
+        return (
+          <div class={`flex flex-col p-3 rounded-xl border text-xs transition-all ${
+            isCurrent
+              ? "border-brand-500/60 bg-surface dark:bg-surface-dark shadow-sm ring-1 ring-brand-500/30"
+              : step.isLive
+              ? "border-border dark:border-border-dark bg-surface/60 dark:bg-surface-dark/40 hover:border-brand-400/40"
+              : "border-border/40 dark:border-border-dark/30 bg-surface/30 dark:bg-surface-dark/20 opacity-70"
+          }`}>
+            <div class="flex items-center justify-between gap-1 mb-1.5">
+              <span class="font-bold text-[11px] text-text-muted dark:text-text-dark-muted">
+                0{step.step}
+              </span>
+              <span class={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                isCurrent
+                  ? "bg-brand-500/10 text-brand-600 dark:text-brand-400"
+                  : step.isLive
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "bg-surface-muted dark:bg-surface-dark-muted text-text-muted dark:text-text-dark-muted"
+              }`}>
+                {isCurrent ? "Reading Now" : step.statusText}
+              </span>
+            </div>
+
+            {step.isLive && !isCurrent ? (
+              <a href={`/blog/${step.slug}`} class="font-bold text-text dark:text-text-dark hover:text-brand-600 dark:hover:text-brand-400 line-clamp-2 mt-auto">
+                {step.shortTitle}
+              </a>
+            ) : (
+              <span class={`font-bold line-clamp-2 mt-auto ${isCurrent ? "text-brand-600 dark:text-brand-400" : "text-text-muted dark:text-text-dark-muted"}`}>
+                {step.shortTitle}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+) : (
+  <div class="my-10 rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark p-6 not-prose shadow-sm">
+    <div class="flex items-center justify-between mb-4 pb-3 border-b border-border/60 dark:border-border-dark/60">
+      <div>
+        <h4 class="text-sm font-bold uppercase tracking-wider text-text dark:text-text-dark">
+          Explore the Full Investigation Cluster
+        </h4>
+        <p class="text-xs text-text-muted dark:text-text-dark-muted mt-0.5">
+          Follow each platform postmortem across Windows, Linux distributions, and Unix.
+        </p>
+      </div>
+      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400">
+        4-Part Series
+      </span>
+    </div>
+
+    <div class="space-y-3">
+      {seriesSteps.map((step) => {
+        const isCurrent = step.slug === currentSlug;
+        return (
+          <div class={`p-3.5 rounded-xl border transition-all ${
+            isCurrent
+              ? "border-brand-500/60 bg-brand-500/5 dark:bg-brand-400/5"
+              : "border-border/60 dark:border-border-dark/60 hover:border-brand-500/40"
+          }`}>
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-3">
+                <span class={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                  isCurrent
+                    ? "bg-brand-600 text-white"
+                    : "bg-surface-muted dark:bg-surface-dark-muted text-text-muted dark:text-text-dark-muted"
+                }`}>
+                  {step.step}
+                </span>
+                <div>
+                  {step.isLive && !isCurrent ? (
+                    <a href={`/blog/${step.slug}`} class="text-sm font-bold text-text dark:text-text-dark hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                      {step.title}
+                    </a>
+                  ) : (
+                    <span class={`text-sm font-bold ${isCurrent ? "text-brand-600 dark:text-brand-400" : "text-text-muted dark:text-text-dark-muted"}`}>
+                      {step.title}
+                    </span>
+                  )}
+                  <p class="text-xs text-text-muted dark:text-text-dark-muted mt-1 leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+
+              <span class={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded ${
+                isCurrent
+                  ? "bg-brand-500/10 text-brand-600 dark:text-brand-400"
+                  : step.isLive
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "bg-surface-muted dark:bg-surface-dark-muted text-text-muted dark:text-text-dark-muted"
+              }`}>
+                {isCurrent ? "Current Guide" : step.statusText}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
