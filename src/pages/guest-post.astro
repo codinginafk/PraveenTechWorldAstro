@@ -94,8 +94,9 @@ import Icon from "@components/common/Icon.astro";
           <input type="url" id="doc_url" name="doc_url" required maxlength="1000" class="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-text placeholder:text-text-muted focus:border-brand-600 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark" placeholder="https://docs.google.com/document/d/..." />
         </div>
 
-        <div id="turnstile-wrapper" class="my-4 min-h-[65px] flex justify-start items-center">
-          <div id="turnstile-container" class="cf-turnstile" data-sitekey="0x4AAAAAAECkhL7KWrcngk0L" data-action="turnstile-spin-v2" data-theme="auto"></div>
+        <div id="turnstile-wrapper" class="my-4 min-h-[65px] flex flex-col justify-start items-start gap-1">
+          <div id="turnstile-container"></div>
+          <p id="pitch-turnstile-msg" class="hidden text-xs text-amber-600 dark:text-amber-400 font-medium"></p>
         </div>
 
         <div id="pitch-status" class="hidden rounded-xl p-4 text-sm font-medium" role="status" aria-live="polite"></div>
@@ -107,78 +108,112 @@ import Icon from "@components/common/Icon.astro";
     </div>
   </div>
 
-  <!-- Cloudflare Turnstile Script (load at runtime) -->
-  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <!-- Cloudflare Turnstile Script (explicit rendering) -->
+  <script is:inline>
+    window.onTurnstileLoadedGuestPost = function() {
+      if (typeof window.__initGuestPostTurnstile === 'function') {
+        window.__initGuestPostTurnstile();
+      }
+    };
+  </script>
+  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoadedGuestPost&render=explicit" async defer></script>
 
   <!-- Submission Handler with Turnstile Verification -->
   <script>
     const pitchForm = document.getElementById('pitch-form') as HTMLFormElement | null;
     const statusDiv = document.getElementById('pitch-status') as HTMLElement | null;
     const submitBtn = document.getElementById('pitch-submit-btn') as HTMLButtonElement | null;
+    const turnstileMsg = document.getElementById('pitch-turnstile-msg') as HTMLElement | null;
 
-    // Safe Turnstile Render Fallback + explicit widget id
     let turnstileWidgetId: string | null = null;
+    let turnstileToken: string | null = null;
 
-    function initTurnstileWidget() {
+    function initGuestPostTurnstile() {
       const container = document.getElementById('turnstile-container');
-      if (!container) return;
+      if (!container || !window.turnstile || turnstileWidgetId !== null || container.children.length > 0) return;
 
-      // If iframe already rendered by Cloudflare auto-script, do nothing
-      if (container.querySelector('iframe')) return;
-
-      if (window.turnstile && typeof window.turnstile.render === 'function') {
-        try {
-          // capture returned widget id so we can get/reset tokens explicitly
-          turnstileWidgetId = window.turnstile.render('#turnstile-container', {
-            sitekey: '0x4AAAAAAECkhL7KWrcngk0L',
-            action: 'turnstile-spin-v2',
-            theme: 'auto'
-          });
-        } catch (err) {
-          console.warn('Turnstile render notice:', err);
-        }
+      try {
+        turnstileWidgetId = window.turnstile.render(container, {
+          sitekey: '0x4AAAAAAECkhL7KWrcngk0L',
+          theme: 'auto',
+          callback: (token: string) => {
+            turnstileToken = token;
+            if (turnstileMsg) {
+              turnstileMsg.classList.add('hidden');
+              turnstileMsg.innerText = '';
+            }
+            if (statusDiv && statusDiv.innerText.includes('security verification')) {
+              statusDiv.classList.add('hidden');
+              statusDiv.innerText = '';
+            }
+          },
+          'expired-callback': () => {
+            turnstileToken = null;
+          },
+          'error-callback': () => {
+            turnstileToken = null;
+            if (turnstileMsg) {
+              turnstileMsg.classList.remove('hidden');
+              turnstileMsg.innerText = 'Security verification failed to load. Please refresh the page.';
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Turnstile render notice:', err);
       }
     }
 
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      setTimeout(initTurnstileWidget, 200);
-      setTimeout(initTurnstileWidget, 1000);
-    } else {
-      window.addEventListener('load', () => {
-        setTimeout(initTurnstileWidget, 200);
-        setTimeout(initTurnstileWidget, 1000);
-      });
+    (window as any).__initGuestPostTurnstile = initGuestPostTurnstile;
+    if (window.turnstile) {
+      initGuestPostTurnstile();
     }
-
 
     if (pitchForm && statusDiv && submitBtn) {
       pitchForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         // Honeypot check
         const formData = new FormData(pitchForm);
         if (formData.get('website_hp')) {
-          // Bot detected - simulate silent success
           statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300';
           statusDiv.innerText = 'Thank you! Your pitch has been submitted successfully.';
           pitchForm.reset();
+          turnstileToken = null;
           if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
           return;
         }
 
-        // Ensure Turnstile token is attached explicitly
-        try {
-          if (window.turnstile && turnstileWidgetId !== null) {
-            const token = window.turnstile.getResponse(turnstileWidgetId);
-            if (token) formData.set('cf-turnstile-response', token);
+        // Validate Turnstile token before sending
+        let token = turnstileToken;
+        if (!token && window.turnstile && turnstileWidgetId !== null) {
+          try {
+            token = window.turnstile.getResponse(turnstileWidgetId);
+          } catch (err) {}
+        }
+        if (!token) {
+          const hiddenInput = pitchForm.querySelector('input[name="cf-turnstile-response"]') as HTMLInputElement | null;
+          if (hiddenInput && hiddenInput.value) token = hiddenInput.value;
+        }
+
+        if (!token) {
+          if (turnstileMsg) {
+            turnstileMsg.classList.remove('hidden');
+            turnstileMsg.innerText = 'Please check the verification box above before submitting your pitch.';
           }
-        } catch (err) {
-          console.warn('Turnstile token retrieval failed', err);
+          statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+          statusDiv.innerText = 'Please complete the Cloudflare security verification above.';
+          return;
         }
 
         submitBtn.disabled = true;
         submitBtn.innerText = 'Submitting Pitch...';
         statusDiv.className = 'hidden';
+        if (turnstileMsg) {
+          turnstileMsg.classList.add('hidden');
+          turnstileMsg.innerText = '';
+        }
+
+        formData.set('cf-turnstile-response', token);
 
         try {
           // Submit via Formspree API (Guaranteed Delivery)
@@ -194,20 +229,23 @@ import Icon from "@components/common/Icon.astro";
             statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300';
             statusDiv.innerText = 'Pitch submitted successfully! Our editorial team will review your outline within 48 hours.';
             pitchForm.reset();
+            turnstileToken = null;
             if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
           } else {
-            const result = await response.json();
+            const result = await response.json().catch(() => ({}));
             statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
             statusDiv.innerText = result.error || 'Submission error. Please email contact@praveentechworld.com directly.';
+            turnstileToken = null;
             if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
           }
         } catch (err) {
           statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
           statusDiv.innerText = 'Network error submitting pitch. Please email contact@praveentechworld.com directly.';
+          turnstileToken = null;
           if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
         } finally {
           submitBtn.disabled = false;
-          submitBtn.innerText = 'Submit Pitch for Review';
+          submitBtn.innerText = 'Submit pitch for review';
         }
       });
     }

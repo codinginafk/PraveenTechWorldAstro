@@ -8,10 +8,13 @@ interface Turnstile {
       sitekey: string;
       action?: string;
       theme?: "auto" | "light" | "dark";
+      callback?: (token: string) => void;
+      "error-callback"?: (code?: string) => void;
+      "expired-callback"?: () => void;
     }
   ): string;
-  getResponse(widgetId: string): string;
-  reset(widgetId: string): void;
+  getResponse(widgetId?: string): string;
+  reset(widgetId?: string): void;
 }
 
 interface PagefindUIOptions {

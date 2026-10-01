@@ -109,8 +109,9 @@ import Icon from "@components/common/Icon.astro";
           </div>
 
           <!-- Cloudflare Turnstile Security Widget -->
-          <div id="contact-turnstile-wrapper" class="my-4 min-h-[65px] flex justify-start items-center">
-            <div id="contact-turnstile-container" class="cf-turnstile" data-sitekey="0x4AAAAAAECkhL7KWrcngk0L" data-action="turnstile-spin-v2" data-theme="auto"></div>
+          <div id="contact-turnstile-wrapper" class="my-4 min-h-[65px] flex flex-col justify-start items-start gap-1">
+            <div id="contact-turnstile-container"></div>
+            <p id="turnstile-status-msg" class="hidden text-xs text-amber-600 dark:text-amber-400 font-medium"></p>
           </div>
 
           <div id="form-status" class="hidden rounded-xl p-4 text-sm font-medium"></div>
@@ -159,66 +160,101 @@ import Icon from "@components/common/Icon.astro";
       </div>
   </div>
 
-  <!-- Cloudflare Turnstile Script (load at runtime) -->
-  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <!-- Cloudflare Turnstile Script (explicit rendering) -->
+  <script is:inline>
+    window.onTurnstileLoaded = function() {
+      if (typeof window.__initContactTurnstile === 'function') {
+        window.__initContactTurnstile();
+      }
+    };
+  </script>
+  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoaded&render=explicit" async defer></script>
 
   <script>
     const form = document.getElementById('contact-form') as HTMLFormElement | null;
     const statusDiv = document.getElementById('form-status') as HTMLElement | null;
     const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+    const turnstileMsg = document.getElementById('turnstile-status-msg') as HTMLElement | null;
 
-    // Safe Turnstile Render Fallback + explicit widget id
     let turnstileWidgetId: string | null = null;
+    let turnstileToken: string | null = null;
 
-    function initTurnstileWidget() {
+    function initContactTurnstile() {
       const container = document.getElementById('contact-turnstile-container');
-      if (!container) return;
+      if (!container || !window.turnstile || turnstileWidgetId !== null || container.children.length > 0) return;
 
-      // If iframe already rendered by Cloudflare auto-script, do nothing
-      if (container.querySelector('iframe')) return;
-
-      if (window.turnstile && typeof window.turnstile.render === 'function') {
-        try {
-          // capture returned widget id so we can get/reset tokens explicitly
-          turnstileWidgetId = window.turnstile.render('#contact-turnstile-container', {
-            sitekey: '0x4AAAAAAECkhL7KWrcngk0L',
-            action: 'turnstile-spin-v2',
-            theme: 'auto'
-          });
-        } catch (err) {
-          console.warn('Turnstile render notice:', err);
-        }
+      try {
+        turnstileWidgetId = window.turnstile.render(container, {
+          sitekey: '0x4AAAAAAECkhL7KWrcngk0L',
+          theme: 'auto',
+          callback: (token: string) => {
+            turnstileToken = token;
+            if (turnstileMsg) {
+              turnstileMsg.classList.add('hidden');
+              turnstileMsg.innerText = '';
+            }
+            if (statusDiv && statusDiv.innerText.includes('security verification')) {
+              statusDiv.classList.add('hidden');
+              statusDiv.innerText = '';
+            }
+          },
+          'expired-callback': () => {
+            turnstileToken = null;
+          },
+          'error-callback': () => {
+            turnstileToken = null;
+            if (turnstileMsg) {
+              turnstileMsg.classList.remove('hidden');
+              turnstileMsg.innerText = 'Security verification failed to load. Please refresh the page.';
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Turnstile render notice:', err);
       }
     }
 
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      setTimeout(initTurnstileWidget, 200);
-      setTimeout(initTurnstileWidget, 1000);
-    } else {
-      window.addEventListener('load', () => {
-        setTimeout(initTurnstileWidget, 200);
-        setTimeout(initTurnstileWidget, 1000);
-      });
+    (window as any).__initContactTurnstile = initContactTurnstile;
+    if (window.turnstile) {
+      initContactTurnstile();
     }
 
     if (form && statusDiv && submitBtn) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // 1. Validate Turnstile token before sending
+        let token = turnstileToken;
+        if (!token && window.turnstile && turnstileWidgetId !== null) {
+          try {
+            token = window.turnstile.getResponse(turnstileWidgetId);
+          } catch (err) {}
+        }
+        if (!token) {
+          const hiddenInput = form.querySelector('input[name="cf-turnstile-response"]') as HTMLInputElement | null;
+          if (hiddenInput && hiddenInput.value) token = hiddenInput.value;
+        }
+
+        if (!token) {
+          if (turnstileMsg) {
+            turnstileMsg.classList.remove('hidden');
+            turnstileMsg.innerText = 'Please check the verification box above before sending.';
+          }
+          statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+          statusDiv.innerText = 'Please complete the Cloudflare security verification above.';
+          return;
+        }
+
         submitBtn.disabled = true;
         submitBtn.innerText = 'Sending...';
         statusDiv.className = 'hidden';
+        if (turnstileMsg) {
+          turnstileMsg.classList.add('hidden');
+          turnstileMsg.innerText = '';
+        }
 
         const data = new FormData(form);
-
-        // Try to attach Turnstile token explicitly to FormData
-        try {
-          if (window.turnstile && turnstileWidgetId !== null) {
-            const token = window.turnstile.getResponse(turnstileWidgetId);
-            if (token) data.set('cf-turnstile-response', token);
-          }
-        } catch (err) {
-          console.warn('Turnstile token retrieval failed', err);
-        }
+        data.set('cf-turnstile-response', token);
 
         try {
           const response = await fetch(form.action, {
@@ -231,17 +267,26 @@ import Icon from "@components/common/Icon.astro";
             statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300';
             statusDiv.innerText = 'Thank you! Your message has been sent successfully.';
             form.reset();
-            if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+            turnstileToken = null;
+            if (window.turnstile && turnstileWidgetId !== null) {
+              window.turnstile.reset(turnstileWidgetId);
+            }
           } else {
-            const result = await response.json();
+            const result = await response.json().catch(() => ({}));
             statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
             statusDiv.innerText = result.error || 'Error sending message. Please use WhatsApp or email.';
-            if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+            turnstileToken = null;
+            if (window.turnstile && turnstileWidgetId !== null) {
+              window.turnstile.reset(turnstileWidgetId);
+            }
           }
         } catch (err) {
           statusDiv.className = 'rounded-xl p-4 text-sm font-medium bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
           statusDiv.innerText = 'Network error. Message on WhatsApp (+971 56 298 0106) or contact@praveentechworld.com.';
-          if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+          turnstileToken = null;
+          if (window.turnstile && turnstileWidgetId !== null) {
+            window.turnstile.reset(turnstileWidgetId);
+          }
         } finally {
           submitBtn.disabled = false;
           submitBtn.innerText = 'Send Message';
