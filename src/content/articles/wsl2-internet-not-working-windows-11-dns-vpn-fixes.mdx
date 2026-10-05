@@ -2,7 +2,7 @@
 title: "WSL2 No Internet on Windows 11? 5 DNS & VPN Fixes"
 description: "WSL2 has no internet on Windows 11? Fix DNS tunneling, VPN MTU clipping, and mirrored networking with 5 tested steps from our lab."
 publishDate: "2026-08-26"
-updatedDate: "2026-09-12"
+updatedDate: "2026-10-05"
 author: "praveen"
 category: "windows-fixes"
 pillarId: "windows-fixes"
@@ -14,6 +14,11 @@ imageAlt: "Minimal flat editorial illustration of an ethernet cable plug with a 
 draft: false
 seoTitle: "WSL2 No Internet on Windows 11? 5 DNS & VPN Fixes"
 socialHook: "WSL2 suddenly has no internet on Windows 11? Before you blow away resolv.conf, here is our team's definitive triage guide: mirrored networking, corporate VPN MTU clamping, and DNS tunneling."
+quickAnswer:
+  summary: "To fix WSL2 no internet or broken DNS on Windows 11, add dnsTunneling=true and autoProxy=true under [wsl2] in %USERPROFILE%\\.wslconfig. Run wsl --shutdown in PowerShell. If connected to a corporate VPN where ping works but apt or curl hangs, clamp your interface MTU using sudo ip link set dev eth0 mtu 1400."
+  command: "notepad $env:USERPROFILE\\.wslconfig"
+  hook: "WSL2 suddenly has no internet while Windows 11 browses normally?"
+  scrollCta: "Review our tested DNS tunneling, mirrored networking, and MTU runbook below."
 faq:
   - question: "Why does WSL2 say temporary failure in name resolution?"
     answer: "The WSL virtual network is unable to reach the Windows DNS proxy (172.x.x.1). This commonly occurs when a corporate VPN (Cisco AnyConnect, GlobalProtect, Zscaler) routes host traffic through strict split-tunnel NRPT policies that Hyper-V's NAT switch cannot access. Enabling DNS tunneling routes queries directly through the host Windows network stack."
@@ -39,13 +44,16 @@ references:
     publisher: "Microsoft WSL"
 ---
 
-**To fix WSL2 with no internet or broken DNS on Windows 11, run `wsl --shutdown` in PowerShell, add `dnsTunneling=true` and `autoProxy=true` under `[wsl2]` in `%UserProfile%\.wslconfig`, and restart WSL. If connected to a corporate VPN (Cisco AnyConnect, GlobalProtect, Zscaler) where `ping 1.1.1.1` works but `curl` or `apt update` hangs on TLS handshakes, clamp the virtual interface MTU by running `sudo ip link set dev eth0 mtu 1400`.**
+> **Quick direct answer:** To fix WSL2 with no internet or broken DNS on Windows 11, open PowerShell and run `notepad $env:USERPROFILE\.wslconfig`. Add `dnsTunneling=true` and `autoProxy=true` under `[wsl2]`. Then run `wsl --shutdown`. If on a corporate VPN where ping works but apt or curl hangs, run `sudo ip link set dev eth0 mtu 1400`.
 
-On our workbench, when our engineering workstations were upgraded to Windows 11 23H2/24H2, our developer fleet ran directly into this wall: Windows 11 browsed websites without issue, but inside Ubuntu and Debian, running `sudo apt update`, `docker pull`, or `git clone` stalled indefinitely with `Temporary failure in name resolution` or hung on TLS handshakes. 
+After updating our workstations to Windows 11 24H2, our developers hit a familiar roadblock: Windows loaded websites fine, but inside Ubuntu, `sudo apt update`, `docker pull`, and `git clone` stalled on `Temporary failure in name resolution` or hung on TLS handshakes. 
 
-Before you destroy your `/etc/resolv.conf` with random public DNS servers or unregister your Linux distro, understand the underlying network topology. WSL2 does not run directly on bare metal—it runs inside a lightweight Hyper-V virtual machine connected via an internal virtual switch (`vEthernet (WSL)`).
+Do not overwrite `/etc/resolv.conf` with random public DNS servers or unregister your Linux distro yet. First, inspect how the underlying network topology works. WSL2 does not run directly on bare metal—it runs inside a lightweight Hyper-V virtual machine connected via an internal virtual switch (`vEthernet (WSL)`).
 
 ## WSL2 Network Architecture & VPN Packet Traversal
+
+### The Technical Root Cause:
+To fix WSL2 with no internet or broken DNS on Windows 11, configure DNS tunneling inside `%USERPROFILE%\.wslconfig`. By default, WSL2 operates behind a legacy Hyper-V NAT switch assigned to an isolated subnet gateway. Enterprise VPN clients like Cisco AnyConnect, GlobalProtect, and Zscaler enforce strict host resolver rules that bypass this virtual switch. To resolve this, add `dnsTunneling=true` and `autoProxy=true` under `[wsl2]` in your `.wslconfig` file, then run `wsl --shutdown` in PowerShell. This routes guest DNS queries through the Windows virtualization socket directly into host networking APIs. If pings succeed but `apt update` or `git clone` hangs during TLS handshakes, corporate VPN encapsulation is clipping packet sizes. Clamp the guest interface by running `sudo ip link set dev eth0 mtu 1400` to stop silent packet drops. For multi-interface routing on Windows 11 23H2 or 24H2, enable `networkingMode=mirrored` to mirror host adapters directly into Linux. You can generate this configuration using our [WSL Configuration Generator](/tools/wsl-config-generator).
 
 ```text
 +-----------------------------------------------------------------------------------+
@@ -88,7 +96,7 @@ Before you destroy your `/etc/resolv.conf` with random public DNS servers or unr
 
 Before applying random registry tweaks or editing Linux system files, test your failure symptoms against our team's verified decision matrix:
 
-| Error Symptom | Diagnostic Probe | Underlying Root Cause | Proven Fix |
+| Error Symptom | Diagnostic Probe | Failure Mechanism | Proven Fix |
 | :--- | :--- | :--- | :--- |
 | **`Temporary failure in name resolution`** | `ping 1.1.1.1` OK; `getent hosts archive.ubuntu.com` FAILS | Host DNS proxy not forwarding queries from Hyper-V vSwitch | Add `dnsTunneling=true` in `.wslconfig` and run `wsl --shutdown` |
 | **`Connection timed out` on TLS / Port 443** | `ping 1.1.1.1` OK; `curl -I https://github.com` HANGS | Corporate VPN encapsulation drops packets larger than 1400 bytes | Clamp guest MTU: `sudo ip link set dev eth0 mtu 1400` |
@@ -193,6 +201,8 @@ curl -I --max-time 10 https://archive.ubuntu.com
 
 > **Workbench Rule:** Do **not** touch `/etc/resolv.conf` or disable `generateResolvConf` in `/etc/wsl.conf` while testing DNS tunneling. WSL needs to generate its internal tunnel stub to bridge into the Windows host resolver.
 
+> **Pro Tip:** Does your virtual machine also hoard memory during builds? Pair these network flags with our [WSL2 vmmem auto memory reclaim guide](/blog/why-wsl2-vmmem-wont-free-ram-auto-memory-reclaim-fix). You can also build your complete config with our interactive [WSL Configuration Generator](/tools/wsl-config-generator).
+
 ## 4. Fix Corporate VPN MTU Packet Clipping
 
 **If `ping 1.1.1.1` passes but `apt update`, `git clone`, or `curl` hangs during TLS handshakes, clamp the Linux interface MTU to 1400.**
@@ -263,11 +273,11 @@ hostAddressLoopback=true
 ignoredPorts=3000,8080
 ```
 
-### What Each Parameter Does:
+### Mirrored Mode Configuration Breakdown:
 1. `networkingMode=mirrored`: Linux shares the host network interfaces, resolving VPN split-tunneling and IPv6.
 2. `dnsTunneling=true`: Routes DNS through host APIs rather than raw NAT packet proxying.
 3. `autoProxy=true`: Translates Windows WinINet corporate HTTP proxy settings into Linux environment variables.
-4. `hostAddressLoopback=true`: Allows Linux containers and Windows applications to communicate over `127.0.0.1` seamlessly.
+4. `hostAddressLoopback=true`: Lets Linux containers and Windows host applications connect to `127.0.0.1` without extra port forwarding.
 5. `ignoredPorts=3000,8080`: Prevents port collisions. In mirrored mode, Windows and Linux share the port space. If a Node.js server runs on Windows port 3000, WSL cannot bind to port 3000 unless specified in `ignoredPorts`.
 
 After editing `.wslconfig`, reload the runtime from PowerShell:
@@ -456,13 +466,15 @@ Save this script as `Test-WSLNetworkStack.ps1` in your dev toolkit to run whenev
 - **Do not disable Windows Defender Firewall globally.** Modern Windows 11 updates rely on WFP rules for Hyper-V packet filtering; turning off the firewall breaks virtual switch routing.
 - **Do not mix manual DNS edits with DNS tunneling.** If `generateResolvConf=false` is set in `/etc/wsl.conf`, DNS tunneling cannot update the guest stub resolver.
 
-## Related Guides & Diagnostics
+## Related Guides & Developer Runbooks
 
-To maintain rock-solid WSL2 networking on Windows 11, configure `dnsTunneling=true` and `autoProxy=true` in `%UserProfile%\.wslconfig`. If working behind a corporate VPN (Cisco, GlobalProtect, Zscaler), clamp your `eth0` MTU to 1400. Reserve Mirrored mode for environments requiring multi-interface or local LAN discovery. If your tunnel is a personal privacy VPN rather than an office one, pick a provider with WireGuard support and no DNS leaks — see our [best free VPNs in 2026, tested for speed and privacy](/blog/best-free-vpn-services-in-2026-complete-comparison-and-privacy-guide).
+To maintain stable WSL2 networking on Windows 11, configure `dnsTunneling=true` and `autoProxy=true` in `%UserProfile%\.wslconfig`. When working behind Cisco, GlobalProtect, or Zscaler, clamp your `eth0` MTU to 1400. Reserve Mirrored mode for environments requiring multi-interface or local LAN discovery.
 
-For containerized developer environments and local AI workflows on Windows 11, explore our related workbench runbooks:
+This guide is part of our **Windows 11 Developer Performance & WSL2** runbook cluster. For containerized workflows and developer environments, explore our companion workbench guides:
+- [`Why WSL2 vmmem Won't Free RAM: Auto Memory Reclaim Fix`](/blog/why-wsl2-vmmem-wont-free-ram-auto-memory-reclaim-fix)
 - [`Podman on Windows 11 & WSL2: Replacing Docker Desktop`](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2)
 - [`Docker Volume Permission Denied Fixes on WSL2`](/blog/docker-volume-permission-denied-fixes)
+- [`Interactive WSL Configuration Generator`](/tools/wsl-config-generator)
 - [`Open WebUI and Ollama Local Network Setup Guide`](/blog/open-webui-ollama-rag-it-runbooks-setup)
 - [`Windows 11 Kernel & Black Screen Recovery Runbook`](/blog/windows-11-kb5120998-black-screen-cursor-fixes)
 - [`Interactive Windows Error Fixer Tool`](/tools/windows-error-fixer)
