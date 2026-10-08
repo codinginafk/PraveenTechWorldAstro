@@ -41,6 +41,7 @@ export default defineConfig({
     "/2026/02/The-Curiosity-Crisis-AI-Is-Raising-a-Generation-of-Loners.html": "/blog",
     "/2026/01/Does-Reinstalling-Windows-Actually-Fix-Problems.html": "/blog/does-resetting-windows-remove-viruses-completely",
     "/p/contact-us.html": "/contact",
+    "/p/contact-us": "/contact",
     "/blog/android-battery-draining-after-update-7-fixes-that-work": "/blog/android-battery-draining-fast-after-update-7-proven-fixes-for-2026",
     "/blog/android-battery-draining-fast-after-update-7-proven-fixes-complete-guide": "/blog/android-battery-draining-fast-after-update-7-proven-fixes-for-2026",
     "/blog/android-battery-drain-after-update": "/blog/android-battery-draining-fast-after-update-7-proven-fixes-for-2026",
