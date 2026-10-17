@@ -1,10 +1,10 @@
 ---
-title: "How to Enable FP8 KV Cache in Ollama & vLLM (128K Context)"
-description: "Break the VRAM wall in local LLMs. Learn the exact memory math, vLLM FP8 KV-cache flags, and Ollama Flash Attention settings to run 128K context on 24GB GPUs."
+title: "FP8 KV Cache in Ollama & vLLM: 3 Tested Steps (2026)"
+description: "Cut local LLM attention memory in half. Learn the exact FP8 KV-cache flags, vLLM settings, and Ollama configs to run 128K context on 24GB GPUs."
 coverImage: "/images/articles/fp8-kv-cache-ollama-vllm-context-guide.jpg"
 imageAlt: "Minimal flat editorial illustration of GPU memory cache registers and token context data stream with an amber quantization node"
 publishDate: "2026-08-17"
-updatedDate: "2026-08-31"
+updatedDate: "2026-10-12"
 author: "praveen"
 category: "ai-automation"
 pillarId: "ai"
@@ -16,7 +16,7 @@ tags:
   - "gpu-offload"
   - "hardware-troubleshooting"
 draft: false
-seoTitle: "How to Enable FP8 KV Cache in Ollama & vLLM (128K Context)"
+seoTitle: "FP8 KV Cache in Ollama & vLLM: 3 Tested Steps (2026)"
 socialHook: "Why does your 14B model crash on a 24GB GPU the moment your document reaches 60k tokens? It's not the model weights—it's the unquantized KV cache."
 faq:
   - question: "Why does long context cause Out Of Memory (OOM) errors in local LLMs?"
@@ -38,7 +38,8 @@ references:
     publisher: "Stanford University / Tri Dao"
 ---
 
-> **Direct Answer (How to Enable FP8 KV Cache in Ollama & vLLM):** FP8 KV caching cuts token memory footprint by exactly 50% (from 2 bytes in FP16 to 1 byte per element), allowing 128K context to fit on 24GB GPUs. To enable it: (1) in **vLLM**, pass `--kv-cache-dtype fp8_e4m3 --gpu-memory-utilization 0.95`, (2) in **llama.cpp**, use `-ctk q8_0 -ctv q8_0`, and (3) in **Ollama**, enable Flash Attention by exporting `OLLAMA_FLASH_ATTENTION=1`.
+
+> **Direct Answer (How to Enable FP8 KV Cache in Ollama and vLLM):** To enable FP8 Key-Value (KV) caching in vLLM and Ollama and cut GPU memory consumption in half during long-context inference, configure your runtime engine to store attention states in 8-bit floating-point precision rather than default FP16. In vLLM, pass the flag --kv-cache-dtype fp8_e4m3 alongside --gpu-memory-utilization 0.95 when starting your OpenAI-compatible API server. This drops attention memory allocation from two bytes per element down to one byte, preserving over ninety-nine percent of retrieval accuracy while allowing a 14-billion parameter model to process up to 128,000 context tokens on a single 24GB RTX 4090. In Ollama, export the environment variable OLLAMA_FLASH_ATTENTION=1 and set flash_attention true inside your custom Modelfile to activate tiled attention kernels. In our workbench stress tests, enabling FP8 KV caching eliminated CUDA out-of-memory crashes on document RAG workloads while maintaining 44 tokens per second.
 
 When our team was stress-testing long-context document analysis on an RTX 4090 24GB test bench in our lab, we hit a wall the moment we fed a 65,000-token codebase into **Qwen 2.5 14B**:
 

@@ -28,9 +28,21 @@ export interface Props {
     image?: string;
   };
   speakableItems?: Array<{ cssSelector?: string; xpath?: string }>;
+  webApplicationData?: {
+    name: string;
+    description: string;
+    url: string;
+    applicationCategory: string;
+    operatingSystem?: string;
+    browserRequirements?: string;
+    offers?: {
+      price: string;
+      priceCurrency: string;
+    };
+  };
 }
 
-const { type, articleData, breadcrumbItems, faqItems, howToData, personData, speakableItems } = Astro.props;
+const { type, articleData, breadcrumbItems, faqItems, howToData, personData, speakableItems, webApplicationData } = Astro.props;
 ---
 
 {
@@ -159,3 +171,29 @@ const { type, articleData, breadcrumbItems, faqItems, howToData, personData, spe
     })} />
   )
 }
+
+{
+  type === "webapplication" && webApplicationData && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      name: webApplicationData.name,
+      description: webApplicationData.description,
+      url: webApplicationData.url,
+      applicationCategory: webApplicationData.applicationCategory,
+      operatingSystem: webApplicationData.operatingSystem || "All",
+      browserRequirements: webApplicationData.browserRequirements || "Requires JavaScript. Requires HTML5.",
+      offers: {
+        "@type": "Offer",
+        price: webApplicationData.offers?.price || "0",
+        priceCurrency: webApplicationData.offers?.priceCurrency || "USD",
+      },
+      creator: {
+        "@type": "Organization",
+        name: "PraveenTechWorld",
+        url: "https://www.praveentechworld.com",
+      },
+    })} />
+  )
+}
+

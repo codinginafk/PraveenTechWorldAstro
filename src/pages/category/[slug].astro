@@ -6,10 +6,13 @@ import ArticleCard from "@components/content/ArticleCard.astro";
 
 export async function getStaticPaths() {
   const allCategories = await getCollection("categories");
-  return allCategories.map((cat) => ({
-    params: { slug: cat.id },
-    props: { categorySlug: cat.id },
-  }));
+  const allArticles = await getPublishedArticles();
+  return allCategories
+    .filter((cat) => allArticles.some((a) => a.data.category === cat.id))
+    .map((cat) => ({
+      params: { slug: cat.id },
+      props: { categorySlug: cat.id },
+    }));
 }
 
 const { categorySlug } = Astro.props;

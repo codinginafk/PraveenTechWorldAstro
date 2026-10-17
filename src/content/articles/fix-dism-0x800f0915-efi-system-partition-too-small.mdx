@@ -1,10 +1,10 @@
 ---
-title: "Fix DISM Error 0x800f0915 on Windows 11 (WinSxS & EFI Fix)"
-description: "Fix DISM error 0x800f0915 and update rollbacks on Windows 11. Repair WinSxS manifests, mount the hidden EFI partition, and clear font bloat on your bench."
+title: "0x800f0915 DISM Error: 5 Tested Fixes on Windows 11 (2026)"
+description: "Fix DISM error 0x800f0915 and update rollbacks on Windows 11. Step-by-step repair for WinSxS manifests, full EFI partitions, and font cache corruption."
 coverImage: "/images/articles/fix-dism-0x800f0915-efi-system-partition-too-small.jpg"
 imageAlt: "Minimal flat editorial illustration of a hard drive partition storage meter with an amber alert segment on an off-white background"
 publishDate: "2026-08-19"
-updatedDate: "2026-09-12"
+updatedDate: "2026-10-13"
 author: "praveen"
 category: "windows-fixes"
 pillarId: "windows-fixes"
@@ -17,7 +17,7 @@ tags:
   - "registry-fix"
 draft: false
 featured: true
-seoTitle: "Fix DISM Error 0x800f0915 on Windows 11: 5 Proven Fixes"
+seoTitle: "0x800f0915 DISM Error: 5 Tested Fixes on Windows 11 (2026)"
 socialHook: "Hitting DISM error 0x800f0915 or Windows Update rollback at 96%? Here is why your EFI System Partition is out of room and how to heal the CBS store."
 faq:
   - question: "What is DISM error 0x800f0915 in Windows 11?"
@@ -35,8 +35,8 @@ references:
   - title: "Microsoft Learn: UEFI/GPT-based Hard Drive Partitions"
     url: "https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/configure-uefigpt-based-hard-drive-partitions"
     publisher: "Microsoft Learn"
+seoDescription: "Fix DISM error 0x800f0915 and update rollbacks on Windows 11. Step-by-step repair for WinSxS manifests, full EFI partitions, and font cache corruption."
 ---
-
 > **Direct Answer (How to Fix DISM Error 0x800f0915):** DISM error `0x800f0915` (`DISM_ERROR_INSTALLATION_PACKAGE_NOT_FOUND`) is triggered by two specific bottlenecks: (1) Damaged Component-Based Servicing (CBS) manifests in the WinSxS store preventing delta verification, or (2) Low disk space on the hidden EFI System Partition (ESP) preventing Windows from staging updated bootloader binaries (`bootmgfw.efi`) and Secure Boot DBX revocation lists. To resolve it: Mount a clean Windows 11 ISO and restore WinSxS using `dism /online /cleanup-image /restorehealth /source:WIM:D:\sources\install.wim:1 /limitaccess`, then mount the hidden ESP via `mountvol y: /s` and delete obsolete multilingual boot fonts in `Y:\EFI\Microsoft\Boot\Fonts\` to recover 30–50 MB of staging space.
 
 On our systems maintenance workbench, our engineering team regularly triages Windows 11 workstations and enterprise client machines that fail monthly cumulative update cycles. A technician will initiate standard servicing maintenance, only for DISM to abort with a fatal exception:
@@ -56,9 +56,13 @@ If you are trapped in an update rollback loop or DISM health checks fail with er
 
 ---
 
+<ErrorLookupBar initialCode="0x800f0915" title="Instant DISM & CBS Error Code Lookup" subtitle="Search verified PowerShell and mountvol commands for 0x800f0915 and update rollbacks." />
+
 ## What Causes DISM Error 0x800f0915 on Windows 11?
 
 **Direct Answer:** Error `0x800f0915` occurs when DISM cannot locate valid package manifests in WinSxS or when the EFI System Partition has less than 100 MB of free headroom.
+
+*(Note for multilingual admins: On Korean Windows 11 editions, this fault is logged as **0x800f0915 오류** or **dism 0x800f0915 오류** with the CBS message `원본 파일을 다운로드할 수 없습니다` (The source files could not be found). The recovery runbook below repairs both English and international language packs identically).*
 
 When DISM executes `/RestoreHealth`, it relies on two critical system storage areas:
 

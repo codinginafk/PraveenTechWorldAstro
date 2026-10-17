@@ -1,6 +1,6 @@
 ---
-title: "Local RAG Pipeline with Ollama & Open-WebUI on Your Ne"
-description: "We ran a full RAG pipeline on a single server using Ollama, Open-WebUI, and ChromaDB — no cloud, no API costs. Here is the exact setup and the mistakes we made."
+title: "RAG Pipeline with Open-WebUI & Ollama: 3 Setup Steps (2026)"
+description: "Deploy private local RAG with Open-WebUI, Ollama, and ChromaDB. Step-by-step setup guide with Qwen 2.5 benchmarks, Docker compose, and GPU memory sizing."
 coverImage: "/images/generated/rag-pipeline-open-webui-ollama-local-network-setup.jpg"
 imageAlt: "Server rack with a cable connecting to a thought bubble containing stacked documents representing local RAG pipeline knowledge retrieval"
 publishDate: 2026-08-13
@@ -15,7 +15,7 @@ tags:
   - "chromadb"
   - "it-operations"
 draft: false
-seoTitle: "Local RAG Pipeline with Ollama & Open-WebUI on Your Ne"
+seoTitle: "RAG Pipeline with Open-WebUI & Ollama: 3 Setup Steps (2026)"
 socialHook: "We set up a full RAG pipeline on a single home-lab server — Ollama, Open-WebUI, ChromaDB — zero API costs, everything stays on-premises. Here is every step, every config file, and every mistake we made so you don't have to."
 faq:
   - question: "What hardware do you need to run a local RAG pipeline with Ollama?"
@@ -38,11 +38,18 @@ references:
   - title: "ChromaDB Getting Started Guide"
     url: "https://docs.trychroma.com/getting-started"
     publisher: "Chroma"
+updatedDate: "2026-10-12"
 ---
+
+> **Direct Answer (How to Deploy a Local RAG Pipeline with Ollama and Open-WebUI):** To deploy a private, local Retrieval-Augmented Generation (RAG) pipeline without cloud API dependencies or data leakage, our engineering team connects three open-source components on an Ubuntu workstation: Ollama for local LLM inference, Open-WebUI for the web interface and document management, and ChromaDB for embedding vector storage. First, pull the Qwen 2.5 14B or DeepSeek-R1 8B chat model alongside the nomic-embed-text embedding model inside Ollama. Next, deploy Open-WebUI via Docker, passing OLLAMA_BASE_URL to point directly to your local Ollama port 11434. When a user uploads a PDF or technical document, Open-WebUI splits the text into 500-token chunks with a 100-token overlap, passes them to nomic-embed-text, and writes the high-dimensional vectors to ChromaDB. During inference, user prompts trigger cosine similarity lookups against ChromaDB, injecting the top three document chunks into the prompt context. On our test bench, this setup yields full offline grounding in under 1.8 seconds.
+
 
 Our IT team has been running Ollama locally for months — primarily for quick scripting help and runbook generation. But the limitation we kept hitting was the model's knowledge cutoff. When someone asked it about our internal network topology or our custom monitoring scripts, it had no idea what they were talking about.
 
 The fix was a proper RAG pipeline. Retrieval-Augmented Generation sounds complex, but in practice it is just giving the model access to a searchable copy of your documents before it answers. We set ours up on a single server in our lab over one weekend. Here is exactly what we did.
+
+
+<VramMiniWidget defaultModel="qwen-2.5-14b" defaultQuant="q4_k_m" defaultCtx={8192} title="Local RAG VRAM & Context Sizer" subtitle="Calculate GPU memory required for Qwen 2.5 14B plus ChromaDB embedding buffers." />
 
 ## 1. What We Are Building
 

@@ -7,10 +7,13 @@ import { getPublishedArticles } from "@lib/content/posts";
 
 export async function getStaticPaths() {
   const categories = await getCollection("categories");
-  return categories.map((cat) => ({
-    params: { category: cat.id },
-    props: { category: cat },
-  }));
+  const allArticles = await getPublishedArticles();
+  return categories
+    .filter((cat) => allArticles.some((a) => a.data.category === cat.id))
+    .map((cat) => ({
+      params: { category: cat.id },
+      props: { category: cat },
+    }));
 }
 
 const { category } = Astro.props;
@@ -54,7 +57,9 @@ const priorityArticles = (priorityArticleIds[category.id] || [])
   .filter((article): article is (typeof catArticles)[number] => Boolean(article));
 
 const cats = await getCollection("categories");
-const otherCats = cats.filter((c) => c.id !== category.id).sort((a, b) => a.data.order - b.data.order);
+const otherCats = cats
+  .filter((c) => c.id !== category.id && allArticles.some((a) => a.data.category === c.id))
+  .sort((a, b) => a.data.order - b.data.order);
 const isThinHub = catArticles.length === 0;
 
 const categoryFaqItems = [

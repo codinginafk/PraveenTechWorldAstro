@@ -9,6 +9,8 @@ export interface SEOMetadata {
   preloadImage?: string;
   canonical?: string;
   noindex?: boolean;
+  publishedTime?: string;
+  modifiedTime?: string;
 }
 
 export function buildPageTitle(title: string): string {

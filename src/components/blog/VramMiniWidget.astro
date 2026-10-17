@@ -1,0 +1,231 @@
+---
+import Icon from "@components/common/Icon.astro";
+
+interface Props {
+  defaultModel?: string;
+  defaultQuant?: string;
+  defaultCtx?: number;
+  title?: string;
+  subtitle?: string;
+}
+
+const {
+  defaultModel = "deepseek-r1-7b",
+  defaultQuant = "q4_k_m",
+  defaultCtx = 8192,
+  title = "Quick Local LLM VRAM Estimator",
+  subtitle = "Test your GPU memory fit right here before running or downloading large GGUF weights."
+} = Astro.props;
+
+const models = [
+  { id: "deepseek-r1-1.5b", name: "DeepSeek-R1 1.5B", params: 1.78, layers: 28, kvHeads: 2 },
+  { id: "deepseek-r1-7b", name: "DeepSeek-R1 7B / Qwen 7B", params: 7.61, layers: 28, kvHeads: 4 },
+  { id: "deepseek-r1-8b", name: "DeepSeek-R1 8B / Llama 8B", params: 8.03, layers: 32, kvHeads: 8 },
+  { id: "deepseek-r1-14b", name: "DeepSeek-R1 14B / Qwen 14B", params: 14.7, layers: 48, kvHeads: 8 },
+  { id: "deepseek-r1-32b", name: "DeepSeek-R1 32B / Qwen 32B", params: 32.8, layers: 64, kvHeads: 8 },
+  { id: "llama-3.3-70b", name: "DeepSeek-R1 70B / Llama 70B", params: 70.6, layers: 80, kvHeads: 8 },
+  { id: "deepseek-v3-671b", name: "DeepSeek-V3 / R1 (671B MoE)", params: 671.0, layers: 61, kvHeads: 128 },
+];
+
+const quants = [
+  { id: "q4_k_m", name: "Q4_K_M (4.5 bpw - Balanced)", bpw: 4.5 },
+  { id: "q5_k_m", name: "Q5_K_M (5.5 bpw - Quality)", bpw: 5.5 },
+  { id: "q8_0", name: "Q8_0 (8.5 bpw - High Precision)", bpw: 8.5 },
+  { id: "fp8", name: "FP8 (8.0 bpw - Native Tensor)", bpw: 8.0 },
+  { id: "fp16", name: "FP16 / BF16 (16.0 bpw - Unquantized)", bpw: 16.0 },
+];
+---
+
+<div class="not-prose my-8 rounded-2xl border-2 border-brand-500/30 bg-surface p-5 sm:p-7 shadow-md dark:border-brand-600/30 dark:bg-surface-dark-alt transition-all">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-4 dark:border-border-dark/80">
+    <div>
+      <div class="inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300 mb-1.5">
+        <Icon name="cpu" class="w-3.5 h-3.5" /> Embedded Engineering Tool
+      </div>
+      <h3 class="text-xl font-black tracking-tight text-text dark:text-text-dark m-0">
+        {title}
+      </h3>
+      <p class="text-xs text-text-muted dark:text-text-dark-muted mt-1 leading-relaxed m-0">
+        {subtitle}
+      </p>
+    </div>
+    <a
+      id="mini-vram-full-btn"
+      href={`/tools/vram-calculator?model=${defaultModel}&quant=${defaultQuant}&ctx=${defaultCtx}`}
+      class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 px-3.5 py-2 text-xs font-bold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 transition-colors shadow-sm shrink-0"
+    >
+      <span>Open Full Calculator</span>
+      <Icon name="arrow" class="w-3.5 h-3.5" />
+    </a>
+  </div>
+
+  <!-- Interactive Grid -->
+  <div class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <!-- Model Selector -->
+    <div>
+      <label for="mini-model-select" class="block text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-dark-muted mb-1.5">
+        1. Target Model
+      </label>
+      <select
+        id="mini-model-select"
+        class="w-full rounded-xl border border-border bg-surface-alt px-3 py-2 text-xs font-semibold text-text shadow-sm focus:border-brand-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+      >
+        {models.map((m) => (
+          <option value={m.id} selected={m.id === defaultModel} data-params={m.params} data-layers={m.layers} data-kv={m.kvHeads}>
+            {m.name}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <!-- Quantization Selector -->
+    <div>
+      <label for="mini-quant-select" class="block text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-dark-muted mb-1.5">
+        2. Precision / Quant
+      </label>
+      <select
+        id="mini-quant-select"
+        class="w-full rounded-xl border border-border bg-surface-alt px-3 py-2 text-xs font-semibold text-text shadow-sm focus:border-brand-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+      >
+        {quants.map((q) => (
+          <option value={q.id} selected={q.id === defaultQuant} data-bpw={q.bpw}>
+            {q.name}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <!-- Context Window -->
+    <div class="sm:col-span-2 lg:col-span-1">
+      <div class="flex items-center justify-between mb-1.5">
+        <label for="mini-ctx-select" class="block text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-dark-muted">
+          3. Context Size
+        </label>
+        <span id="mini-ctx-label" class="font-mono text-xs font-bold text-brand-700 dark:text-brand-300">
+          {defaultCtx >= 1024 ? `${defaultCtx / 1024}K tokens` : `${defaultCtx} tokens`}
+        </span>
+      </div>
+      <select
+        id="mini-ctx-select"
+        class="w-full rounded-xl border border-border bg-surface-alt px-3 py-2 text-xs font-semibold text-text shadow-sm focus:border-brand-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+      >
+        <option value="2048" selected={defaultCtx === 2048}>2,048 (Ollama default)</option>
+        <option value="4096" selected={defaultCtx === 4096}>4,096 (4K standard)</option>
+        <option value="8192" selected={defaultCtx === 8192}>8,192 (8K coding)</option>
+        <option value="16384" selected={defaultCtx === 16384}>16,384 (16K long chat)</option>
+        <option value="32768" selected={defaultCtx === 32768}>32,768 (32K reasoning)</option>
+        <option value="65536" selected={defaultCtx === 65536}>65,536 (64K deep search)</option>
+        <option value="131072" selected={defaultCtx === 131072}>131,072 (128K full context)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Live Output Banner -->
+  <div class="mt-5 rounded-xl border border-brand-500/20 bg-surface-alt p-4 dark:border-brand-500/30 dark:bg-surface-dark">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div>
+        <span class="text-xs uppercase tracking-wider font-bold text-text-muted dark:text-text-dark-muted">
+          Calculated VRAM Requirement
+        </span>
+        <div class="flex items-baseline gap-2 mt-0.5">
+          <span id="mini-vram-total" class="text-2xl sm:text-3xl font-black text-brand-700 dark:text-brand-400 font-mono">
+            5.42 GB
+          </span>
+          <span class="text-xs text-text-muted dark:text-text-dark-muted">
+            (Weights: <span id="mini-vram-weights" class="font-semibold text-text dark:text-text-dark">4.38 GB</span> + KV: <span id="mini-vram-kv" class="font-semibold text-text dark:text-text-dark">0.42 GB</span> + Buffer)
+          </span>
+        </div>
+      </div>
+      
+      <!-- Fit Verdict Pill -->
+      <div id="mini-fit-verdict" class="inline-flex items-center gap-1.5 rounded-xl bg-accent-500/10 border border-accent-500/30 px-3 py-1.5 text-xs font-bold text-accent-700 dark:text-accent-300 self-start sm:self-auto">
+        <Icon name="check" class="w-3.5 h-3.5" />
+        <span id="mini-fit-text">Fits comfortable on RTX 4060 (8GB)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+(function() {
+  const modelSelect = document.getElementById("mini-model-select");
+  const quantSelect = document.getElementById("mini-quant-select");
+  const ctxSelect = document.getElementById("mini-ctx-select");
+  const ctxLabel = document.getElementById("mini-ctx-label");
+  const fullBtn = document.getElementById("mini-vram-full-btn");
+
+  const totalEl = document.getElementById("mini-vram-total");
+  const weightsEl = document.getElementById("mini-vram-weights");
+  const kvEl = document.getElementById("mini-vram-kv");
+  const fitText = document.getElementById("mini-fit-text");
+
+  if (!modelSelect || !quantSelect || !ctxSelect || !totalEl) return;
+
+  function recalculate() {
+    const selectedOpt = modelSelect.selectedOptions[0];
+    const params = parseFloat(selectedOpt.getAttribute("data-params")) || 7.61;
+    const layers = parseInt(selectedOpt.getAttribute("data-layers"), 10) || 28;
+    const kvHeads = parseInt(selectedOpt.getAttribute("data-kv"), 10) || 4;
+    const headDim = 128;
+
+    const quantOpt = quantSelect.selectedOptions[0];
+    const bpw = parseFloat(quantOpt.getAttribute("data-bpw")) || 4.5;
+
+    const ctx = parseInt(ctxSelect.value, 10) || 8192;
+    if (ctxLabel) {
+      ctxLabel.textContent = ctx >= 1024 ? (ctx / 1024) + "K tokens" : ctx + " tokens";
+    }
+
+    // Formulas:
+    // 1. Model weights (GB) = (params_B * bpw / 8) * 1.15
+    const weightsGb = (params * bpw / 8.0) * 1.15;
+
+    // 2. KV Cache (GB) = 2 * layers * kvHeads * headDim * ctx * 2 bytes / 1024^3
+    const kvBytes = 2 * layers * kvHeads * headDim * ctx * 2;
+    const kvGb = kvBytes / (1024 * 1024 * 1024);
+
+    // 3. CUDA Buffer (GB) = 0.5 + (0.000015 * ctx)
+    const cudaGb = 0.5 + (0.000015 * ctx);
+
+    const totalGb = weightsGb + kvGb + cudaGb;
+
+    weightsEl.textContent = weightsGb.toFixed(2) + " GB";
+    kvEl.textContent = kvGb.toFixed(2) + " GB";
+    totalEl.textContent = totalGb.toFixed(2) + " GB";
+
+    // Verdict
+    if (totalGb <= 6.0) {
+      fitText.textContent = "Fits 6GB GPUs (RTX 3050, GTX 1660)";
+    } else if (totalGb <= 8.0) {
+      fitText.textContent = "Fits 8GB GPUs (RTX 3060, 4060, Apple 8GB)";
+    } else if (totalGb <= 12.0) {
+      fitText.textContent = "Fits 12GB GPUs (RTX 3060 12GB, RTX 4070)";
+    } else if (totalGb <= 16.0) {
+      fitText.textContent = "Fits 16GB GPUs (RTX 4080, RX 7800 XT)";
+    } else if (totalGb <= 24.0) {
+      fitText.textContent = "Fits 24GB GPUs (RTX 3090, 4090, Apple 24GB)";
+    } else if (totalGb <= 32.0) {
+      fitText.textContent = "Fits 32GB GPUs (RTX 5090, Apple 36GB)";
+    } else if (totalGb <= 64.0) {
+      fitText.textContent = "Requires Mac Studio (64GB) or Dual RTX 3090";
+    } else if (totalGb <= 128.0) {
+      fitText.textContent = "Requires AMD Strix Halo (128GB) / Multi-GPU";
+    } else {
+      fitText.textContent = "Requires Enterprise Cloud Cluster (A100/H100)";
+    }
+
+    if (fullBtn) {
+      fullBtn.href = "/tools/vram-calculator?model=" + encodeURIComponent(modelSelect.value) +
+        "&quant=" + encodeURIComponent(quantSelect.value) +
+        "&ctx=" + encodeURIComponent(ctx);
+    }
+  }
+
+  modelSelect.addEventListener("change", recalculate);
+  quantSelect.addEventListener("change", recalculate);
+  ctxSelect.addEventListener("change", recalculate);
+
+  recalculate();
+})();
+</script>

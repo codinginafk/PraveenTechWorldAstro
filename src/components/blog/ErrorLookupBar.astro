@@ -1,0 +1,77 @@
+---
+import Icon from "@components/common/Icon.astro";
+
+interface Props {
+  initialCode?: string;
+  title?: string;
+  subtitle?: string;
+}
+
+const {
+  initialCode = "",
+  title = "Look Up Any Windows Stop Code or Update Error",
+  subtitle = "Search our verified database of 50+ Windows 11 BSoD hex codes, kernel drivers, and update errors."
+} = Astro.props;
+
+const popularCodes = [
+  { code: "0x101", label: "0x101 (Clock Watchdog)" },
+  { code: "0x124", label: "0x124 (WHEA Uncorrectable)" },
+  { code: "0x1E", label: "0x1E (Kmode Exception)" },
+  { code: "0x7E", label: "0x7E (System Thread)" },
+  { code: "nvlddmkm", label: "nvlddmkm.sys (Event 153)" },
+  { code: "0x8024200d", label: "0x8024200d (Update Error)" },
+  { code: "0x800f0915", label: "0x800f0915 (EFI Full)" },
+];
+---
+
+<div class="not-prose my-8 rounded-2xl border-2 border-brand-500/30 bg-surface p-5 sm:p-7 shadow-md dark:border-brand-600/30 dark:bg-surface-dark-alt transition-all">
+  <!-- Header -->
+  <div class="mb-4">
+    <div class="inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300 mb-1.5">
+      <Icon name="wrench" class="w-3.5 h-3.5" /> Interactive Diagnostic Lookup
+    </div>
+    <h3 class="text-xl font-black tracking-tight text-text dark:text-text-dark m-0">
+      {title}
+    </h3>
+    <p class="text-xs text-text-muted dark:text-text-dark-muted mt-1 leading-relaxed m-0">
+      {subtitle}
+    </p>
+  </div>
+
+  <!-- Search Input Form -->
+  <form id="error-bar-form" action="/tools/windows-error-fixer" method="GET" class="flex flex-col sm:flex-row gap-2.5">
+    <div class="relative flex-1">
+      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-text-muted dark:text-text-dark-muted">
+        <Icon name="search" class="w-4 h-4" />
+      </div>
+      <input
+        type="text"
+        id="error-bar-input"
+        name="code"
+        value={initialCode}
+        placeholder="Enter stop code or keyword (e.g. 0x101, nvlddmkm, 0x8024200d)..."
+        class="w-full rounded-xl border border-border bg-surface-alt pl-10 pr-4 py-2.5 text-xs sm:text-sm font-semibold text-text shadow-sm placeholder:text-text-muted/60 focus:border-brand-500 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+      />
+    </div>
+    <button
+      type="submit"
+      class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 px-5 py-2.5 text-xs sm:text-sm font-bold text-white hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 transition-colors shadow-sm shrink-0 cursor-pointer"
+    >
+      <span>Lookup Error</span>
+      <Icon name="arrow" class="w-3.5 h-3.5" />
+    </button>
+  </form>
+
+  <!-- Popular Quick Chips -->
+  <div class="mt-4 flex flex-wrap items-center gap-1.5 text-xs">
+    <span class="text-text-muted dark:text-text-dark-muted font-bold mr-1">Frequent Errors:</span>
+    {popularCodes.map((c) => (
+      <a
+        href={c.code.toLowerCase().startsWith("0x") || c.code.toLowerCase().startsWith("kb") ? `/tools/windows-error-fixer/${c.code.toLowerCase()}` : `/tools/windows-error-fixer?code=${encodeURIComponent(c.code)}`}
+        class="rounded-lg border border-border/80 bg-surface-alt px-2.5 py-1 text-xs font-mono font-medium text-text-muted hover:border-brand-500 hover:text-brand-700 dark:border-border-dark/80 dark:bg-surface-dark dark:text-text-dark-muted dark:hover:border-brand-400 dark:hover:text-brand-300 transition-colors"
+      >
+        {c.label}
+      </a>
+    ))}
+  </div>
+</div>

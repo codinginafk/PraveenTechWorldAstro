@@ -59,3 +59,12 @@ Regardless of the `autoApprove` and `suppressPrompts` configurations above, the 
 2. **First-Person Workbench Experience:** Ground every technical guide in real developer work: "We tested this on Windows 11 24H2", "The script crashed on line 42 because Pandas read empty cells as strings".
 3. **Cut the Buzzwords:** Eliminate synergy, paradigm, transformative, testament, landscape, multifaceted, leverage, utilize.
 4. **Immediate Direct Answer:** Put the exact PowerShell/Python command or 2-sentence fix in the first 50 words before getting into the architecture.
+
+## Keyword Research & Impression-to-Click Conversion Rules
+1. **Desktop Tool Suite Integration:** Always interface with the specialized tool suite at `C:\Users\bunny\OneDrive\Desktop\KeywordResearch\app.py` and `scripts/serp_keyword_optimizer.py`. Use `app.score_title()` to score candidate titles (target score >= 70/100) and `app.find_flow()` to extract real autocomplete user questions for H2 subtitles.
+2. **Strict Title Protection Gate (Never Break Winners):**
+   - **PROTECT (Keep 100% Intact):** Never modify the `<title>` or `seoTitle` of articles with GSC CTR > 5.0%, Clicks > 100, or Position <= 2.5 (e.g. `DeGoogle Starter Pack` at 29% CTR).
+   - **SURGICAL REFINEMENT:** For healthy articles with CTR 1.0%–3.0%, retain the exact winning frontload keyword string; only append odd-number counts or freshness anchors.
+   - **UPGRADE:** Rewrite only underperforming titles with CTR < 0.8% in striking distance (positions 4–10) or truncated titles.
+3. **Passage Citability Capsules:** Embed a 134–167 word standalone answer block directly under the primary problem H2 with firsthand workbench test details for Google AI Overview (GEO/AEO) extraction.
+4. **Metadata & Freshness Propagation:** Ensure titles are between 45–60 characters (never truncated), descriptions are under 155 characters, and `updatedDate` is set to activate the emerald freshness badge and SERP modified timestamps.

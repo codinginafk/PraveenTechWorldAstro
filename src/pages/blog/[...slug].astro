@@ -18,7 +18,10 @@ import TechAdUnit from "@components/ads/TechAdUnit.astro";
 import QuickAnswer from "@components/blog/QuickAnswer.astro";
 import MoneyBridge from "@components/blog/MoneyBridge.astro";
 import SeriesNavigator from "@components/blog/SeriesNavigator.astro";
+import DebloatNavigator from "@components/blog/DebloatNavigator.astro";
 import DeGoogleScoreCalculator from "@components/blog/DeGoogleScoreCalculator.astro";
+import VramMiniWidget from "@components/blog/VramMiniWidget.astro";
+import ErrorLookupBar from "@components/blog/ErrorLookupBar.astro";
 import PreferGoogleButton from "@components/common/PreferGoogleButton.astro";
 
 export async function getStaticPaths() {
@@ -47,6 +50,14 @@ const isDeGoogleSeries = [
   "google-photos-alternatives-immich-ente-photos-migration-guide",
   "degoogle-android-phone-grapheneos-aurora-store-complete-guide",
   "google-maps-alternatives-organic-maps-osmand-privacy-guide",
+].some((slug) => article.id.includes(slug));
+
+const isDebloatSeries = [
+  "debloat-windows-11-sysadmin-guide-2026",
+  "how-to-debloat-android-tv-google-tv-adb-guide",
+  "remove-copilot-recall-bloat-windows-11-quiet-pc-guide",
+  "windows-11-24h2-debloat-gpo-telemetry-guide",
+  "how-to-debloat-samsung-xiaomi-vivo-phones-adb-guide",
 ].some((slug) => article.id.includes(slug));
 
 const tagRedirectMap: Record<string, string> = {
@@ -121,6 +132,8 @@ const howToData = howToSteps ? {
     ogImage: article.data.coverImage,
     ogType: "article",
     noindex: article.data.noindex,
+    publishedTime: article.data.publishDate.toISOString(),
+    modifiedTime: (article.data.updatedDate || article.data.publishDate).toISOString(),
   }}
 >
   <!-- Reading progress bar -->
@@ -189,9 +202,9 @@ const howToData = howToSteps ? {
           <h1 class="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
             {article.data.seoTitle || article.data.title}
           </h1>
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-muted dark:text-text-dark-muted">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-text-muted dark:text-text-dark-muted">
             {author && (
-              <a href={`/author/${article.data.author}`} class="hover:text-brand-700 dark:hover:text-brand-300">
+              <a href={`/author/${article.data.author}`} class="font-medium hover:text-brand-700 dark:hover:text-brand-300">
                 {author.data.name}
               </a>
             )}
@@ -200,12 +213,14 @@ const howToData = howToSteps ? {
               Published {formatDate(article.data.publishDate)}
             </time>
             {article.data.updatedDate && article.data.updatedDate.toISOString() !== article.data.publishDate.toISOString() && (
-              <>
-                <span class="hidden sm:inline">&bull;</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/80">
+                <svg class="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.75a.75.75 0 00-.75.75v4.482a.75.75 0 001.5 0v-2.128l.42.42a7 7 0 0011.89-3.238.75.75 0 00-1.498-.141zM4.688 8.576a5.5 5.5 0 019.201-2.466l.312.311h-2.433a.75.75 0 000 1.5H16.25a.75.75 0 00.75-.75V2.689a.75.75 0 00-1.5 0v2.128l-.42-.42A7 7 0 003.19 7.635a.75.75 0 001.498.141z" clip-rule="evenodd" />
+                </svg>
                 <time datetime={article.data.updatedDate.toISOString()}>
-                  Updated {formatDate(article.data.updatedDate)}
+                  Updated on {formatDate(article.data.updatedDate)}
                 </time>
-              </>
+              </span>
             )}
             <span class="hidden sm:inline">&bull;</span>
             <span>{readingTime} min read</span>
@@ -245,12 +260,14 @@ const howToData = howToSteps ? {
           pillarId={article.data.pillarId}
         />
         {isDeGoogleSeries && <SeriesNavigator currentSlug={article.id} position="top" />}
+        {isDebloatSeries && <DebloatNavigator currentSlug={article.id} position="top" />}
         <div class="prose max-w-[68ch] dark:prose-invert">
           <Fragment set:html="<!--email_off-->" />
-          <Content components={{ DeGoogleScoreCalculator }} />
+          <Content components={{ DeGoogleScoreCalculator, VramMiniWidget, ErrorLookupBar }} />
           <Fragment set:html="<!--/email_off-->" />
         </div>
         {isDeGoogleSeries && <SeriesNavigator currentSlug={article.id} position="bottom" />}
+        {isDebloatSeries && <DebloatNavigator currentSlug={article.id} position="bottom" />}
 
         <!-- In-Article Contextual High-Converting Tech Sponsor / Ad Slot -->
         <TechAdUnit category={article.data.category} tags={article.data.tags} slotType="in-article" />
