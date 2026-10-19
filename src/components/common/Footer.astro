@@ -1,11 +1,16 @@
 ---
 import { getCollection } from "astro:content";
+import { getPublishedArticles } from "@lib/content/posts";
 import PreferGoogleButton from "@components/common/PreferGoogleButton.astro";
 
 const currentYear = new Date().getFullYear();
-const cats = await getCollection("categories");
-// Show top 10 categories by order, formatted in a two-column grid
-const topCats = cats.sort((a, b) => a.data.order - b.data.order).slice(0, 10);
+const [cats, allArticles] = await Promise.all([
+  getCollection("categories"),
+  getPublishedArticles(),
+]);
+// Show top 10 categories that have published articles by order, formatted in a two-column grid
+const activeCats = cats.filter((cat) => allArticles.some((a) => a.data.category === cat.id));
+const topCats = activeCats.sort((a, b) => a.data.order - b.data.order).slice(0, 10);
 ---
 
 <footer class="border-t border-border/40 dark:border-border-dark/40 bg-surface-alt/20 dark:bg-surface-dark-alt/10">

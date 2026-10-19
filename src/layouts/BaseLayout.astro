@@ -19,15 +19,40 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
 <!doctype html>
 <html lang="en" class="">
   <head>
-    <!-- Google Consent Mode v2 Default -->
+    <!-- Google Consent Mode v2 (Advanced) -->
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('consent', 'default', {
-        'ad_storage': 'denied',
-        'ad_user_data': 'denied',
-        'ad_personalization': 'denied',
-        'analytics_storage': 'granted'
+      var savedConsent = null;
+      try { savedConsent = localStorage.getItem('cookie-consent'); } catch(e) {}
+      if (savedConsent === 'accepted') {
+        gtag('consent', 'default', {
+          'ad_storage': 'granted',
+          'ad_user_data': 'granted',
+          'ad_personalization': 'granted',
+          'analytics_storage': 'granted'
+        });
+      } else {
+        gtag('consent', 'default', {
+          'ad_storage': 'denied',
+          'ad_user_data': 'denied',
+          'ad_personalization': 'denied',
+          'analytics_storage': 'denied',
+          'wait_for_update': 500
+        });
+      }
+    </script>
+
+    <!-- Google tag (gtag.js) - GA4 with Consent Mode v2 Cookieless Pings -->
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-TR2F3NPMVN"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-TR2F3NPMVN', {
+        'send_page_view': true,
+        'anonymize_ip': true,
+        'cookie_flags': 'SameSite=None;Secure'
       });
     </script>
 
@@ -130,15 +155,15 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
     </main>
     <Footer />
 
-    <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface p-4 shadow-lg dark:border-border-dark dark:bg-surface-dark hidden">
-      <div class="mx-auto flex max-w-4xl flex-col items-center gap-3 sm:flex-row">
+    <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface p-4 shadow-xl dark:border-border-dark dark:bg-surface-dark hidden">
+      <div class="mx-auto flex max-w-4xl flex-col items-center justify-between gap-3 sm:flex-row">
         <p class="flex-1 text-sm text-text-muted dark:text-text-dark-muted">
-          This site uses cookies to analyze traffic and improve your experience.
+          We use cookies and privacy-safe analytics to understand site traffic and ensure our technical guides and tools work properly. You can accept all or select necessary only.
           <a href="/privacy" class="underline hover:text-brand-700 dark:hover:text-brand-300">Privacy Policy</a>
         </p>
-        <div class="flex shrink-0 gap-2">
-          <button id="cookie-reject" class="rounded-lg border border-border px-4 py-2 text-sm text-text-muted transition-colors hover:bg-surface-alt dark:border-border-dark dark:text-text-dark-muted dark:hover:bg-surface-dark-alt">Reject</button>
-          <button id="cookie-accept" class="rounded-lg bg-accent-700 px-4 py-2 text-sm text-white transition-colors hover:bg-accent-800">Accept</button>
+        <div class="flex shrink-0 items-center gap-2">
+          <button id="cookie-necessary" class="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-surface-alt hover:text-text dark:border-border-dark dark:text-text-dark-muted dark:hover:bg-surface-dark-alt dark:hover:text-text-dark cursor-pointer">Necessary Only</button>
+          <button id="cookie-accept" class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-800 cursor-pointer">Accept All</button>
         </div>
       </div>
     </div>
@@ -150,7 +175,7 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
         try {
           mc.registerTool({
             name: "accept_cookies",
-            description: "Accept cookie consent for analytics tracking",
+            description: "Accept all cookies for full analytics and personalization",
             inputSchema: { type: "object", properties: {}, required: [] },
             execute: async function() {
               var b = document.getElementById("cookie-accept");
@@ -159,13 +184,23 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
             }
           });
           mc.registerTool({
-            name: "reject_cookies",
-            description: "Reject cookie consent",
+            name: "necessary_cookies",
+            description: "Allow only necessary cookies and anonymous cookieless measurement",
             inputSchema: { type: "object", properties: {}, required: [] },
             execute: async function() {
-              var b = document.getElementById("cookie-reject");
+              var b = document.getElementById("cookie-necessary") || document.getElementById("cookie-reject");
               if (b) b.click();
-              return { status: "rejected" };
+              return { status: "necessary" };
+            }
+          });
+          mc.registerTool({
+            name: "reject_cookies",
+            description: "Alias for necessary_cookies",
+            inputSchema: { type: "object", properties: {}, required: [] },
+            execute: async function() {
+              var b = document.getElementById("cookie-necessary") || document.getElementById("cookie-reject");
+              if (b) b.click();
+              return { status: "necessary" };
             }
           });
           mc.registerTool({
@@ -191,29 +226,33 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
     </script>
 
     <script is:inline>
-      function loadGA() {
-        var s = document.createElement("script");
-        s.async = true;
-        s.src = "https://www.googletagmanager.com/gtag/js?id=G-TR2F3NPMVN";
-        document.head.appendChild(s);
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag("js", new Date());
-        gtag("config", "G-TR2F3NPMVN");
-      }
       function updateConsent(status) {
         try { localStorage.setItem("cookie-consent", status); } catch(e) {}
-        if (status === "accepted") {
-          loadGA();
+        if (typeof gtag === "function") {
+          if (status === "accepted") {
+            gtag('consent', 'update', {
+              'ad_storage': 'granted',
+              'ad_user_data': 'granted',
+              'ad_personalization': 'granted',
+              'analytics_storage': 'granted'
+            });
+          } else {
+            gtag('consent', 'update', {
+              'ad_storage': 'denied',
+              'ad_user_data': 'denied',
+              'ad_personalization': 'denied',
+              'analytics_storage': 'denied'
+            });
+          }
         }
       }
       var banner = document.getElementById("cookie-banner");
       var acceptBtn = document.getElementById("cookie-accept");
-      var rejectBtn = document.getElementById("cookie-reject");
-      var consent = localStorage.getItem("cookie-consent");
-      if (consent === "accepted") {
-        loadGA();
-      } else if (!consent && banner) {
+      var necessaryBtn = document.getElementById("cookie-necessary");
+      var consent = null;
+      try { consent = localStorage.getItem("cookie-consent"); } catch(e) {}
+
+      if (!consent && banner) {
         banner.classList.remove("hidden");
       }
       if (acceptBtn) {
@@ -222,24 +261,22 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
           if (banner) banner.classList.add("hidden");
         });
       }
-      if (rejectBtn) {
-        rejectBtn.addEventListener("click", function () {
-          updateConsent("rejected");
+      if (necessaryBtn) {
+        necessaryBtn.addEventListener("click", function () {
+          updateConsent("necessary");
           if (banner) banner.classList.add("hidden");
         });
       }
     </script>
     <script>
-      // Real-user Core Web Vitals -> GA4 (this IS the p95/p99 instrument).
-      // Fires only after cookie consent (GA itself only loads on accept),
-      // so no tracking without permission. Read p95 in GA4: Explore >
-      // free-form, metric = vital_value, filter vital_name.
+      // Real-user Core Web Vitals -> GA4.
+      // Under Consent Mode v2, gtag automatically routes web vitals via
+      // cookieless pings when analytics_storage is denied, or full events when granted.
       import { onCLS, onFCP, onINP, onLCP, onTTFB } from "web-vitals";
       const reportVital = (m: { name: string; value: number; rating: string }) => {
         try {
           const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
           if (typeof gtag !== "function") return;
-          if (localStorage.getItem("cookie-consent") !== "accepted") return;
           gtag("event", "web_vital", {
             vital_name: m.name,
             vital_value: Math.round(m.name === "CLS" ? m.value * 1000 : m.value),
