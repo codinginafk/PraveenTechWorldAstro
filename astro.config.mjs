@@ -111,6 +111,32 @@ export default defineConfig({
     "/blog/ga4-data-delayed-or-missing-check-measurement-id-consent": "/blog/ga4-not-tracking-visitors-12-troubleshooting-steps",
     "/blog/google-search-alternatives-that-dont-track-you": "/blog/google-search-alternatives-kagi-brave-duckduckgo-compared",
     "/blog/gmail-alternatives-privacy-focused-email": "/blog/best-gmail-alternatives-proton-tuta-fastmail-migration-guide",
+    "/blog/11-volume-control-not-working-8-proven-fixes-for-2026": "/blog/windows-11-volume-control-not-working-8-proven-fixes-for-2026",
+    "/blog/best-free-ai-image-generator-better-than-chatgpt-gemini": "/blog/best-free-ai-image-generators-better-than-chatgpt-and-gemini",
+    "/blog/best-free-alternatives-to-2026-complete-comparison": "/blog/best-free-alternatives-to-paid-software-in-2026-complete-comparison",
+    "/blog/core-web-vitals-fail-on-a-new-website-improve-lcp-inp-and-cls-before-publishing": "/blog/core-web-vitals-fail-new-website-improve-lcp-inp-cls",
+    "/blog/does-resetting-windows-removes-viruses-completely": "/blog/does-resetting-windows-remove-viruses-completely",
+    "/blog/how-to-fix-audiodg-exe-cpu-windows-11": "/blog/how-to-fix-audiodg-exe-high-cpu-windows-11",
+    "/blog/how-to-fix-audiodg-exe-windows-11": "/blog/how-to-fix-audiodg-exe-high-cpu-windows-11",
+    "/blog/how-to-fix-windows-11-inpoutx64-crash": "/blog/how-to-fix-windows-11-kb5121003-inpoutx64-crash",
+    "/blog/how-to-tell-if-your-ram-is-bad-a-step-by-step-diagnostics-guide": "/blog/how-to-tell-if-your-ram-is-bad-a-step-by-step-pc-diagnostics-guide",
+    "/blog/how-we-replaced-docker-desktop-with-podman-windows11-wsl2": "/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2",
+    "/blog/ollama-vs-vllm-vs-lm-studio-2026-speed-vram-benchmark": "/blog/ollama-vs-vllm-vs-lm-studio-windows-11-wsl2-benchmark",
+    "/blog/vllm-pagedattention-vs-radixattention-benchmarks": "/blog/vllm-pagedattention-vs-sglang-radixattention-benchmarks",
+    "/blog/vllm-praveentechworld.com/blog/vllm-pagedattention-vs-sglang-radixattention-benchmarks": "/blog/vllm-pagedattention-vs-sglang-radixattention-benchmarks",
+    "/blog/why-dont-have-gemini-spark-mode-yet-access-guide": "/blog/why-you-dont-have-gemini-spark-mode-yet-access-guide",
+    "/blog/why-windows-11-24h2-bsods-on-wd-hmb-fix": "/blog/why-windows-11-24h2-bsods-on-wd-nvme-hmb-fix",
+    "/blog/windows-11-kb5089573-update-errors-slow-internet-fix": "/blog/does-resetting-windows-remove-viruses-completely",
+    "/blog/wsl2-keep-crashing-ram-vmmem-windows-11-fix": "/blog/why-wsl2-vmmem-wont-free-ram-auto-memory-reclaim-fix",
+    "/does-resetting-windows-remove-viruses-completely": "/blog/does-resetting-windows-remove-viruses-completely",
+    "/guides/business": "/services/dubai",
+    "/guides/career-growth": "/guides",
+    "/guides/hosting-infra": "/guides/it-operations",
+    "/guides/productivity": "/tag/productivity",
+    "/category/productivity": "/tag/productivity",
+    "/category/business": "/services/dubai",
+    "/category/career-growth": "/guides",
+    "/category/hosting-infra": "/guides/it-operations",
   },
   build: {
     format: "directory",
@@ -132,7 +158,7 @@ export default defineConfig({
         !page.startsWith("https://www.praveentechworld.com/guides/business") &&
         !page.startsWith("https://www.praveentechworld.com/guides/career-growth") &&
         !page.startsWith("https://www.praveentechworld.com/guides/hosting-infra") &&
-        !page.startsWith("https://www.praveentechworld.com/guides/productivity") &&
+        !page.startsWith("https://www.praveentechworld.com/tag/productivity") &&
         !page.startsWith("https://www.praveentechworld.com/guest-post") &&
         !page.startsWith("https://www.praveentechworld.com/author/abduldiyan") &&
         !page.startsWith("https://www.praveentechworld.com/author/satyam") &&
