@@ -56,9 +56,32 @@ if (process.argv[1] === __filename) {
     prioritySlugs = queue.map(q => q.slug);
   }
 
+  // Load redirects from vercel.json to avoid scheduling redirected legacy slugs
+  const VERCEL_FILE = path.join(ROOT_DIR, 'vercel.json');
+  const redirects = new Set();
+  if (fs.existsSync(VERCEL_FILE)) {
+    try {
+      const vercel = JSON.parse(fs.readFileSync(VERCEL_FILE, 'utf8'));
+      for (const r of vercel.redirects || []) {
+        redirects.add(r.source.replace(/^\/blog\//, '').replace(/\/$/, ''));
+      }
+    } catch (e) {
+      console.error('Warning: could not parse vercel.json redirects:', e.message);
+    }
+  }
+
   // Find all draft articles currently in articles dir
   const allArticles = fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith('.mdx'));
   const draftArticles = [];
+
+  // Helper to test if a draft is genuine (not redirected or merged)
+  function isGenuineDraft(filename, content) {
+    const slug = filename.replace(/\.mdx$/, '');
+    if (redirects.has(slug)) return false;
+    if (/^redirect:\s*/m.test(content)) return false;
+    if (content.includes('MERGED:') || content.includes('REDIRECTED:') || content.includes('redirected')) return false;
+    return true;
+  }
 
   // 1. Add priority drafts first
   for (const slug of prioritySlugs) {
@@ -66,7 +89,7 @@ if (process.argv[1] === __filename) {
     const fullPath = path.join(ARTICLES_DIR, filename);
     if (fs.existsSync(fullPath)) {
       const content = fs.readFileSync(fullPath, 'utf8');
-      if (/^draft:\s*true\s*$/m.test(content)) {
+      if (/^draft:\s*true\s*$/m.test(content) && isGenuineDraft(filename, content)) {
         draftArticles.push(filename);
       }
     }
@@ -76,11 +99,7 @@ if (process.argv[1] === __filename) {
   for (const f of allArticles) {
     if (draftArticles.includes(f)) continue;
     const content = fs.readFileSync(path.join(ARTICLES_DIR, f), 'utf8');
-    if (/^draft:\s*true\s*$/m.test(content)) {
-      // Skip merged/redirected legacy files
-      if (content.includes('MERGED:') || content.includes('REDIRECTED:') || content.includes('redirected')) {
-        continue;
-      }
+    if (/^draft:\s*true\s*$/m.test(content) && isGenuineDraft(f, content)) {
       draftArticles.push(f);
     }
   }
