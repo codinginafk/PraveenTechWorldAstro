@@ -27,6 +27,11 @@ const CATEGORY_TO_PILLAR = {
   "free-software": "website-setup",
   "career-growth": "website-setup",
   "android-fixes": "windows-fixes",
+  "hardware-troubleshooting": "windows-fixes",
+  "ai": "ai-websites",
+  "ai-workflows": "ai-automation",
+  "business": "build-in-public",
+  "seo": "website-setup"
 };
 
 const PILLAR_LABELS = {
@@ -47,17 +52,18 @@ function parseFrontmatter(filePath) {
     if (!fmMatch) return null;
     const fmLines = fmMatch[1].split("\n");
     const body = fmMatch[2].trim();
-    const fm = { slug: path.basename(filePath, ".mdx"), body };
+    const fm = { slug: path.basename(filePath, path.extname(filePath)), body, draft: false };
     for (const line of fmLines) {
       const kv = line.match(/^(\w+):\s*(.+)/);
       if (!kv) continue;
       const key = kv[1], val = kv[2].trim();
-      if (key === "title") fm.title = val.replace(/^"(.+)"$/, "$1");
+      if (key === "draft") fm.draft = val === "true";
+      else if (key === "title") fm.title = val.replace(/^"(.+)"$/, "$1");
       else if (key === "description") fm.description = val.replace(/^"(.+)"$/, "$1");
       else if (key === "category") fm.category = val.replace(/^"(.+)"$/, "$1");
       else if (key === "pillarId") fm.pillarId = val.replace(/^"(.+)"$/, "$1");
       else if (key === "tags") fm.tags = [];
-      else if (key === "publishDate") fm.publishDate = val;
+      else if (key === "publishDate") fm.publishDate = val.replace(/^"(.+)"$/, "$1");
     }
     // Read tags from subsequent lines
     const tagSection = fmMatch[1].match(/tags:\n((?:\s+-\s+.+\n?)*)/);
@@ -87,8 +93,13 @@ export function generateLlmsTxt() {
     return;
   }
 
-  const files = fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx"));
-  const articles = files.map(f => parseFrontmatter(path.join(ARTICLES_DIR, f))).filter(Boolean);
+  const now = new Date();
+  const files = fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx") || f.endsWith(".md"));
+  const articles = files
+    .map(f => parseFrontmatter(path.join(ARTICLES_DIR, f)))
+    .filter(Boolean)
+    .filter(a => !a.draft)
+    .filter(a => new Date(a.publishDate) <= now);
 
   // Sort by publishDate descending
   articles.sort((a, b) => (b.publishDate || "").localeCompare(a.publishDate || ""));
@@ -143,10 +154,12 @@ The site exposes the following WebMCP tools for agentic browsing:
 export function generateLlmsFullTxt() {
   if (!fs.existsSync(ARTICLES_DIR)) return;
 
-  const files = fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx"));
+  const now = new Date();
+  const files = fs.readdirSync(ARTICLES_DIR).filter(f => f.endsWith(".mdx") || f.endsWith(".md"));
   const articles = files.map(f => {
-    const content = fs.readFileSync(path.join(ARTICLES_DIR, f), "utf-8");
     const fm = parseFrontmatter(path.join(ARTICLES_DIR, f));
+    if (!fm || fm.draft || new Date(fm.publishDate) > now) return null;
+    const content = fs.readFileSync(path.join(ARTICLES_DIR, f), "utf-8");
     const body = content.replace(/^---[\s\S]*?^---\n*/m, "").trim();
     return { ...fm, body };
   }).filter(Boolean);
