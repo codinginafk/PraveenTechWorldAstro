@@ -17,3 +17,11 @@
 - **First-Person Workbench Experience:** Ground every technical guide in real developer work: "We tested this on Windows 11 24H2", "The script crashed on line 42 because Pandas read empty cells as strings".
 - **Cut the Buzzwords:** Eliminate synergy, paradigm, transformative, testament, landscape, multifaceted, leverage, utilize.
 - **Immediate Direct Answer:** Put the exact PowerShell/Python command or 2-sentence fix in the first 50 words before getting into the architecture.
+
+## 4. Mandatory Priority Topics & Topical Purity
+- **The 3 Allowed Focus Lanes:** 
+  1. **DeGoogle, Privacy & Digital Sovereignty:** (GrapheneOS, Proton/Tuta, Nextcloud, SearXNG, telemetry blocking).
+  2. **Windows Kernel & Hardware Troubleshooting:** (BSOD 0x1E/0x101/0x124, DISM 0x800f0915/0x8024200d, TDR nvlddmkm, RAM diagnostics).
+  3. **Local & Self-Hosted AI DevOps:** (Ollama, DeepSeek local deployment, VRAM calculators, local RAG benchmarks).
+- **Zero Dilution Rule:** Never draft or research generic AI summaries, speculative predictions, office productivity tips, student grade scripts, or generic social marketing guides.
+- **Double Down on News/Cluster Winners:** All new articles or news coverage must anchor directly to existing winners (especially expanding the #1 ranking DeGoogle cluster).

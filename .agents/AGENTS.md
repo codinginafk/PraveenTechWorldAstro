@@ -68,3 +68,15 @@ Regardless of the `autoApprove` and `suppressPrompts` configurations above, the 
    - **UPGRADE:** Rewrite only underperforming titles with CTR < 0.8% in striking distance (positions 4–10) or truncated titles.
 3. **Passage Citability Capsules:** Embed a 134–167 word standalone answer block directly under the primary problem H2 with firsthand workbench test details for Google AI Overview (GEO/AEO) extraction.
 4. **Metadata & Freshness Propagation:** Ensure titles are between 45–60 characters (never truncated), descriptions are under 155 characters, and `updatedDate` is set to activate the emerald freshness badge and SERP modified timestamps.
+
+## Core Topical Purity & Strategic Priority Rules (Mandatory Focus Lanes)
+1. **The Three Core Priority Lanes (Cover These and These Only):**
+   - **Lane 1: DeGoogle, Digital Sovereignty & Privacy Infrastructure:** (Our #1 global search moat: GrapheneOS, local self-hosted backups, Proton/Tuta migrations, Nextcloud, alternative private search engines, DNS/telemetry blocking, privacy runbooks).
+   - **Lane 2: Hard Windows Kernel, Hardware, & Driver Diagnostics:** (Where Google gives us Page 1 authority: BSOD stop codes, WinDbg dump triage, DISM/WinSxS component store repairs, GPU TDR crashes, RAM controller stability, and WSL2 kernel memory limits).
+   - **Lane 3: Self-Hosted & Local AI DevOps Runbooks:** (Concrete, reproducible workbench benchmarks: Ollama, DeepSeek local deployment, VRAM calculators, local RAG on physical GPU hardware, and self-hosted AI automation).
+2. **Strict Topical Purity Gate (Banned Dilution Topics):**
+   - You are strictly prohibited from writing, researching, or generating content outside of these three core lanes.
+   - Specifically banned: generic AI news summaries, speculative AI predictions ("AI in 10 years", "Will AI take jobs"), generic office productivity/email tips, student grade report scripts, or generic social media marketing guides. These dilute site topical authority and get rejected by Google into "Crawled - currently not indexed".
+3. **Double Down on News & Cluster Depth Around Our Winners:**
+   - Any new research, news analysis, or article drafting must directly strengthen one of the three core lanes or act as a high-authority satellite expanding off our #1 ranking winners (e.g., expanding our `degoogle-starter-pack` fortress cluster).
+   - Every piece within these lanes must be interlinked directly to the primary cluster pillar, using only active canonical URLs (never link to redirected or deprecated slugs).
