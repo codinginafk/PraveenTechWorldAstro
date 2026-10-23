@@ -5,13 +5,20 @@
  * scores each through the SlopDetector API, and FAILS (exit 1) when any
  * article scores combined >= 40 or the judge says likely_ai_raw (high).
  *
+ * The judge is fed the ADDED text of the diff, not the whole article. Scoring
+ * the whole body meant that a one-line link repair re-judged ~1,500 words of
+ * legacy prose and could fail CI for text the commit never touched. Added text
+ * under MIN_JUDGE_WORDS is treated as a mechanical edit (links, metadata,
+ * typo) and skipped with a note; a new or substantially rewritten article has
+ * all of its prose in the diff and is scored in full.
+ *
  * Infra failures (API down, rate-limited) WARN and pass open — a broken tool
  * must never block legitimate publishing. The weekly full-site audit is the
  * backstop. Set SKIP_SLOP_GATE=1 to bypass explicitly (logged).
  *
  * Usage:
  *   node src/scripts/slop-gate.mjs              # gate changed articles
- *   node src/scripts/slop-gate.mjs --file <path> # gate one file (testing / pre-check)
+ *   node src/scripts/slop-gate.mjs --file <path> # gate one file in full (testing / pre-check)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -23,6 +30,8 @@ const ARTICLES = path.join(ROOT, "src/content/articles");
 const API = process.env.SLOP_API_URL || "https://slopdetector.praveentechworld.com/api/analyze";
 const FAIL_SCORE = 40;
 const MAX_FILES = 10;
+// Fewer added prose words than this cannot meaningfully change a voice verdict.
+const MIN_JUDGE_WORDS = 40;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 if (process.env.SKIP_SLOP_GATE === "1") {
@@ -92,6 +101,26 @@ async function score(text) {
   }
 }
 
+/**
+ * Text this commit actually added to an article.
+ * Untracked files have no origin/main counterpart, so their whole body counts.
+ */
+function addedText(file) {
+  const rel = path.relative(ROOT, file).split(path.sep).join("/");
+  const tracked = sh(`git ls-files --error-unmatch "${rel}"`) !== "";
+  if (!tracked) return fs.readFileSync(file, "utf8");
+
+  const base = sh("git rev-parse --verify origin/main") ? "origin/main" : "HEAD";
+  const diff = sh(`git diff --unified=0 ${base} -- "${rel}"`);
+  if (!diff) return "";
+  const added = diff
+    .split("\n")
+    .filter((l) => l.startsWith("+") && !l.startsWith("+++"))
+    .map((l) => l.slice(1))
+    .join("\n");
+  return added;
+}
+
 const files = changedArticles();
 if (!files.length) {
   console.log("✅ Slop-Gate: no article changes detected — skipped.");
@@ -100,18 +129,30 @@ if (!files.length) {
 console.log(`🔍 Slop-Gate: scoring ${files.length} changed article(s)...`);
 
 const failures = [], warnings = [];
+const wholeFileMode = process.argv.includes("--file");
 let i = 0;
+let skipped = 0;
 for (const f of files) {
   i++;
-  if (i > 1) await sleep(6000);
   const rel = path.relative(ROOT, f);
   const raw = fs.readFileSync(f, "utf8");
   const fm = frontmatter(raw);
   // cheap local checks (warnings only — Google truncates, doesn't penalize)
   if (fm.title && fm.title.length > 60) warnings.push(`${rel}: title ${fm.title.length} chars (>60, will truncate in SERP)`);
   if (fm.description && fm.description.length > 160) warnings.push(`${rel}: description ${fm.description.length} chars (>160, will truncate)`);
-  const text = bodyText(raw);
-  if (text.split(/\s+/).length < 40) { warnings.push(`${rel}: body under 40 words — judge skipped, heuristic only`); }
+
+  const scope = wholeFileMode ? raw : addedText(f);
+  const text = bodyText(scope);
+  const words = text.split(/\s+/).filter(Boolean).length;
+
+  if (!wholeFileMode && words < MIN_JUDGE_WORDS) {
+    skipped++;
+    console.log(`   ${rel}: ${words} added prose word(s) — mechanical edit, judge skipped`);
+    continue;
+  }
+  if (words < MIN_JUDGE_WORDS) warnings.push(`${rel}: body under ${MIN_JUDGE_WORDS} words — judge skipped, heuristic only`);
+
+  if (i > 1) await sleep(6000);
   const d = await score(text);
   if (d.infra) { warnings.push(`${rel}: judge unavailable (${d.detail}) — heuristic-only pass, re-check in weekly audit`); continue; }
   const j = d.judge;
