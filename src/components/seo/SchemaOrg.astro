@@ -9,6 +9,8 @@ export interface Props {
     updatedDate?: string;
     authorName?: string;
     image?: string;
+    imageWidth?: number;
+    imageHeight?: number;
     tags?: string[];
   };
   breadcrumbItems?: Array<{ name: string; url: string }>;
@@ -20,14 +22,6 @@ export interface Props {
     image?: string;
     sameAs?: string[];
   };
-  howToData?: {
-    name: string;
-    description: string;
-    steps: Array<{ name: string; text: string; url?: string }>;
-    totalTime?: string;
-    image?: string;
-  };
-  speakableItems?: Array<{ cssSelector?: string; xpath?: string }>;
   webApplicationData?: {
     name: string;
     description: string;
@@ -42,7 +36,7 @@ export interface Props {
   };
 }
 
-const { type, articleData, breadcrumbItems, faqItems, howToData, personData, speakableItems, webApplicationData } = Astro.props;
+const { type, articleData, breadcrumbItems, faqItems, personData, webApplicationData } = Astro.props;
 ---
 
 {
@@ -82,8 +76,9 @@ const { type, articleData, breadcrumbItems, faqItems, howToData, personData, spe
         url: articleData.image.startsWith("http")
           ? articleData.image
           : `https://www.praveentechworld.com${articleData.image}`,
-        width: 1200,
-        height: 675,
+        ...(articleData.imageWidth && articleData.imageHeight
+          ? { width: articleData.imageWidth, height: articleData.imageHeight }
+          : {}),
       } : undefined,
       keywords: articleData.tags?.join(", "),
       inLanguage: "en-US",
@@ -133,41 +128,6 @@ const { type, articleData, breadcrumbItems, faqItems, howToData, personData, spe
       url: personData.url,
       image: personData.image,
       sameAs: personData.sameAs,
-    })} />
-  )
-}
-
-{
-  type === "speakable" && speakableItems && (
-    <script type="application/ld+json" is:inline set:html={JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      name: articleData?.title || "",
-      speakable: speakableItems.map((item) => ({
-        "@type": "SpeakableSpecification",
-        ...(item.cssSelector ? { cssSelector: item.cssSelector } : {}),
-        ...(item.xpath ? { xpath: item.xpath } : {}),
-      })),
-      url: articleData?.url,
-    })} />
-  )
-}
-
-{
-  type === "howto" && howToData && (
-    <script type="application/ld+json" is:inline set:html={JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "HowTo",
-      name: howToData.name,
-      description: howToData.description,
-      image: howToData.image,
-      totalTime: howToData.totalTime,
-      step: howToData.steps.map((step) => ({
-        "@type": "HowToStep",
-        name: step.name,
-        text: step.text,
-        url: step.url,
-      })),
     })} />
   )
 }

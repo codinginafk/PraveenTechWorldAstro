@@ -3,7 +3,7 @@
 > Practical IT Operations, AI automation, and technology guides.
 > URL: https://www.praveentechworld.com
 > Language: English
-> Last updated: 2026-10-22
+> Last updated: 2026-10-23
 > Total articles: 171
 
 This file contains the full text of every article on the site. AI systems can extract specific passages for citations or answers.
@@ -718,20 +718,6 @@ Formerly known as Process Hacker, System Informer relies on a dedicated kernel-m
 
 > Check your laptop battery health and cycle count on Windows 11 without third-party software. Step-by-step native powercfg command runbook and wear guide.
 
-Quick direct answer: To check your laptop battery health on Windows 11, open PowerShell and run . Next, run . Compare Full Charge Capacity to Design Capacity to calculate your exact battery health percentage.
-
-Every laptop battery degrades over time. Lithium-ion chemistry loses maximum storage capacity with every charge cycle.
-
-On our workbench test laptops, we noticed our Dell XPS and ThinkPad units losing runtime after two years of heavy builds. A laptop that once lasted seven hours dropped to two hours before reaching 15 percent.
-
-Users often search Windows Settings for an Apple-style battery health percentage. Unfortunately, Microsoft hides detailed battery degradation metrics behind a command-line tool.
-
-You do not need to download sketchy third-party battery utilities. Windows 11 includes a powerful battery diagnostic engine built directly into the operating system.
-
-Here is our team's tested runbook on Windows 11 24H2 to generate, read, and calculate your battery health in seconds.
-
-
-
 2. How to Read Your Battery Report: Capacity vs. Wear
 
 Once the battery report opens in your browser, do not get overwhelmed by the graphs. Scroll directly to the Installed batteries table near the top.
@@ -820,7 +806,18 @@ You cannot stop lithium-ion chemical aging completely. However, you can signific
 
 1. Enable Smart Charging / Battery Limiter: Most modern laptops support an 80% charge threshold in BIOS or companion software. Keeping cells at 80% rather than 100% overnight cuts chemical stress in half.
 2. Avoid Full 0% Discharges: Deep discharges accelerate cell wear. Plug your charger in when the battery drops to 20%.
-3. Control Heat During Heavy Tasks: Heat degrades battery chemistry faster than anything else. Never game or render video with th
+3. Control Heat During Heavy Tasks: Heat degrades battery chemistry faster than anything else. Never game or render video with the laptop sitting on a soft blanket or bed.
+4. Use Windows 11 Energy Saver: In Windows 11 24H2, Microsoft introduced a unified Energy Saver mode that curtails background CPU activity without dimming your display to unusable levels.
+
+--
+
+Related Runbooks & Windows Guides
+
+Explore our companion workbench guides in the Windows 11 Everyday Essentials collection:
+
+How to Find Saved WiFi Passwords on Windows 11
+How to Screen Record on Windows 11 Without Watermarks
+How to Tell If Crashes Are Caused by RAM or Bad Drivers
 
 ---
 
@@ -2696,20 +2693,6 @@ Browser I
 
 > Learn how to debloat Windows 11 cleanly using PowerShell without breaking WSL2, Windows Store, Winget, or WinRE. Tested sysadmin script with full rollback.
 
-When our team sets up new developer laptops and workstations, we run into the same problem every time: Windows 11 comes packed with pre-installed bloatware, background trackers, and news feeds.
-
-On a high-end workstation with 32 GB or 64 GB of RAM, a few news widgets might seem harmless. But if you run Docker containers, compile large codebases, or use Windows Subsystem for Linux (WSL2), this background churn adds latency. It eats up CPU cycles and wastes up to 2 GB of memory before you even start working.
-
-Many engineers turn to community debloat scripts from GitHub or YouTube. But in our lab tests, we found a big problem: most debloat scripts break essential developer tools. They strip out , damage the Microsoft Store, crash Windows Terminal, and break WSL2 network adapters.
-
-In this guide, my team and I share our tested debloat runbook. It removes consumer bloatware safely while keeping WSL2, Docker, Hyper-V, Winget, Terminal, and the Store completely intact.
-
-Direct Answer: How to Debloat Windows 11 Without Breaking Developer Tools
-
-To safely debloat Windows 11, run a targeted PowerShell script that removes only consumer bloatware. Make sure to keep  (Winget), , and . Never turn off the , , or  services, so WSL2 and Docker continue to run smoothly.
-
-
-
 Why Community Scripts Break Dev Tools
 
 Many popular debloat scripts try to clean too aggressively. In our testing lab, we found four main reasons these scripts cause system breakage:
@@ -2778,7 +2761,47 @@ foreach ($Package in $Provisioned) {
 Write-Host "n[Step 3/3] Enforcing Clean Workstation Registry Policies..." -ForegroundColor Yellow
 $RegistryTweaks = @(
     @{
-        Path  = "HKLM:\SOFTWARE\Policies\Microsoft\Window
+        Path  = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent"
+        Name  = "DisableWindowsConsumerFeatures"
+        Value = 1
+    },
+    @{
+        Path  = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+        Name  = "DisableSearchBoxSuggestions"
+        Value = 1
+    }
+)
+
+foreach ($Reg in $RegistryTweaks) {
+    if (-not (Test-Path $Reg.Path)) {
+        New-Item -Path $Reg.Path -Force | Out-Null
+    }
+    if ($DryRun) {
+        Write-Host "  [DRY-RUN] Would set $($Reg.Path)\$($Reg.Name) = $($Reg.Value)" -ForegroundColor Gray
+    } else {
+        Set-ItemProperty -Path $Reg.Path -Name $Reg.Name -Value $Reg.Value -Type DWord -Force
+        Write-Host "  [+] Configured: $($Reg.Name) = $($Reg.Value)" -ForegroundColor Green
+    }
+}
+
+Write-Host "
+
+--
+
+Preserving Virtualization and WSL2 Services
+
+If you have ever launched WSL2 after running a generic debloat script only to be greeted by this error:
+
+
+
+The script you ran likely shut off the Windows Hypervisor platform. To keep WSL2 and Docker running smoothly, test your system settings with this script:
+
+nWSL Subsystem Status:" -ForegroundColor Green
+    $wslStatus | ForEach-Object { Write-Host "  $_" }
+} catch {
+    Write-Host "  [ERROR] WSL command failed. Ensure wsl.exe is in system PATH." -ForegroundColor Red
+}
+p
 
 ---
 

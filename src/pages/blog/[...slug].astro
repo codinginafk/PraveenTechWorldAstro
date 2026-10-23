@@ -7,6 +7,7 @@ import { formatDate } from "@lib/utils/dateFormat";
 import { calculateReadingTime } from "@lib/utils/readingTime";
 import { buildCanonical } from "@lib/seo/metadata";
 import { extractHeadings } from "@lib/content/headings";
+import { getCoverImageDimensions, getWebpSibling } from "@lib/images/dimensions";
 import TableOfContents from "@components/content/TableOfContents.astro";
 import AuthorBox from "@components/content/AuthorBox.astro";
 import SocialShare from "@components/content/SocialShare.astro";
@@ -98,29 +99,12 @@ const breadcrumbItems = [
 ];
 
 // Extract HowTo steps from headings containing "Step" or numbered steps
-function extractHowToSteps(
-  body: string | undefined,
-  baseUrl: string
-): Array<{ name: string; text: string; url: string }> | null {
-  const stepRegex = /^#{2,3}\s+(Step\s+\d+[:.]?\s*.+)$/gm;
-  const steps: Array<{ name: string; text: string; url: string }> = [];
-  let match: RegExpExecArray | null;
-  while ((match = stepRegex.exec(body || "")) !== null) {
-    const name = match[1].trim();
-    const stepNum = name.match(/Step\s+(\d+)/i);
-    const index: number = stepNum ? parseInt(stepNum[1], 10) : steps.length + 1;
-    steps.push({ name, text: name, url: `${baseUrl}#step-${index}` });
-  }
-  return steps.length > 0 ? steps : null;
-}
+// (removed: Google retired HowTo rich results in 2023 and the generated
+// `#step-N` fragment targets never existed in the rendered page, so this
+// emitted a large, always-invalid HowTo graph on ~45 articles.)
 
-const howToSteps = extractHowToSteps(article.body, articleUrl);
-const howToData = howToSteps ? {
-  name: article.data.seoTitle || article.data.title,
-  description: article.data.description || "",
-  steps: howToSteps,
-  image: article.data.coverImage,
-} : null;
+const coverDims = await getCoverImageDimensions(article.data.coverImage);
+const coverWebp = getWebpSibling(article.data.coverImage);
 ---
 
 <BaseLayout
@@ -148,6 +132,8 @@ const howToData = howToSteps ? {
       updatedDate: article.data.updatedDate?.toISOString(),
       authorName: author?.data.name || "Praveen",
       image: article.data.coverImage,
+      imageWidth: coverDims?.width,
+      imageHeight: coverDims?.height,
       tags: article.data.tags,
     }}
   />
@@ -158,18 +144,6 @@ const howToData = howToSteps ? {
   {article.data.faq && article.data.faq.length > 0 && (
     <SchemaOrg type="faq" faqItems={article.data.faq} />
   )}
-  {howToData && howToData.steps.length >= 2 && (
-    <SchemaOrg type="howto" howToData={howToData} />
-  )}
-  <SchemaOrg
-    type="speakable"
-    articleData={{ title: article.data.seoTitle || article.data.title, url: articleUrl }}
-    speakableItems={[
-      { cssSelector: "h1" },
-      { cssSelector: ".prose > h2:first-of-type + p" },
-      { cssSelector: ".prose > h2:first-of-type" },
-    ]}
-  />
 
   <div class="mx-auto max-w-6xl px-4 py-12">
     <div class="lg:grid lg:grid-cols-[1fr_250px] lg:gap-10">
@@ -241,7 +215,10 @@ const howToData = howToSteps ? {
 
         {article.data.coverImage && (
           <figure class="mb-8 overflow-hidden rounded-xl">
-            <img src={article.data.coverImage} alt={article.data.imageAlt || article.data.title} width="800" height="400" class="w-full" loading="eager" fetchpriority="high" decoding="async" />
+            <picture>
+              {coverWebp && <source srcset={coverWebp} type="image/webp" />}
+              <img src={article.data.coverImage} alt={article.data.imageAlt || article.data.title} width={coverDims?.width || 1200} height={coverDims?.height || 630} class="w-full" loading="eager" fetchpriority="high" decoding="async" />
+            </picture>
             {article.data.imageCredit && (
               <figcaption class="mt-1 text-xs text-text-muted dark:text-text-dark-muted">
                 {article.data.imageCredit}

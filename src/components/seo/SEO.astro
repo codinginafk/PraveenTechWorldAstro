@@ -1,5 +1,6 @@
 ---
 import { buildPageTitle, buildCanonical, type SEOMetadata } from "@lib/seo/metadata";
+import { getCoverImageDimensions } from "@lib/images/dimensions";
 
 export interface Props extends SEOMetadata {
   noindex?: boolean;
@@ -23,7 +24,16 @@ const siteUrl = "https://www.praveentechworld.com";
 const siteName = "PraveenTechWorld";
 const pageTitle = buildPageTitle(title);
 const pageCanonical = canonical || buildCanonical(siteUrl, Astro.url.pathname);
-const ogImg = ogImage || `${siteUrl}/images/og-default.svg`;
+
+// Social crawlers do not resolve relative URLs and do not render SVG, so the
+// card image must always be an absolute raster URL. Frontmatter `coverImage`
+// values are site-relative (`/images/...`), which previously reached og:image
+// verbatim and produced a broken preview on every article.
+const RESERVED_PATH = "/images/og-default.png";
+const rawImage = ogImage || RESERVED_PATH;
+const ogImg = /^https?:\/\//i.test(rawImage) ? rawImage : new URL(rawImage, siteUrl).href;
+const ogDims = ogImage ? await getCoverImageDimensions(ogImage) : { width: 1200, height: 630 };
+const ogTypeAttr = /\.png$/i.test(ogImg) ? "image/png" : /\.webp$/i.test(ogImg) ? "image/webp" : "image/jpeg";
 ---
 
 <title>{pageTitle}</title>
@@ -38,6 +48,10 @@ const ogImg = ogImage || `${siteUrl}/images/og-default.svg`;
 <meta property="og:description" content={ogDescription || description} />
 <meta property="og:url" content={pageCanonical} />
 <meta property="og:image" content={ogImg} />
+<meta property="og:image:type" content={ogTypeAttr} />
+{ogDims && <meta property="og:image:width" content={String(ogDims.width)} />}
+{ogDims && <meta property="og:image:height" content={String(ogDims.height)} />}
+<meta property="og:image:alt" content={ogTitle || pageTitle} />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:site" content="@praveenwithapen" />

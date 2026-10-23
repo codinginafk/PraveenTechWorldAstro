@@ -1,13 +1,19 @@
 /**
  * redirect-audit.mjs — the system that prevents redirect disasters.
  *
- * Parses ALL THREE redirect configs (astro.config.mjs, vercel.json, public/_redirects)
- * and enforces:
+ * vercel.json is the single source of truth for redirects. Astro's static
+ * `redirects` map and a Netlify-style public/_redirects used to carry the same
+ * rules a second and third time: the build emitted 108 meta-refresh stub pages
+ * that Vercel never serves, and _redirects was published as a public file with
+ * a `/blog/* -> /blog 301!` catch-all that would have destroyed the blog on any
+ * host that honours it. Both are gone; this audit now guards one map.
+ *
+ * Enforces:
  *   FAIL: source slug matches a LIVE (draft:false) article  (the Step-3/4/5 bug class)
- *   FAIL: redirect loops (A->B->A), self-redirects (A->A), intra-file duplicates
+ *   FAIL: redirect loops (A->B->A), self-redirects (A->A), duplicate sources
  *   FAIL: destination slug has no published article (draft/renamed target -> live 404)
- *   WARN: cross-config mismatch (same source, different dest / missing somewhere)
  *   WARN: chains (A->B->C, equity leak + latency)
+ *   WARN: redirect layers reappearing (astro config / _redirects) with mismatched dests
  *
  * Usage: node src/scripts/redirect-audit.mjs [--live]
  *   --live also HTTP-checks every source (slower, for manual runs — NOT in CI).
@@ -26,7 +32,7 @@ const warn = (m) => warns.push(m);
 // decode %XX so astro (%20) and _redirects (raw space) forms compare equal
 const norm = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
 
-// ---- 1. parse astro.config.mjs redirects block ----
+// ---- 1. astro.config.mjs redirects (expected to be absent; audited if reintroduced) ----
 const astro = fs.readFileSync(path.join(ROOT, "astro.config.mjs"), "utf8");
 const astroMap = new Map();
 const block = (astro.match(/redirects:\s*\{([\s\S]*?)\n\s*\},/) || [])[1] || "";
@@ -96,20 +102,26 @@ for (const [src] of vercelMap) {
   if (live.has(src)) fail(`SHADOW: ${src} is a LIVE article but vercel.json redirects it`);
 }
 
-// ---- 5. cross-config consistency (exact-path rules only) ----
-const astroN = new Map([...astroMap.entries()].map(([k, v]) => [norm(k), v]));
-const vercelN = new Map([...vercelMap.entries()].filter(([k]) => !/[(*]/.test(k)).map(([k, v]) => [norm(k), v]));
-const redirN = redirMap; // already decoded at parse
-const allSrc = new Set([...astroN.keys(), ...vercelN.keys(), ...redirN.keys()]);
-for (const src of allSrc) {
-  const dests = new Set();
-  if (astroN.has(src)) dests.add(astroN.get(src).dest);
-  if (vercelN.has(src)) dests.add(vercelN.get(src).dest);
-  if (redirN.has(src)) dests.add(redirN.get(src).dest);
-  if (dests.size > 1) fail(`MISMATCH: ${src} -> ${[...dests].join(" VS ")}`);
-  const present = [astroN.has(src) ? "astro" : null, vercelN.has(src) ? "vercel" : null, redirN.has(src) ? "_redirects" : null].filter(Boolean);
-  if (present.length === 1) warn(`ONLY-IN-${present[0].toUpperCase().replace("_", "")}: ${src} (one config will silently win on Vercel: vercel.json > astro adapter)`);
+// ---- 5. cross-config consistency (only when a second layer exists) ----
+// With vercel.json as the only layer there is nothing to cross-check, and the
+// old "ONLY-IN-VERCEL" warning would fire once per rule (191 warnings).
+const layersPresent = [astroMap.size > 0, redirMap.size > 0].filter(Boolean).length;
+if (layersPresent > 0) {
+  const astroN = new Map([...astroMap.entries()].map(([k, v]) => [norm(k), v]));
+  const vercelN = new Map([...vercelMap.entries()].filter(([k]) => !/[(*]/.test(k)).map(([k, v]) => [norm(k), v]));
+  const redirN = redirMap; // already decoded at parse
+  const allSrc = new Set([...astroN.keys(), ...vercelN.keys(), ...redirN.keys()]);
+  for (const src of allSrc) {
+    const dests = new Set();
+    if (astroN.has(src)) dests.add(astroN.get(src).dest);
+    if (vercelN.has(src)) dests.add(vercelN.get(src).dest);
+    if (redirN.has(src)) dests.add(redirN.get(src).dest);
+    if (dests.size > 1) fail(`MISMATCH: ${src} -> ${[...dests].join(" VS ")}`);
+  }
+} else {
+  warn("redirect layers: vercel.json only (astro redirects and public/_redirects are intentionally absent)");
 }
+const allSrc = new Set([...astroMap.keys(), ...vercelMap.keys(), ...redirMap.keys()]);
 
 // ---- 6. chains, loops, self-redirects ----
 const canon = new Map([...astroMap.entries()].map(([k, v]) => [k, v.dest]));
@@ -192,4 +204,4 @@ if (fails.length) {
   fails.forEach((x) => console.error("   - " + x));
   process.exit(1);
 }
-console.log(`\n✅ Redirect audit passed: ${allSrc.size} sources consistent across astro/vercel/_redirects${LIVE ? " + live" : ""}${EDGE ? " + edge" : ""}.`);
+console.log(`\n✅ Redirect audit passed: ${allSrc.size} sources consistent in vercel.json${astroMap.size || redirMap.size ? " (+ re-introduced extra layers)" : ""}${LIVE ? " + live" : ""}${EDGE ? " + edge" : ""}.`);

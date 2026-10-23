@@ -1,12 +1,29 @@
 ---
 export interface Props {
   skipBreadcrumbs?: boolean;
+  /**
+   * Page-level metadata. Without it every page emitted the *site* name and the
+   * same generic description as its own WebPage entity, so ~630 pages claimed
+   * to be one identical WebPage.
+   */
+  seo?: { title?: string; description?: string; ogImage?: string };
 }
 
-const { skipBreadcrumbs = false } = Astro.props;
+const { skipBreadcrumbs = false, seo } = Astro.props;
 const siteUrl = "https://www.praveentechworld.com";
 const siteName = "PraveenTechWorld";
 const contactEmail = "contact@praveentechworld.com";
+
+const FALLBACK_DESCRIPTION =
+  "Practical technology guides, how-to tutorials, AI workflows, productivity tips, and troubleshooting solutions.";
+const pageName = seo?.title?.trim() || siteName;
+const pageDescription = seo?.description?.trim() || FALLBACK_DESCRIPTION;
+const rawImage = seo?.ogImage;
+const pageImage = rawImage
+  ? /^https?:\/\//i.test(rawImage)
+    ? rawImage
+    : `${siteUrl}${rawImage}`
+  : `${siteUrl}/images/og-default.png`;
 
 const rawPathname = Astro.url.pathname.replace(/\/$/, "");
 const segments = rawPathname.split("/").filter(Boolean);
@@ -68,9 +85,13 @@ const currentPageUrl = `${siteUrl}${Astro.url.pathname}`;
 <script type="application/ld+json" is:inline set:html={JSON.stringify({
   "@context": "https://schema.org",
   "@type": "WebPage",
-  name: siteName,
+  name: pageName,
   url: currentPageUrl,
-  description: "Practical technology guides, how-to tutorials, AI workflows, productivity tips, and troubleshooting solutions.",
+  description: pageDescription,
+  primaryImageOfPage: {
+    "@type": "ImageObject",
+    url: pageImage,
+  },
   inLanguage: "en-US",
   isPartOf: {
     "@type": "WebSite",

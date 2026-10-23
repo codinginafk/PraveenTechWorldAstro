@@ -13,10 +13,16 @@ permissions:
 jobs:
   audit-and-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          # The single-post release guard in ci-preflight-audit.mjs diffs against
+          # origin/main. With the default depth of 1 that ref is missing, the
+          # git call throws, and the guard is silently skipped.
+          fetch-depth: 0
 
       - name: Setup Node.js Environment
         uses: actions/setup-node@v4
