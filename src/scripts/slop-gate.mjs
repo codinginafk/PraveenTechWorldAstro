@@ -26,6 +26,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
+import { resolveDiffBase } from "../lib/ci/git-base.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const ARTICLES = path.join(ROOT, "src/content/articles");
@@ -55,9 +56,10 @@ function changedArticles() {
     return [full];
   }
   const set = new Set();
-  // 1) PR/branch diff vs origin/main (what CI sees)
-  const diff = sh("git diff --name-only origin/main...HEAD");
-  // 2) worktree changes (local dev, uncommitted work)
+  // Diff against the resolved base (push.before / PR base / origin/main / HEAD~1)
+  const base = resolveDiffBase(ROOT);
+  const diff = base ? sh(`git diff --name-only ${base.ref}..HEAD`) : "";
+  // worktree changes (local dev, uncommitted work)
   const status = sh("git status --porcelain");
   for (const line of (diff + "\n" + status).split("\n")) {
     const f = line.trim().replace(/^[A-Z?! ]+\s+/, "").replace(/^"|"$/g, "");
@@ -104,12 +106,18 @@ async function score(text) {
 }
 
 function gitBase() {
-  return sh("git rev-parse --verify origin/main") ? "origin/main" : "HEAD";
+  // On a push to main, origin/main already equals HEAD, so diffing against it
+  // returned nothing and this gate silently skipped. resolveDiffBase() consults
+  // github.event.before first, which is the commit the push actually replaced.
+  const base = resolveDiffBase(ROOT);
+  return base ? base.ref : "";
 }
 
 function diffFor(file) {
+  const base = gitBase();
+  if (!base) return "";
   const rel = path.relative(ROOT, file).split(path.sep).join("/");
-  return sh(`git diff --unified=0 ${gitBase()} -- "${rel}"`);
+  return sh(`git diff --unified=0 ${base} -- "${rel}"`);
 }
 
 /**

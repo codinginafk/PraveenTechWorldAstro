@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { changedFiles, fileAtRef } from "../lib/ci/git-base.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,36 +78,50 @@ runCheck("MDX Syntax & JSX Integrity", () => {
 });
 
 // 5. Single-Post Release Safety Enforcement
+//
+// AGENTS.md forbids releasing more than one article per session. The old check
+// had two blind spots:
+//   1. it diffed against origin/main, which already equals HEAD on a push to
+//      main, so it examined zero files and passed;
+//   2. it only counted files that were brand new AND draft:false, so flipping
+//      an existing draft to draft:false — exactly what the scheduled publisher
+//      does — was never counted at all.
+// Fixed here: the base comes from the shared resolver, and a release is either a
+// new draft:false file or a draft:true -> draft:false transition on an existing one.
 runCheck("Single-Post Release Guard (AGENTS.md Policy)", () => {
-  try {
-    const gitDiff = execSync("git diff --name-only origin/main...HEAD src/content/articles", { cwd: projectRoot, stdio: "pipe" }).toString().trim();
-    if (gitDiff) {
-      const changedFiles = gitDiff.split("\n").filter(f => f.trim().length > 0);
-      let newLiveCount = 0;
-      for (const file of changedFiles) {
-        const fullPath = path.resolve(projectRoot, file.trim());
-        if (fs.existsSync(fullPath)) {
-          const text = fs.readFileSync(fullPath, "utf8");
-          // Check if newly created and draft: false
-          if (/^draft:\s*false/m.test(text)) {
-            // Check if file existed in origin/main
-            try {
-              execSync(`git cat-file -e origin/main:${file.trim()}`, { cwd: projectRoot, stdio: "pipe" });
-            } catch {
-              // File is completely new and draft: false
-              newLiveCount++;
-            }
-          }
-        }
-      }
-      if (newLiveCount > 1) {
-        throw new Error(`Strict Single-Post Violation: ${newLiveCount} new articles are marked draft: false simultaneously.`);
-      }
+  const { base, files } = changedFiles({ paths: [articlesDir], cwd: projectRoot });
+  if (!base) {
+    console.warn("\n   WARN: no git base resolved; single-post guard could not verify this release.");
+    return;
+  }
+  if (files.length === 0) {
+    console.log(`\n   no article files changed vs ${base.reason}`);
+    return;
+  }
+
+  const released = [];
+  for (const file of files) {
+    const fullPath = path.resolve(projectRoot, file);
+    if (!fs.existsSync(fullPath)) continue;
+    const current = fs.readFileSync(fullPath, "utf8");
+    if (!/^draft:\s*false\b/m.test(current)) continue;
+
+    const previous = fileAtRef(file, base.ref, projectRoot);
+    if (previous === null) {
+      released.push(`${path.basename(file)} (new)`);
+      continue;
     }
-  } catch (err) {
-    if (err.message.includes("Strict Single-Post Violation")) {
-      throw err;
+    if (/^draft:\s*true\b/m.test(previous) && !/^draft:\s*true\b/m.test(current)) {
+      released.push(`${path.basename(file)} (draft -> live)`);
     }
+  }
+
+  process.stdout.write(`\n   ${files.length} article file(s) vs ${base.kind}; ${released.length} released `);
+  if (released.length > 1) {
+    throw new Error(
+      `Strict Single-Post Violation: ${released.length} articles released in one push:\n` +
+        released.map((r) => `     - ${r}`).join("\n"),
+    );
   }
 });
 

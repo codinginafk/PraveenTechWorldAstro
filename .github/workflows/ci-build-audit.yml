@@ -19,9 +19,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # The single-post release guard in ci-preflight-audit.mjs diffs against
-          # origin/main. With the default depth of 1 that ref is missing, the
-          # git call throws, and the guard is silently skipped.
+          # Full history: the guards diff against a base commit, and one of the
+          # candidates is HEAD~1 which does not exist in a depth-1 clone.
           fetch-depth: 0
 
       - name: Setup Node.js Environment
@@ -34,9 +33,21 @@ jobs:
         run: npm ci
 
       - name: Run Pre-Flight Multi-Point Quality Audit
+        # On a push to main, origin/main and HEAD are the same commit, so a
+        # `git diff origin/main...HEAD` is empty and both the single-post guard
+        # and the slop gate used to pass without examining anything. These two
+        # variables let src/lib/ci/git-base.mjs diff against what actually
+        # changed. GITHUB_BASE_REF is provided by GitHub for pull requests;
+        # `github.event.before` has to be passed explicitly.
+        env:
+          GITHUB_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
         run: node src/scripts/ci-preflight-audit.mjs
 
       - name: Run Full Static Build & Pagefind Indexing
+        env:
+          GITHUB_BEFORE_SHA: ${{ github.event.before }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
         run: npm run build
 
       - name: CI/CD Failure Alert Dispatcher

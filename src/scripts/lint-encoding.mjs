@@ -24,8 +24,11 @@ const ROOTS = ["src", "public"];
 const EXTS = new Set([".mdx", ".md", ".astro", ".ts", ".js", ".mjs", ".cjs", ".json", ".css", ".yml", ".yaml", ".txt", ".xml"]);
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", ".astro", "pagefind"]);
 
-// "â€”" (em dash), "â€™" (right quote), "â€œ/â€\x9d" (quotes), "Ã¢â‚¬" (double-encoded)
-const MOJIBAKE = /(?:\u00e2\u20ac[\u2018\u2019\u201c\u201d\u2013\u2014\u00a6\u00a0]|\u00c3\u00a2\u00e2\u201a\u00ac|\u00c3\u00a9|\u00c3\u00a8)/;
+// "â€”" (em dash), "â€™" (right quote), "â€œ/â€\x9d" (quotes), "Ã¢â‚¬" (double-encoded).
+// The second alternative is the general shape: a Latin-1 lead byte followed by a
+// CP1252 special character, which covers accented letters and emoji too.
+const MOJIBAKE =
+  /(?:\u00e2\u20ac[\u2018\u2019\u201c\u201d\u2013\u2014\u00a6\u00a0]|\u00c3\u00a2\u00e2\u201a\u00ac|[\u00c2-\u00f4][\u0080-\u00bf\u0152\u0153\u0160\u0161\u0178\u017d\u017e\u0192\u02c6\u02dc\u2013\u2014\u2018\u2019\u201a\u201c\u201d\u201e\u2020-\u2022\u2026\u2030\u2039\u203a\u20ac\u2122])/;
 const REPLACEMENT = /\ufffd/;
 
 const problems = [];
