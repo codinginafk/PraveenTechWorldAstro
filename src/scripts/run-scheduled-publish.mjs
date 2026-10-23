@@ -68,6 +68,22 @@ for (const entry of schedule) {
     continue;
   }
 
+  // Quality Gate: Ensure article is fully complete with valid image before releasing
+  const coverMatch = content.match(/^coverImage:\s*["']?(.*?)["']?\s*$/m);
+  const imageRel = coverMatch ? coverMatch[1].trim() : null;
+  const imagePath = imageRel ? path.join(projectRoot, "public", imageRel.replace(/^[\/\\]/, "")) : null;
+  if (!imageRel || !imagePath || !fs.existsSync(imagePath)) {
+    console.log(`⚠️ SKIPPING UNREADY DRAFT: ${entry.file} (missing coverImage or asset not found in public/)`);
+    futureEntries.push(entry);
+    continue;
+  }
+
+  if (content.includes('{/* LAB:')) {
+    console.log(`⚠️ SKIPPING UNREADY DRAFT: ${entry.file} (contains unresolved lab notes)`);
+    futureEntries.push(entry);
+    continue;
+  }
+
   const publishTime = new Date(entry.publishAt);
   if (Number.isNaN(publishTime.getTime()) || publishTime <= now) {
     dueEntries.push({ entry, filePath });
