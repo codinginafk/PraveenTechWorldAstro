@@ -45,6 +45,9 @@ let made = 0;
 let skipped = 0;
 let bytesIn = 0;
 let bytesOut = 0;
+let small = 0;
+
+const SMALL_WIDTH = 800; // cards and mobile heroes never need more than this
 
 for (const file of files) {
   const out = file.replace(/\.(jpe?g|png)$/i, ".webp");
@@ -54,17 +57,31 @@ for (const file of files) {
   if (fs.existsSync(out) && fs.statSync(out).mtimeMs >= fs.statSync(file).mtimeMs) {
     skipped++;
     bytesOut += fs.statSync(out).size;
-    continue;
+  } else {
+    try {
+      await sharp(file)
+        .webp({ quality: inSize > 80 * 1024 ? 76 : 82, effort: 5 })
+        .toFile(out);
+      bytesOut += fs.statSync(out).size;
+      made++;
+    } catch (error) {
+      console.error(`[webp] failed ${path.relative(ROOT, file)}: ${error.message}`);
+    }
   }
 
+  // A narrower variant for small viewports: a 390px-wide phone at 2x needs
+  // ~780px, not the 1200-1400px desktop cover.
+  const smallOut = file.replace(/\.(jpe?g|png)$/i, `-${SMALL_WIDTH}w.webp`);
   try {
-    await sharp(file)
-      .webp({ quality: inSize > 80 * 1024 ? 76 : 82, effort: 5 })
-      .toFile(out);
-    bytesOut += fs.statSync(out).size;
-    made++;
+    const meta = await sharp(file).metadata();
+    if ((meta.width || 0) > SMALL_WIDTH) {
+      if (!(fs.existsSync(smallOut) && fs.statSync(smallOut).mtimeMs >= fs.statSync(file).mtimeMs)) {
+        await sharp(file).resize({ width: SMALL_WIDTH, withoutEnlargement: true }).webp({ quality: 78, effort: 5 }).toFile(smallOut);
+        small++;
+      }
+    }
   } catch (error) {
-    console.error(`[webp] failed ${path.relative(ROOT, file)}: ${error.message}`);
+    console.error(`[webp] small variant failed ${path.relative(ROOT, file)}: ${error.message}`);
   }
 }
 

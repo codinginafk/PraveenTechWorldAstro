@@ -7,7 +7,7 @@ import { formatDate } from "@lib/utils/dateFormat";
 import { calculateReadingTime } from "@lib/utils/readingTime";
 import { buildCanonical } from "@lib/seo/metadata";
 import { extractHeadings } from "@lib/content/headings";
-import { getCoverImageDimensions, getWebpSibling } from "@lib/images/dimensions";
+import { getCoverImageDimensions, getWebpSibling, getWebpSmall } from "@lib/images/dimensions";
 import TableOfContents from "@components/content/TableOfContents.astro";
 import AuthorBox from "@components/content/AuthorBox.astro";
 import SocialShare from "@components/content/SocialShare.astro";
@@ -105,6 +105,13 @@ const breadcrumbItems = [
 
 const coverDims = await getCoverImageDimensions(article.data.coverImage);
 const coverWebp = getWebpSibling(article.data.coverImage);
+const coverWebpSmall = getWebpSmall(article.data.coverImage);
+// One <source> with width descriptors when the 800px variant exists, otherwise
+// the single original — never a bare srcset that could under-serve a desktop.
+const coverSrcset =
+  coverWebp && coverWebpSmall
+    ? `${coverWebpSmall} 800w, ${coverWebp} ${coverDims?.width || 1200}w`
+    : coverWebp;
 ---
 
 <BaseLayout
@@ -216,7 +223,13 @@ const coverWebp = getWebpSibling(article.data.coverImage);
         {article.data.coverImage && (
           <figure class="mb-8 overflow-hidden rounded-xl">
             <picture>
-              {coverWebp && <source srcset={coverWebp} type="image/webp" />}
+              {coverSrcset && (
+                <source
+                  srcset={coverSrcset}
+                  sizes="(min-width: 1024px) 830px, 100vw"
+                  type="image/webp"
+                />
+              )}
               <img src={article.data.coverImage} alt={article.data.imageAlt || article.data.title} width={coverDims?.width || 1200} height={coverDims?.height || 630} class="w-full" loading="eager" fetchpriority="high" decoding="async" />
             </picture>
             {article.data.imageCredit && (

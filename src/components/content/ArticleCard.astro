@@ -2,7 +2,7 @@
 import type { CollectionEntry } from "astro:content";
 import { formatDate } from "@lib/utils/dateFormat";
 import { calculateReadingTime } from "@lib/utils/readingTime";
-import { getWebpSibling } from "@lib/images/dimensions";
+import { getWebpSibling, getWebpSmall } from "@lib/images/dimensions";
 import Badge from "./Badge.astro";
 
 export interface Props {
@@ -15,6 +15,10 @@ const readingTime = article.data.readingTime || calculateReadingTime(article.bod
 const loading = index < 3 ? "eager" : "lazy";
 const fetchpriority = index < 3 ? "high" : "auto";
 const coverWebp = getWebpSibling(article.data.coverImage);
+const coverWebpSmall = getWebpSmall(article.data.coverImage);
+// Cards are a third of the grid on desktop, half on tablet, full width on phone.
+const cardSrcset =
+  coverWebp && coverWebpSmall ? `${coverWebpSmall} 800w, ${coverWebp} 1400w` : coverWebp;
 ---
 
 <article class="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-600 hover:shadow-xl dark:border-border-dark dark:bg-surface-dark dark:hover:border-brand-400">
@@ -22,7 +26,13 @@ const coverWebp = getWebpSibling(article.data.coverImage);
     {article.data.coverImage ? (
       <div class="overflow-hidden aspect-video relative w-full border-b border-border dark:border-border-dark">
         <picture>
-          {coverWebp && <source srcset={coverWebp} type="image/webp" />}
+          {cardSrcset && (
+            <source
+              srcset={cardSrcset}
+              sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+              type="image/webp"
+            />
+          )}
           <img 
             src={article.data.coverImage} 
             alt={article.data.imageAlt || article.data.title} 

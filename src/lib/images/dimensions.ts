@@ -77,3 +77,31 @@ export function getWebpSibling(src?: string): string | null {
   webpCache.set(clean, result);
   return result;
 }
+
+/**
+ * The 800px-wide WebP variant, if `npm run images:webp` has generated one.
+ * A phone at 2x DPR needs ~780px, so serving the 1200–1400px cover wastes bytes.
+ * Returns null when the variant is missing so callers fall back to one source.
+ */
+const smallCache = new Map<string, string | null>();
+
+export function getWebpSmall(src?: string): string | null {
+  if (!src) return null;
+  const clean = src.split("?")[0].split("#")[0];
+  if (!clean.startsWith("/images/") || !/\.(jpe?g|png)$/i.test(clean)) return null;
+
+  const cached = smallCache.get(clean);
+  if (cached !== undefined) return cached;
+
+  const candidate = clean.replace(/\.(jpe?g|png)$/i, "-800w.webp");
+  let result: string | null = null;
+  try {
+    if (fs.existsSync(path.join(process.cwd(), "public", candidate.replace(/^\//, "")))) {
+      result = candidate;
+    }
+  } catch {
+    result = null;
+  }
+  smallCache.set(clean, result);
+  return result;
+}

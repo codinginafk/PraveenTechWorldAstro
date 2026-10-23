@@ -31,13 +31,44 @@ Every file in here was verified to have **no** reference from:
 redirect source.
 
 ## If you need one of these again
-
 ```bash
 git mv archive/scripts/<file> scripts/<file>
 ```
 
 Check first that its relative imports still resolve — files were moved without
 rewriting their `../scripts/...` import paths.
+
+## `tools/`
+
+### `critical-css.mjs` — evaluated, **not shipped**
+
+Extracts the above-the-fold rules from the compiled stylesheet and inlines them,
+deferring the rest. Built and measured, but deliberately **not wired into the
+build**: the extraction cannot be made pixel-exact from static HTML alone.
+
+Measured on the real 640-page build, with the stylesheet request blocked and the
+result compared pixel-by-pixel against the fully styled render, at 390×844 and
+1280×900:
+
+| Approach | Inline size | Page/viewport combos identical |
+| --- | --- | --- |
+| string heuristic (header + N chars of `<main>`) | 26.5 KB | 0 / 12 |
+| + fixed/sticky subtrees for the consent banner | 37.7 KB | 0 / 12 |
+| + class set derived from Chromium layout | 39.4 KB | 11 / 12 |
+| + union of both, across 12 diverse pages | 40.8 KB | 19 / 24 |
+
+The residual failures were real layout breakage, not rounding: an "Updated" badge
+SVG rendered at ~200 px because `h-3 w-3` was not inlined for one particular
+article, and the hero image overflowed an article page where `w-full` was missed.
+Neither is detectable from markup alone — "what is in the first viewport" is a
+layout question, and per-page variance means one snapshot per template is not
+enough either.
+
+Wire cost if shipped: ~6 KB brotli of inline CSS on every page (uncacheable) to
+save one ~150 ms blocking round trip. Worth it only when the render is exact.
+
+To resume: per-page extraction inside a real layout engine at build time, or
+hand-maintained per-template critical CSS with a render-parity test as the gate.
 
 ## The scripts that remain in `scripts/`
 
