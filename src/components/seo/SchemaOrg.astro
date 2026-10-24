@@ -22,6 +22,11 @@ export interface Props {
     image?: string;
     sameAs?: string[];
   };
+  itemListData?: {
+    name: string;
+    description?: string;
+    items: Array<{ name: string; url: string; position: number }>;
+  };
   webApplicationData?: {
     name: string;
     description: string;
@@ -36,14 +41,14 @@ export interface Props {
   };
 }
 
-const { type, articleData, breadcrumbItems, faqItems, personData, webApplicationData } = Astro.props;
+const { type, articleData, breadcrumbItems, faqItems, personData, itemListData, webApplicationData } = Astro.props;
 ---
 
 {
   type === "article" && articleData && (
     <script type="application/ld+json" is:inline set:html={JSON.stringify({
       "@context": "https://schema.org",
-      "@type": "TechArticle",
+      "@type": ["Article", "TechArticle"],
       headline: articleData.title,
       description: articleData.description,
       url: articleData.url,
@@ -143,11 +148,13 @@ const { type, articleData, breadcrumbItems, faqItems, personData, webApplication
       applicationCategory: webApplicationData.applicationCategory,
       operatingSystem: webApplicationData.operatingSystem || "All",
       browserRequirements: webApplicationData.browserRequirements || "Requires JavaScript. Requires HTML5.",
-      offers: {
-        "@type": "Offer",
-        price: webApplicationData.offers?.price || "0",
-        priceCurrency: webApplicationData.offers?.priceCurrency || "USD",
-      },
+      ...(webApplicationData.offers ? {
+        offers: {
+          "@type": "Offer",
+          price: webApplicationData.offers.price,
+          priceCurrency: webApplicationData.offers.priceCurrency,
+        },
+      } : {}),
       creator: {
         "@type": "Organization",
         name: "PraveenTechWorld",
@@ -157,3 +164,19 @@ const { type, articleData, breadcrumbItems, faqItems, personData, webApplication
   )
 }
 
+{
+  type === "itemlist" && itemListData && (
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: itemListData.name,
+      description: itemListData.description,
+      itemListElement: itemListData.items.map((item) => ({
+        "@type": "ListItem",
+        position: item.position,
+        name: item.name,
+        url: item.url.startsWith("http") ? item.url : `https://www.praveentechworld.com${item.url}`,
+      })),
+    })} />
+  )
+}
