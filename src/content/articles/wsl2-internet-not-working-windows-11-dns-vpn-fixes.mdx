@@ -1,8 +1,8 @@
 ---
 title: "Fix Windows WSL2 DNS Issue: 5 Tested Steps in 2026"
-description: "Fix Windows WSL2 DNS issues and no-internet errors in 5 steps. Complete runbook for dnsTunneling, mirrored networking, and corporate VPN MTU fixes."
+description: "Facing a Windows WSL2 DNS issue with no internet? Fix temporary failure in name resolution, Cisco AnyConnect VPN MTU drops, and dnsTunneling in 5 steps."
 publishDate: "2026-08-26"
-updatedDate: "2026-10-13"
+updatedDate: "2026-10-30"
 author: "praveen"
 category: "windows-fixes"
 pillarId: "windows-fixes"
@@ -42,7 +42,7 @@ references:
   - title: "WSL localhost networking and Mirrored Mode"
     url: "https://github.com/microsoft/WSL/blob/master/doc/docs/technical-documentation/localhost.md"
     publisher: "Microsoft WSL"
-seoDescription: "WSL2 has no internet or cannot resolve host on Windows 11? Fix DNS tunneling, Cisco AnyConnect VPN MTU clipping, and mirrored networking in 5 steps."
+seoDescription: "Facing a Windows WSL2 DNS issue with no internet? Fix temporary failure in name resolution, Cisco AnyConnect VPN MTU drops, and dnsTunneling in 5 steps."
 ---
 > **Quick direct answer:** To fix WSL2 with no internet or broken DNS on Windows 11, open PowerShell and run `notepad $env:USERPROFILE\.wslconfig`. Add `dnsTunneling=true` and `autoProxy=true` under `[wsl2]`. Then run `wsl --shutdown`. If on a corporate VPN where ping works but apt or curl hangs, run `sudo ip link set dev eth0 mtu 1400`.
 
@@ -50,10 +50,11 @@ After updating our workstations to Windows 11 24H2, our developers hit a familia
 
 Do not overwrite `/etc/resolv.conf` with random public DNS servers or unregister your Linux distro yet. First, inspect how the underlying network topology works. WSL2 does not run directly on bare metal—it runs inside a lightweight Hyper-V virtual machine connected via an internal virtual switch (`vEthernet (WSL)`).
 
-## WSL2 Network Architecture & VPN Packet Traversal
+## Why Does Windows WSL2 Have DNS and No Internet Issues?
 
-### The Technical Root Cause:
-To fix WSL2 with no internet or broken DNS on Windows 11, configure DNS tunneling inside `%USERPROFILE%\.wslconfig`. By default, WSL2 operates behind a legacy Hyper-V NAT switch assigned to an isolated subnet gateway. Enterprise VPN clients like Cisco AnyConnect, GlobalProtect, and Zscaler enforce strict host resolver rules that bypass this virtual switch. To resolve this, add `dnsTunneling=true` and `autoProxy=true` under `[wsl2]` in your `.wslconfig` file, then run `wsl --shutdown` in PowerShell. This routes guest DNS queries through the Windows virtualization socket directly into host networking APIs. If pings succeed but `apt update` or `git clone` hangs during TLS handshakes, corporate VPN encapsulation is clipping packet sizes. Clamp the guest interface by running `sudo ip link set dev eth0 mtu 1400` to stop silent packet drops. For multi-interface routing on Windows 11 23H2 or 24H2, enable `networkingMode=mirrored` to mirror host adapters directly into Linux. You can generate this configuration using our [WSL Configuration Generator](/tools/wsl-config-generator).
+To fix a Windows WSL2 DNS issue with no internet or broken name resolution on Windows 11, configure DNS tunneling inside `%USERPROFILE%\.wslconfig`. By default, WSL2 operates behind a legacy Hyper-V NAT switch assigned to an isolated subnet gateway. Enterprise VPN clients like Cisco AnyConnect, GlobalProtect, and Zscaler enforce strict host resolver rules that bypass this virtual switch. To resolve this, add `dnsTunneling=true` and `autoProxy=true` under `[wsl2]` in your `.wslconfig` file, then run `wsl --shutdown` in PowerShell. This routes guest DNS queries through the Windows virtualization socket directly into host networking APIs. If pings succeed but `apt update` or `git clone` hangs during TLS handshakes, corporate VPN encapsulation is clipping packet sizes. Clamp the guest interface by running `sudo ip link set dev eth0 mtu 1400` to stop silent packet drops. For multi-interface routing on Windows 11 23H2 or 24H2, enable `networkingMode=mirrored` to mirror host adapters directly into Linux. You can generate this configuration using our [WSL Configuration Generator](/tools/wsl-config-generator).
+
+### WSL2 Network Architecture & VPN Packet Traversal
 
 ```text
 +-----------------------------------------------------------------------------------+
