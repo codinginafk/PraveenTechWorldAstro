@@ -63,11 +63,24 @@ for (const file of htmlFiles) {
 }
 notes.push(`stylesheets: ${withCss}/${htmlFiles.length - stubs} rendered pages linked (${stubs} redirect stubs)`);
 
-/* 3. _redirects must never ship again */
+/* 3. verify Cloudflare Pages _redirects and _headers */
 const redirectsFile = path.join(DIST, "_redirects");
+const headersFile = path.join(DIST, "_headers");
 if (fs.existsSync(redirectsFile)) {
-  fs.rmSync(redirectsFile);
-  notes.push("removed dist/_redirects (vercel.json is the only redirect source)");
+  const content = fs.readFileSync(redirectsFile, "utf8");
+  if (content.includes("/blog/*")) {
+    problems.push("dist/_redirects contains forbidden /blog/* catch-all!");
+  } else {
+    notes.push("verified dist/_redirects for Cloudflare Pages (no catch-alls)");
+  }
+} else {
+  problems.push("dist/_redirects is missing for Cloudflare Pages!");
+}
+
+if (fs.existsSync(headersFile)) {
+  notes.push("verified dist/_headers for Cloudflare Pages");
+} else {
+  problems.push("dist/_headers is missing for Cloudflare Pages!");
 }
 
 /* 4. prune CSS files nothing references */
