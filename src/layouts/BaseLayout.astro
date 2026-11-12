@@ -14,6 +14,19 @@ export interface Props {
 
 const { seo, noindex: explicitNoindex } = Astro.props;
 const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
+
+// AdSense Policy Safety: Strictly suppress ad script on 404, search, legal, contact, and noindexed utility pages
+const pathname = Astro.url.pathname.replace(/\/$/, "");
+const isAdPolicyRestricted =
+  Boolean(noindex) ||
+  pathname === "/404" ||
+  pathname === "/search" ||
+  pathname.startsWith("/search/") ||
+  pathname === "/privacy" ||
+  pathname === "/terms" ||
+  pathname === "/contact" ||
+  pathname === "/guest-post" ||
+  pathname === "/demo";
 ---
 
 <!doctype html>
@@ -23,7 +36,7 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#ffffff" />
 
-    <!-- Google Consent Mode v2 (Advanced) -->
+    <!-- Google Consent Mode v2 (Advanced, Regional EEA/UK Compliance) -->
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
@@ -36,12 +49,28 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
           'ad_personalization': 'granted',
           'analytics_storage': 'granted'
         });
+      } else if (savedConsent === 'necessary') {
+        gtag('consent', 'default', {
+          'ad_storage': 'denied',
+          'ad_user_data': 'denied',
+          'ad_personalization': 'denied',
+          'analytics_storage': 'denied'
+        });
       } else {
+        // Global default: Granted for non-EEA crawlers (US review bots) and global traffic
+        gtag('consent', 'default', {
+          'ad_storage': 'granted',
+          'ad_user_data': 'granted',
+          'ad_personalization': 'granted',
+          'analytics_storage': 'granted'
+        });
+        // Strict EU/EEA/UK/CH User Consent enforcement: Denied by default until user consent
         gtag('consent', 'default', {
           'ad_storage': 'denied',
           'ad_user_data': 'denied',
           'ad_personalization': 'denied',
           'analytics_storage': 'denied',
+          'region': ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'],
           'wait_for_update': 500
         });
       }
@@ -134,9 +163,11 @@ const noindex = explicitNoindex !== undefined ? explicitNoindex : seo?.noindex;
       }
     </script>
 
-    <!-- Google AdSense Verification & Runtime -->
+    <!-- Google AdSense Verification & Runtime (Policy-Gated) -->
     <meta name="google-adsense-account" content="ca-pub-7141944151842257" />
-    <script is:inline async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7141944151842257" crossorigin="anonymous"></script>
+    {!isAdPolicyRestricted && (
+      <script is:inline async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7141944151842257" crossorigin="anonymous"></script>
+    )}
 
     <!-- Ahrefs Web Analytics & Ownership Verification -->
     <script is:inline src="https://analytics.ahrefs.com/analytics.js" data-key="MK+SHF8VR3nNzLoiww157g" async></script>
