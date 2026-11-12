@@ -48,6 +48,11 @@ export default defineConfig({
         !page.startsWith("https://www.praveentechworld.com/guides/business") &&
         !page.startsWith("https://www.praveentechworld.com/guides/career-growth") &&
         !page.startsWith("https://www.praveentechworld.com/guides/hosting-infra") &&
+        !page.startsWith("https://www.praveentechworld.com/guides/seo") &&
+        !page.startsWith("https://www.praveentechworld.com/guides/build-in-public") &&
+        !page.startsWith("https://www.praveentechworld.com/guides/free-software") &&
+        !page.startsWith("https://www.praveentechworld.com/guides/automation") &&
+        !page.startsWith("https://www.praveentechworld.com/tools/windows-error-fixer/") &&
         !page.startsWith("https://www.praveentechworld.com/tag/productivity") &&
         !page.startsWith("https://www.praveentechworld.com/guest-post") &&
         !page.startsWith("https://www.praveentechworld.com/author/abduldiyan") &&
