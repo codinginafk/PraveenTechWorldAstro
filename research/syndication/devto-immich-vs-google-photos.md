@@ -1,6 +1,7 @@
 ---
 title: "Immich vs Google Photos: 5 Tested Lab Benchmarks (82k Photos Migrated)"
-published: false
+published: true
+devto_url: "https://dev.to/youngones/immich-vs-google-photos-5-tested-lab-benchmarks-82k-photos-migrated-5cb2"
 description: "We migrated 82,419 photos (312GB Takeout) to an Intel N100 mini-PC running Immich. Here are 5 benchmarks comparing AI search speed, sync throughput, and costs."
 tags: [selfhosted, privacy, open-source, devops]
 canonical_url: "https://praveentechworld.com/blog/google-photos-alternatives-immich-ente-photos-migration-guide"

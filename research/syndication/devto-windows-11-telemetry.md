@@ -1,6 +1,7 @@
 ---
 title: "Windows 11 24H2 Telemetry: 7 Tested Network Fixes (168-Hour Lab Audit)"
-published: false
+published: true
+devto_url: "https://dev.to/youngones/windows-11-24h2-telemetry-7-tested-network-fixes-168-hour-lab-audit-3koe"
 description: "We left Windows 11 24H2 idle on an isolated VLAN for 168 hours. It phoned home 842 times a day. Here is the Wireshark packet capture analysis and 7 network fixes."
 tags: [windows, devops, privacy, networking]
 canonical_url: "https://praveentechworld.com/blog/windows-11-24h2-telemetry-network-fixes"
