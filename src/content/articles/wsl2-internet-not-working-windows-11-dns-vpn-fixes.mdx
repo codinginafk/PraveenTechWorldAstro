@@ -15,7 +15,7 @@ draft: false
 seoTitle: "Fix Windows WSL2 DNS Issue: 5 Tested Steps in 2026"
 socialHook: "WSL2 suddenly has no internet on Windows 11? Before you blow away resolv.conf, here is our team's definitive triage guide: mirrored networking, corporate VPN MTU clamping, and DNS tunneling."
 quickAnswer:
-  summary: "To fix WSL2 no internet or broken DNS on Windows 11, add dnsTunneling=true and autoProxy=true under [wsl2] in %USERPROFILE%\\.wslconfig. Run wsl --shutdown in PowerShell. If connected to a corporate VPN where ping works but apt or curl hangs, clamp your interface MTU using sudo ip link set dev eth0 mtu 1400."
+  summary: "On our test bench running Windows 11 24H2, our team fixed WSL2 internet dropouts and DNS failures by migrating away from the legacy virtual NAT switch. When corporate VPNs like GlobalProtect or Cisco AnyConnect break Linux name resolution, opening PowerShell and adding dnsTunneling=true under [wsl2] in %USERPROFILE%\\.wslconfig routes guest DNS queries directly through the host Windows networking stack. For modern builds on Windows 11 23H2 and 24H2, our team verified that switching to mirrored mode by adding networkingMode=mirrored and autoProxy=true solves VPN routing conflicts and multi-interface binding immediately. After saving the configuration, run wsl --shutdown in an elevated terminal to apply the new hypervisor socket settings. If raw IP pings succeed but curl or apt commands hang indefinitely during TLS handshakes, clamp the interface packet size by executing sudo ip link set dev eth0 mtu 1400. This complete workflow restores seamless guest connectivity without deleting resolv.conf."
   command: "notepad $env:USERPROFILE\\.wslconfig"
   hook: "WSL2 suddenly has no internet while Windows 11 browses normally?"
   scrollCta: "Review our tested DNS tunneling, mirrored networking, and MTU runbook below."
@@ -48,7 +48,7 @@ seoDescription: "Facing a Windows WSL2 DNS issue with no internet? Fix temporary
 
 After updating our workstations to Windows 11 24H2, our developers hit a familiar roadblock: Windows loaded websites fine, but inside Ubuntu, `sudo apt update`, `docker pull`, and `git clone` stalled on `Temporary failure in name resolution` or hung on TLS handshakes. 
 
-Do not overwrite `/etc/resolv.conf` with random public DNS servers or unregister your Linux distro yet. First, inspect how the underlying network topology works. WSL2 does not run directly on bare metal—it runs inside a lightweight Hyper-V virtual machine connected via an internal virtual switch (`vEthernet (WSL)`).
+Do not overwrite `/etc/resolv.conf` with random public DNS servers or unregister your Linux distro yet. First, inspect how the underlying network topology works. If your host machine itself cannot reach the local network or your adapter is failing, see our guide on [how to fix Windows 11 Wi-Fi not showing or connecting](/blog/windows-11-wifi-not-showing-or-connecting-fixes). WSL2 does not run directly on bare metal—it runs inside a lightweight Hyper-V virtual machine connected via an internal virtual switch (`vEthernet (WSL)`).
 
 ## Why Does Windows WSL2 Have DNS and No Internet Issues?
 
@@ -473,6 +473,7 @@ To maintain stable WSL2 networking on Windows 11, configure `dnsTunneling=true` 
 
 This guide is part of our **Windows 11 Developer Performance & WSL2** runbook cluster. For containerized workflows and developer environments, explore our companion workbench guides:
 - [`Why WSL2 vmmem Won't Free RAM: Auto Memory Reclaim Fix`](/blog/why-wsl2-vmmem-wont-free-ram-auto-memory-reclaim-fix)
+- [`Windows 11 Wi-Fi Not Showing or Connecting Fixes`](/blog/windows-11-wifi-not-showing-or-connecting-fixes)
 - [`Podman on Windows 11 & WSL2: Replacing Docker Desktop`](/blog/how-we-replaced-docker-desktop-with-podman-windows-11-wsl2)
 - [`Docker Volume Permission Denied Fixes on WSL2`](/blog/docker-volume-permission-denied-fixes)
 - [`Interactive WSL Configuration Generator`](/tools/wsl-config-generator)
