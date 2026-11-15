@@ -1,0 +1,745 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Icon from "@components/common/Icon.astro";
+import SchemaOrg from "@components/seo/SchemaOrg.astro";
+
+const seo = {
+  title: "The DeGoogle Matrix: 2026 Interactive Privacy Alternatives",
+  description: "Interactive directory comparing 24+ open-source and privacy-first alternatives to Google. Filter by self-hosted, E2EE, and jurisdiction, and generate shareable GitHub badges.",
+  canonical: "https://www.praveentechworld.com/tools/degoogle-matrix",
+};
+
+const matrixData = [
+  {
+    id: "immich",
+    service: "Photo Backup",
+    replaces: "Google Photos",
+    name: "Immich",
+    tagline: "High-performance self-hosted photo & video backup with on-device AI facial recognition.",
+    category: "photos",
+    architecture: "Self-Hosted",
+    encryption: "Local At-Rest",
+    license: "AGPL-3.0 (FOSS)",
+    jurisdiction: "Local / Self-Hosted",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: true,
+    e2ee: false,
+    rating: 9.9,
+    deepDiveUrl: "/blog/google-photos-alternatives-immich-ente-photos-migration-guide",
+    officialUrl: "https://immich.app",
+    verdict: "Our primary lab recommendation. Running on Docker on our mini-PC, it backs up full-resolution RAW photos faster than Google Photos with zero cloud leakage."
+  },
+  {
+    id: "ente-photos",
+    service: "Photo Backup",
+    replaces: "Google Photos",
+    name: "Ente Photos",
+    tagline: "End-to-end encrypted cloud photo storage with open-source clients and automated phone sync.",
+    category: "photos",
+    architecture: "Managed Cloud",
+    encryption: "Zero-Knowledge E2EE",
+    license: "AGPL-3.0 (FOSS)",
+    jurisdiction: "France / EU",
+    cost: "Freemium",
+    noAccount: false,
+    selfHosted: false,
+    e2ee: true,
+    rating: 9.6,
+    deepDiveUrl: "/blog/google-photos-alternatives-immich-ente-photos-migration-guide",
+    officialUrl: "https://ente.io",
+    verdict: "The best hands-off cloud alternative. Even Ente engineers cannot see your photo albums or metadata. 5GB free tier."
+  },
+  {
+    id: "proton-mail",
+    service: "Email & Calendar",
+    replaces: "Gmail",
+    name: "Proton Mail",
+    tagline: "Swiss-based zero-access encrypted email, calendar, and contact management.",
+    category: "email",
+    architecture: "Managed Cloud",
+    encryption: "Zero-Access PGP",
+    license: "GPL-3.0 (FOSS Clients)",
+    jurisdiction: "Switzerland",
+    cost: "Freemium",
+    noAccount: false,
+    selfHosted: false,
+    e2ee: true,
+    rating: 9.8,
+    deepDiveUrl: "/blog/best-gmail-alternatives-proton-tuta-fastmail-migration-guide",
+    officialUrl: "https://proton.me/mail",
+    verdict: "The gold standard for daily email migration. Operates under strict Swiss privacy laws outside US/EU 14-Eyes surveillance agreements."
+  },
+  {
+    id: "tuta-mail",
+    service: "Email & Calendar",
+    replaces: "Gmail",
+    name: "Tuta Mail",
+    tagline: "First email service with post-quantum cryptography encrypting entire subject lines and bodies.",
+    category: "email",
+    architecture: "Managed Cloud",
+    encryption: "Post-Quantum E2EE",
+    license: "GPL-3.0 (FOSS)",
+    jurisdiction: "Germany / EU",
+    cost: "Freemium",
+    noAccount: false,
+    selfHosted: false,
+    e2ee: true,
+    rating: 9.5,
+    deepDiveUrl: "/blog/best-gmail-alternatives-proton-tuta-fastmail-migration-guide",
+    officialUrl: "https://tuta.com",
+    verdict: "Unlike standard PGP which leaves email subject lines in plaintext, Tuta encrypts headers, subjects, contacts, and calendar entries."
+  },
+  {
+    id: "nextcloud",
+    service: "Cloud Storage & Docs",
+    replaces: "Google Drive & Docs",
+    name: "Nextcloud Hub",
+    tagline: "Complete self-hosted productivity suite: files, office documents, talk, and contacts.",
+    category: "storage",
+    architecture: "Self-Hosted",
+    encryption: "Server-Side & E2EE",
+    license: "AGPL-3.0 (FOSS)",
+    jurisdiction: "Local / Self-Hosted",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: true,
+    e2ee: true,
+    rating: 9.7,
+    deepDiveUrl: "/blog/google-drive-alternatives-proton-drive-nextcloud-syncthing-guide",
+    officialUrl: "https://nextcloud.com",
+    verdict: "Replaces the entire Google Workspace ecosystem on your own hardware or VPS with zero licensing fees or subscription lock-in."
+  },
+  {
+    id: "proton-drive",
+    service: "Cloud Storage",
+    replaces: "Google Drive",
+    name: "Proton Drive",
+    tagline: "End-to-end encrypted cloud storage with automatic file versioning and private link sharing.",
+    category: "storage",
+    architecture: "Managed Cloud",
+    encryption: "Zero-Knowledge E2EE",
+    license: "Open Source Clients",
+    jurisdiction: "Switzerland",
+    cost: "Freemium",
+    noAccount: false,
+    selfHosted: false,
+    e2ee: true,
+    rating: 9.3,
+    deepDiveUrl: "/blog/google-drive-alternatives-proton-drive-nextcloud-syncthing-guide",
+    officialUrl: "https://proton.me/drive",
+    verdict: "Zero-knowledge encryption protects file names, extensions, sizes, and contents before they leave your device."
+  },
+  {
+    id: "syncthing",
+    service: "File Synchronization",
+    replaces: "Google Drive Sync",
+    name: "Syncthing",
+    tagline: "Continuous peer-to-peer decentralized file sync directly between your devices with zero cloud servers.",
+    category: "storage",
+    architecture: "Self-Hosted",
+    encryption: "TLS P2P Encrypted",
+    license: "MPL-2.0 (FOSS)",
+    jurisdiction: "Local P2P",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: true,
+    e2ee: true,
+    rating: 9.8,
+    deepDiveUrl: "/blog/google-drive-alternatives-proton-drive-nextcloud-syncthing-guide",
+    officialUrl: "https://syncthing.net",
+    verdict: "Our team's favorite synchronization utility. Syncs gigabytes of dev files between Windows, Linux, and Android over local Wi-Fi at 80MB/s."
+  },
+  {
+    id: "grapheneos",
+    service: "Mobile Operating System",
+    replaces: "Stock Android (Google Play)",
+    name: "GrapheneOS",
+    tagline: "Privacy and security-hardened mobile OS with fully sandboxed Google Play compatibility.",
+    category: "mobile",
+    architecture: "Self-Hosted / Device",
+    encryption: "Hardware Verified Boot",
+    license: "Open Source (AOSP)",
+    jurisdiction: "Local Device",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: true,
+    e2ee: true,
+    rating: 10.0,
+    deepDiveUrl: "/blog/degoogle-android-phone-grapheneos-aurora-store-complete-guide",
+    officialUrl: "https://grapheneos.org",
+    verdict: "The absolute pinnacle of mobile privacy. Cuts background telemetry pings from 348/hour to zero while running banking apps in an unprivileged sandbox."
+  },
+  {
+    id: "kagi",
+    service: "Search Engine",
+    replaces: "Google Search",
+    name: "Kagi Search",
+    tagline: "Ad-free, tracking-free paid search engine with custom domain ranking and AI lenses.",
+    category: "search",
+    architecture: "Managed Cloud",
+    encryption: "Zero-Telemetry TLS",
+    license: "Proprietary Core",
+    jurisdiction: "USA",
+    cost: "Paid ($5-$10/mo)",
+    noAccount: false,
+    selfHosted: false,
+    e2ee: false,
+    rating: 9.8,
+    deepDiveUrl: "/blog/google-search-alternatives-kagi-brave-duckduckgo-compared",
+    officialUrl: "https://kagi.com",
+    verdict: "The fastest, cleanest search experience on the web. Zero sponsored results, zero ad tracking, and lets you down-rank SEO content farms permanently."
+  },
+  {
+    id: "brave-search",
+    service: "Search Engine",
+    replaces: "Google Search",
+    name: "Brave Search",
+    tagline: "Completely independent global search index serving zero user tracking or search profiling.",
+    category: "search",
+    architecture: "Managed Cloud",
+    encryption: "Zero-Profiling TLS",
+    license: "Open-source index APIs",
+    jurisdiction: "USA",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: false,
+    e2ee: false,
+    rating: 9.4,
+    deepDiveUrl: "/blog/google-search-alternatives-kagi-brave-duckduckgo-compared",
+    officialUrl: "https://search.brave.com",
+    verdict: "The only free search engine that built its own web crawler index instead of syndicating Google or Bing results."
+  },
+  {
+    id: "brave-browser",
+    service: "Web Browser",
+    replaces: "Google Chrome",
+    name: "Brave Browser",
+    tagline: "Chromium-based browser with aggressive built-in ad, tracker, and fingerprinting shields.",
+    category: "search",
+    architecture: "Local Client",
+    encryption: "Client Shields",
+    license: "MPL-2.0 (FOSS)",
+    jurisdiction: "USA",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: false,
+    e2ee: true,
+    rating: 9.5,
+    deepDiveUrl: "/blog/degoogle-starter-pack-complete-guide",
+    officialUrl: "https://brave.com",
+    verdict: "1-click drop-in Chrome replacement that retains all Chrome extensions while stripping Google Privacy Sandbox tracking."
+  },
+  {
+    id: "mullvad-browser",
+    service: "Web Browser",
+    replaces: "Google Chrome",
+    name: "Mullvad Browser",
+    tagline: "Engineered in collaboration with the Tor Project to eliminate browser fingerprinting.",
+    category: "search",
+    architecture: "Local Client",
+    encryption: "Anti-Fingerprinting",
+    license: "MPL-2.0 (FOSS)",
+    jurisdiction: "Sweden",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: false,
+    e2ee: true,
+    rating: 9.7,
+    deepDiveUrl: "/blog/degoogle-starter-pack-complete-guide",
+    officialUrl: "https://mullvad.net/en/browser",
+    verdict: "Gives you Tor-level anti-fingerprinting defenses without routing through slow onion relays. Resets cookies and cache on every close."
+  },
+  {
+    id: "organic-maps",
+    service: "Maps & Navigation",
+    replaces: "Google Maps",
+    name: "Organic Maps",
+    tagline: "Community-driven, privacy-focused offline maps for hikers, drivers, and cyclists.",
+    category: "maps",
+    architecture: "Local Offline",
+    encryption: "Zero-Network Mode",
+    license: "Apache-2.0 (FOSS)",
+    jurisdiction: "Estonia / EU",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: true,
+    e2ee: true,
+    rating: 9.7,
+    deepDiveUrl: "/blog/google-maps-alternatives-organic-maps-osmand-privacy-guide",
+    officialUrl: "https://organicmaps.app",
+    verdict: "Zero tracking, zero battery drain from telemetry, and works in full airplane mode with downloaded state/country maps."
+  },
+  {
+    id: "bitwarden",
+    service: "Password Management",
+    replaces: "Google Password Manager",
+    name: "Bitwarden",
+    tagline: "Audited open-source password manager with cross-platform sync and self-hosting options.",
+    category: "security",
+    architecture: "Cloud or Self-Hosted",
+    encryption: "Zero-Knowledge AES-256",
+    license: "GPL-3.0 (FOSS)",
+    jurisdiction: "USA (or Self-Hosted)",
+    cost: "Free / $10/yr",
+    noAccount: false,
+    selfHosted: true,
+    e2ee: true,
+    rating: 9.9,
+    deepDiveUrl: "/blog/best-password-managers-in-2026-security-features-and-pricing-compared",
+    officialUrl: "https://bitwarden.com",
+    verdict: "Extract your passwords from Google Chrome and store them in an encrypted vault you own. Can be self-hosted via Vaultwarden in 5 minutes."
+  },
+  {
+    id: "cryptpad",
+    service: "Docs & Spreadsheets",
+    replaces: "Google Docs & Sheets",
+    name: "CryptPad",
+    tagline: "End-to-end encrypted real-time collaborative office suite with zero personal registration.",
+    category: "office",
+    architecture: "Cloud or Self-Hosted",
+    encryption: "Zero-Knowledge E2EE",
+    license: "AGPL-3.0 (FOSS)",
+    jurisdiction: "France / EU",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: true,
+    e2ee: true,
+    rating: 9.6,
+    deepDiveUrl: "/blog/degoogle-starter-pack-complete-guide",
+    officialUrl: "https://cryptpad.fr",
+    verdict: "Open CryptPad.fr and start writing documents or spreadsheets with friends without signing up for an account. Encrypted directly in the browser."
+  },
+  {
+    id: "aegis-auth",
+    service: "2FA Authenticator",
+    replaces: "Google Authenticator",
+    name: "Aegis Authenticator",
+    tagline: "Secure, open-source 2FA app for Android with encrypted backups and biometric vault lock.",
+    category: "security",
+    architecture: "Local Device",
+    encryption: "Encrypted AES-GCM",
+    license: "GPL-3.0 (FOSS)",
+    jurisdiction: "Local Device",
+    cost: "100% Free",
+    noAccount: true,
+    selfHosted: true,
+    e2ee: true,
+    rating: 9.9,
+    deepDiveUrl: "/blog/degoogle-starter-pack-complete-guide",
+    officialUrl: "https://getaegis.app",
+    verdict: "Unlike Google Authenticator which syncs unencrypted 2FA seeds to Google cloud, Aegis stores your 2FA seeds encrypted locally on your phone."
+  }
+];
+
+const categories = [
+  { id: "all", name: "All Services" },
+  { id: "photos", name: "Photos & Media" },
+  { id: "email", name: "Email & Calendar" },
+  { id: "storage", name: "Cloud & Files" },
+  { id: "search", name: "Search & Browsing" },
+  { id: "mobile", name: "Mobile Operating System" },
+  { id: "maps", name: "Maps & Navigation" },
+  { id: "office", name: "Office & Notes" },
+  { id: "security", name: "Security & Passwords" }
+];
+---
+
+<BaseLayout seo={seo}>
+  <SchemaOrg
+    type="webapplication"
+    webApplicationData={{
+      name: "The 2026 DeGoogle Alternative Matrix",
+      description: "Interactive directory comparing 24+ open-source and privacy-first alternatives to Google. Filter by self-hosted, E2EE, and jurisdiction, and generate shareable GitHub badges.",
+      url: "https://www.praveentechworld.com/tools/degoogle-matrix",
+      applicationCategory: "UtilityApplication",
+      operatingSystem: "All",
+      browserRequirements: "Requires JavaScript. Modern Browser.",
+      offers: {
+        price: "0",
+        priceCurrency: "USD",
+      },
+    }}
+  />
+
+  <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
+    <!-- Breadcrumb -->
+    <nav class="mb-6 text-sm text-text-muted dark:text-text-dark-muted" aria-label="Breadcrumb">
+      <ol class="flex items-center gap-2">
+        <li><a href="/" class="hover:text-brand-700 dark:hover:text-brand-300">Home</a></li>
+        <li><span class="text-text-muted/60">/</span></li>
+        <li><a href="/tools" class="hover:text-brand-700 dark:hover:text-brand-300">Tools</a></li>
+        <li><span class="text-text-muted/60">/</span></li>
+        <li class="font-medium text-text dark:text-text-dark" aria-current="page">DeGoogle Matrix</li>
+      </ol>
+    </nav>
+
+    <!-- Header Section -->
+    <header class="mb-10 space-y-4">
+      <div class="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+        <Icon name="shield" class="w-3.5 h-3.5" /> Living Technical Matrix &bull; 2026 Edition
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-tight sm:text-5xl text-text dark:text-text-dark">
+        The DeGoogle Alternative Matrix
+      </h1>
+      <p class="max-w-3xl text-base sm:text-lg text-text-muted dark:text-text-dark-muted leading-relaxed">
+        The curated, lab-tested directory of open-source and zero-knowledge replacements for Alphabet's surveillance ecosystem. Filter by self-hosting, end-to-end encryption, and jurisdiction.
+      </p>
+    </header>
+
+    <!-- Shareable Privacy Stack Card -->
+    <section class="mb-12 rounded-2xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark p-6 sm:p-8 shadow-sm">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-border dark:border-border-dark">
+        <div>
+          <span class="text-xs font-mono uppercase tracking-wider text-brand-700 dark:text-brand-300 font-bold">Interactive Stack Builder</span>
+          <h2 class="text-xl sm:text-2xl font-bold text-text dark:text-text-dark mt-1">
+            Build & Share Your Privacy Stack
+          </h2>
+          <p class="text-sm text-text-muted dark:text-text-dark-muted mt-1 max-w-xl">
+            Select the tools you use in the matrix below. Generate a custom live SVG badge for your GitHub profile README or share your setup on X and Reddit.
+          </p>
+        </div>
+
+        <!-- Live Score Widget -->
+        <div class="flex items-center gap-4 bg-surface-alt dark:bg-surface-dark-alt p-4 rounded-xl border border-border dark:border-border-dark shrink-0">
+          <div class="text-center">
+            <div class="text-xs text-text-muted dark:text-text-dark-muted font-mono uppercase">Your Freedom Score</div>
+            <div class="text-3xl sm:text-4xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5" id="user-score-display">0%</div>
+          </div>
+          <div class="h-10 w-px bg-border dark:bg-border-dark"></div>
+          <div class="text-center">
+            <div class="text-xs text-text-muted dark:text-text-dark-muted font-mono uppercase">Tier Rating</div>
+            <div class="text-sm font-bold text-text dark:text-text-dark mt-1" id="user-tier-display">Google Dependent</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Badge Export Bar -->
+      <div class="pt-6 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
+        <div class="flex items-center gap-2">
+          <span class="text-text-muted dark:text-text-dark-muted font-medium">GitHub Badge:</span>
+          <code class="px-2 py-1 rounded bg-slate-900 text-slate-200 select-all max-w-[280px] sm:max-w-md truncate" id="github-badge-code">
+            [![DeGoogle](https://img.shields.io/badge/DeGoogle-Explorer-10b981?style=flat-square)](https://praveentechworld.com/tools/degoogle-matrix)
+          </code>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="copy-badge-btn" class="px-3.5 py-1.5 rounded-lg border border-border dark:border-border-dark bg-surface-alt dark:bg-surface-dark-alt hover:bg-brand-500/10 text-text dark:text-text-dark font-medium transition-colors cursor-pointer flex items-center gap-1.5">
+            <Icon name="copy" class="w-3.5 h-3.5" /> Copy Badge
+          </button>
+          <button id="share-x-btn" class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-black text-white font-medium transition-colors cursor-pointer flex items-center gap-1.5 dark:bg-slate-800 dark:hover:bg-slate-700">
+            Share on X
+          </button>
+          <button id="share-reddit-btn" class="px-3.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors cursor-pointer flex items-center gap-1.5">
+            Share on Reddit
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Filter Controls -->
+    <div class="mb-8 space-y-4">
+      <!-- Search Input -->
+      <div class="relative">
+        <input
+          type="text"
+          id="matrix-search-input"
+          placeholder="Filter by name, Google service, encryption protocol, or jurisdiction (e.g. Immich, Photos, E2EE, Switzerland)..."
+          class="w-full rounded-xl border border-border bg-surface px-4 py-3.5 pl-11 text-sm text-text placeholder-text-muted/60 transition-colors focus:border-brand-600 focus:outline-none dark:border-border-dark dark:bg-surface-dark dark:text-text-dark"
+        />
+        <svg class="absolute left-3.5 top-4 h-4 w-4 text-text-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+        </svg>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="flex flex-wrap items-center gap-2 pt-1" id="category-filter-bar">
+        {categories.map((cat, idx) => (
+          <button
+            class={`category-filter-btn px-3.5 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+              idx === 0
+                ? "bg-brand-700 text-white border-brand-700 dark:bg-brand-600 dark:border-brand-600 active-filter"
+                : "bg-surface dark:bg-surface-dark border-border dark:border-border-dark text-text-muted hover:border-brand-500 hover:text-text dark:hover:text-text-dark"
+            }`}
+            data-category={cat.id}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      <!-- Architecture & Security Toggle Toggles -->
+      <div class="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono">
+        <span class="text-text-muted dark:text-text-dark-muted font-sans font-medium text-xs">Quick Toggles:</span>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+          <input type="checkbox" id="toggle-self-hosted" class="rounded border-border dark:border-border-dark accent-emerald-600" />
+          <span class="text-text dark:text-text-dark">Self-Hosted Only</span>
+        </label>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+          <input type="checkbox" id="toggle-e2ee" class="rounded border-border dark:border-border-dark accent-emerald-600" />
+          <span class="text-text dark:text-text-dark">Zero-Knowledge E2EE Only</span>
+        </label>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+          <input type="checkbox" id="toggle-free" class="rounded border-border dark:border-border-dark accent-emerald-600" />
+          <span class="text-text dark:text-text-dark">100% Free / FOSS</span>
+        </label>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+          <input type="checkbox" id="toggle-no-account" class="rounded border-border dark:border-border-dark accent-emerald-600" />
+          <span class="text-text dark:text-text-dark">No Account Required</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- The Matrix Grid -->
+    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3" id="matrix-cards-container">
+      {matrixData.map((item) => (
+        <article
+          class="matrix-card group relative flex flex-col justify-between rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-500/50 hover:shadow-md"
+          data-id={item.id}
+          data-category={item.category}
+          data-selfhosted={item.selfHosted ? "true" : "false"}
+          data-e2ee={item.e2ee ? "true" : "false"}
+          data-free={item.cost.includes("Free") ? "true" : "false"}
+          data-noaccount={item.noAccount ? "true" : "false"}
+          data-searchtext={`${item.name} ${item.replaces} ${item.service} ${item.architecture} ${item.encryption} ${item.jurisdiction} ${item.license}`.toLowerCase()}
+        >
+          <div>
+            <!-- Card Header: Replaces & Select Checkbox -->
+            <div class="flex items-center justify-between pb-3 border-b border-border/50 dark:border-border-dark/50 mb-3 text-xs">
+              <span class="font-mono text-xs uppercase tracking-wider text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1">
+                <span class="line-through">{item.replaces}</span>
+              </span>
+              <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium text-text-muted hover:text-brand-700 dark:hover:text-brand-300">
+                <input type="checkbox" class="stack-checkbox rounded border-border dark:border-border-dark accent-brand-600" data-id={item.id} />
+                <span>I use this</span>
+              </label>
+            </div>
+
+            <!-- Alternative Title & Rating -->
+            <div class="flex items-start justify-between gap-3 mb-2">
+              <h3 class="text-xl font-bold text-text dark:text-text-dark">
+                {item.name}
+              </h3>
+              <span class="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 font-mono shrink-0">
+                ★ {item.rating}
+              </span>
+            </div>
+
+            <p class="text-xs text-text-muted dark:text-text-dark-muted leading-relaxed mb-4">
+              {item.tagline}
+            </p>
+
+            <!-- Technical Spec Badges -->
+            <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+              <span class={`rounded px-2 py-0.5 border ${
+                item.selfHosted
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                  : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800"
+              }`}>
+                {item.architecture}
+              </span>
+              <span class="rounded bg-surface-alt dark:bg-surface-dark-alt px-2 py-0.5 border border-border dark:border-border-dark text-text-muted dark:text-text-dark-muted">
+                {item.encryption}
+              </span>
+              <span class="rounded bg-surface-alt dark:bg-surface-dark-alt px-2 py-0.5 border border-border dark:border-border-dark text-text-muted dark:text-text-dark-muted">
+                📍 {item.jurisdiction}
+              </span>
+              <span class="rounded bg-surface-alt dark:bg-surface-dark-alt px-2 py-0.5 border border-border dark:border-border-dark text-text-muted dark:text-text-dark-muted">
+                {item.cost}
+              </span>
+            </div>
+
+            <!-- Workbench Verdict -->
+            <div class="rounded-lg bg-surface-alt/70 dark:bg-surface-dark-alt/70 p-3 text-xs text-text-muted dark:text-text-dark-muted leading-relaxed mb-4 border border-border/50 dark:border-border-dark/50">
+              <strong class="text-text dark:text-text-dark font-semibold">Lab Verdict:</strong> {item.verdict}
+            </div>
+          </div>
+
+          <!-- Card Footer Actions -->
+          <div class="flex items-center justify-between pt-3 border-t border-border/50 dark:border-border-dark/50 text-xs">
+            <a href={item.deepDiveUrl} class="font-semibold text-brand-700 hover:underline dark:text-brand-300 flex items-center gap-1">
+              Read Our Runbook &rarr;
+            </a>
+            <a href={item.officialUrl} target="_blank" rel="noopener noreferrer nofollow" class="text-text-muted hover:text-text dark:hover:text-text-dark">
+              Official Site ↗
+            </a>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <!-- Empty Results State -->
+    <div id="no-results" class="hidden py-16 text-center text-text-muted dark:text-text-dark-muted">
+      <p class="text-base font-semibold">No alternatives match your current filter combination.</p>
+      <p class="text-xs mt-1">Try resetting the search query or unchecking some quick toggles.</p>
+    </div>
+
+    <!-- Deep Dive Callout Banner -->
+    <div class="mt-16 rounded-2xl border border-brand-500/30 bg-surface dark:bg-surface-dark p-8 shadow-sm">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <span class="text-xs font-mono font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">Flagship Pillar Guide</span>
+          <h2 class="text-2xl font-bold text-text dark:text-text-dark mt-1">
+            Need the Step-by-Step Migration Blueprint?
+          </h2>
+          <p class="text-sm text-text-muted dark:text-text-dark-muted mt-1.5 max-w-2xl leading-relaxed">
+            Read our master runbook: <em>DeGoogle Starter Pack: Complete Guide in 2026</em>. Includes our 72-hour Wireshark packet dumps, battery runtime graphs, and step-by-step account deletion orders.
+          </p>
+        </div>
+        <a
+          href="/blog/degoogle-starter-pack-complete-guide"
+          class="shrink-0 rounded-xl bg-brand-700 hover:bg-brand-800 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all cursor-pointer dark:bg-brand-700 dark:hover:bg-brand-800"
+        >
+          Read Master Guide &rarr;
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('matrix-search-input');
+    const categoryBtns = document.querySelectorAll('.category-filter-btn');
+    const toggleSelfHosted = document.getElementById('toggle-self-hosted');
+    const toggleE2ee = document.getElementById('toggle-e2ee');
+    const toggleFree = document.getElementById('toggle-free');
+    const toggleNoAccount = document.getElementById('toggle-no-account');
+    const cards = document.querySelectorAll('.matrix-card');
+    const noResults = document.getElementById('no-results');
+
+    // Stack and badge state
+    const userScoreDisplay = document.getElementById('user-score-display');
+    const userTierDisplay = document.getElementById('user-tier-display');
+    const githubBadgeCode = document.getElementById('github-badge-code');
+    const copyBadgeBtn = document.getElementById('copy-badge-btn');
+    const shareXBtn = document.getElementById('share-x-btn');
+    const shareRedditBtn = document.getElementById('share-reddit-btn');
+    const checkboxes = document.querySelectorAll('.stack-checkbox');
+
+    let currentCategory = 'all';
+
+    function filterMatrix() {
+      const query = (searchInput?.value || '').toLowerCase().trim();
+      const onlySelfHosted = toggleSelfHosted?.checked;
+      const onlyE2ee = toggleE2ee?.checked;
+      const onlyFree = toggleFree?.checked;
+      const onlyNoAccount = toggleNoAccount?.checked;
+
+      let visibleCount = 0;
+
+      cards.forEach(card => {
+        const cat = card.getAttribute('data-category');
+        const isSelfHosted = card.getAttribute('data-selfhosted') === 'true';
+        const isE2ee = card.getAttribute('data-e2ee') === 'true';
+        const isFree = card.getAttribute('data-free') === 'true';
+        const isNoAccount = card.getAttribute('data-noaccount') === 'true';
+        const searchText = card.getAttribute('data-searchtext') || '';
+
+        const matchesCat = currentCategory === 'all' || cat === currentCategory;
+        const matchesQuery = !query || searchText.includes(query);
+        const matchesSelfHosted = !onlySelfHosted || isSelfHosted;
+        const matchesE2ee = !onlyE2ee || isE2ee;
+        const matchesFree = !onlyFree || isFree;
+        const matchesNoAccount = !onlyNoAccount || isNoAccount;
+
+        if (matchesCat && matchesQuery && matchesSelfHosted && matchesE2ee && matchesFree && matchesNoAccount) {
+          card.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      if (noResults) {
+        if (visibleCount === 0) noResults.classList.remove('hidden');
+        else noResults.classList.add('hidden');
+      }
+    }
+
+    searchInput?.addEventListener('input', filterMatrix);
+    toggleSelfHosted?.addEventListener('change', filterMatrix);
+    toggleE2ee?.addEventListener('change', filterMatrix);
+    toggleFree?.addEventListener('change', filterMatrix);
+    toggleNoAccount?.addEventListener('change', filterMatrix);
+
+    categoryBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        categoryBtns.forEach(b => {
+          b.classList.remove('bg-brand-700', 'text-white', 'border-brand-700', 'dark:bg-brand-600', 'dark:border-brand-600', 'active-filter');
+          b.classList.add('bg-surface', 'dark:bg-surface-dark', 'border-border', 'dark:border-border-dark', 'text-text-muted');
+        });
+        btn.classList.add('bg-brand-700', 'text-white', 'border-brand-700', 'dark:bg-brand-600', 'dark:border-brand-600', 'active-filter');
+        btn.classList.remove('bg-surface', 'dark:bg-surface-dark', 'border-border', 'dark:border-border-dark', 'text-text-muted');
+
+        currentCategory = btn.getAttribute('data-category') || 'all';
+        filterMatrix();
+      });
+    });
+
+    // Score and Badge Logic
+    function updateScore() {
+      const selected = Array.from(checkboxes).filter(cb => cb.checked);
+      const totalAvailable = checkboxes.length;
+      const pct = Math.min(100, Math.round((selected.length / 8) * 100)); // 8 core services = 100%
+
+      let tier = "Google Dependent";
+      let badgeColor = "e11d48";
+      if (pct >= 85) {
+        tier = "Sovereign";
+        badgeColor = "10b981";
+      } else if (pct >= 50) {
+        tier = "Hardened";
+        badgeColor = "0284c7";
+      } else if (pct >= 25) {
+        tier = "Explorer";
+        badgeColor = "f59e0b";
+      }
+
+      if (userScoreDisplay) userScoreDisplay.innerText = `${pct}%`;
+      if (userTierDisplay) userTierDisplay.innerText = tier;
+
+      const badgeMarkdown = `[![DeGoogle](https://img.shields.io/badge/DeGoogle-${pct}%25%20${tier}-${badgeColor}?style=flat-square&logo=shield)](https://praveentechworld.com/tools/degoogle-matrix)`;
+      if (githubBadgeCode) githubBadgeCode.innerText = badgeMarkdown;
+
+      // Save stack in localStorage
+      const selectedIds = selected.map(cb => cb.getAttribute('data-id'));
+      localStorage.setItem('ptw_degoogle_stack', JSON.stringify(selectedIds));
+    }
+
+    // Load saved stack
+    const saved = JSON.parse(localStorage.getItem('ptw_degoogle_stack') || '[]');
+    checkboxes.forEach(cb => {
+      const id = cb.getAttribute('data-id');
+      if (saved.includes(id)) cb.checked = true;
+      cb.addEventListener('change', updateScore);
+    });
+    updateScore();
+
+    // Copy Badge
+    copyBadgeBtn?.addEventListener('click', () => {
+      const text = githubBadgeCode?.innerText || '';
+      navigator.clipboard.writeText(text).then(() => {
+        copyBadgeBtn.innerHTML = '<span>✓ Copied!</span>';
+        setTimeout(() => {
+          copyBadgeBtn.innerHTML = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copy Badge';
+        }, 2000);
+      });
+    });
+
+    // Share to X
+    shareXBtn?.addEventListener('click', () => {
+      const score = userScoreDisplay?.innerText || '0%';
+      const tier = userTierDisplay?.innerText || 'Explorer';
+      const text = encodeURIComponent(`My DeGoogle Freedom Score is ${score} (${tier} tier) on the 2026 Alternative Matrix. Test your privacy stack and generate your GitHub badge:`);
+      const url = encodeURIComponent('https://www.praveentechworld.com/tools/degoogle-matrix');
+      window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+    });
+
+    // Share to Reddit
+    shareRedditBtn?.addEventListener('click', () => {
+      const title = encodeURIComponent(`The 2026 DeGoogle Alternative Matrix (Interactive Filters + Privacy Stack Builder)`);
+      const url = encodeURIComponent('https://www.praveentechworld.com/tools/degoogle-matrix');
+      window.open(`https://reddit.com/submit?title=${title}&url=${url}`, '_blank');
+    });
+  });
+</script>
