@@ -436,6 +436,42 @@ const categories = [
       </div>
     </section>
 
+    <!-- Terminal CLI & API Access Box -->
+    <div class="mb-8 rounded-2xl border border-slate-800 bg-slate-950 p-5 text-slate-200 shadow-md">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-xs font-mono font-bold tracking-wider text-emerald-400 uppercase">CLI Terminal Endpoint</span>
+            <span class="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">curl &bull; PowerShell &bull; JSON</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">
+            Query privacy alternatives and threat models directly from your terminal with zero tracking:
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 font-mono text-xs" id="cli-pills">
+          <button type="button" class="cli-topic-pill px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium cursor-pointer" data-topic="photos">photos</button>
+          <button type="button" class="cli-topic-pill px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 cursor-pointer" data-topic="email">email</button>
+          <button type="button" class="cli-topic-pill px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 cursor-pointer" data-topic="storage">storage</button>
+          <button type="button" class="cli-topic-pill px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 cursor-pointer" data-topic="search">search</button>
+          <button type="button" class="cli-topic-pill px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 cursor-pointer" data-topic="mobile">mobile</button>
+          <button type="button" class="cli-topic-pill px-2.5 py-1 rounded-md bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800 cursor-pointer" data-topic="all">all</button>
+        </div>
+      </div>
+      <div class="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+        <div class="flex items-center gap-2 bg-slate-900 px-3.5 py-2.5 rounded-xl border border-slate-800/80 w-full overflow-hidden">
+          <span class="text-slate-500 font-mono text-xs select-none">$</span>
+          <code id="cli-cmd-display" class="font-mono text-xs text-emerald-400 select-all truncate">curl -sL https://praveentechworld.com/degoogle/photos</code>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button type="button" id="copy-cli-btn" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-mono font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 border border-slate-700">
+            <Icon name="copy" class="w-3.5 h-3.5" />
+            <span id="copy-cli-text">Copy Command</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Search & Filter Controls -->
     <div class="mb-8 space-y-4">
       <!-- Search Input -->
@@ -740,6 +776,37 @@ const categories = [
       const title = encodeURIComponent(`The 2026 DeGoogle Alternative Matrix (Interactive Filters + Privacy Stack Builder)`);
       const url = encodeURIComponent('https://www.praveentechworld.com/tools/degoogle-matrix');
       window.open(`https://reddit.com/submit?title=${title}&url=${url}`, '_blank');
+    });
+
+    // CLI Pills & Copy Command
+    const cliDisplay = document.getElementById('cli-cmd-display');
+    const copyCliBtn = document.getElementById('copy-cli-btn');
+    const copyCliText = document.getElementById('copy-cli-text');
+    const cliPills = document.querySelectorAll('.cli-topic-pill');
+
+    cliPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const topic = pill.getAttribute('data-topic') || 'photos';
+        cliPills.forEach(p => {
+          p.classList.remove('bg-emerald-500/20', 'text-emerald-300', 'border-emerald-500/30');
+          p.classList.add('bg-slate-900', 'text-slate-400', 'border-slate-800');
+        });
+        pill.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+        pill.classList.add('bg-emerald-500/20', 'text-emerald-300', 'border-emerald-500/30');
+        if (cliDisplay) {
+          cliDisplay.innerText = `curl -sL https://praveentechworld.com/degoogle/${topic}`;
+        }
+      });
+    });
+
+    copyCliBtn?.addEventListener('click', () => {
+      const cmd = cliDisplay?.innerText || '';
+      navigator.clipboard.writeText(cmd).then(() => {
+        if (copyCliText) copyCliText.innerText = 'Copied!';
+        setTimeout(() => {
+          if (copyCliText) copyCliText.innerText = 'Copy Command';
+        }, 2000);
+      });
     });
   });
 </script>

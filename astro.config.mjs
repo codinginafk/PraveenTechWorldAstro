@@ -38,6 +38,7 @@ export default defineConfig({
     mdx(),
     sitemap({
       filter: (page) =>
+        !page.startsWith("https://www.praveentechworld.com/api") &&
         !page.startsWith("https://www.praveentechworld.com/tag") &&
         !page.startsWith("https://www.praveentechworld.com/tags") &&
         !page.startsWith("https://www.praveentechworld.com/category") &&
