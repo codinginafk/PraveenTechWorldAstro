@@ -3,7 +3,7 @@
 > Practical IT Operations, AI automation, and technology guides.
 > URL: https://www.praveentechworld.com
 > Language: English
-> Last updated: 2026-11-21
+> Last updated: 2026-11-24
 > Total articles: 176
 
 This file contains the full text of every article on the site. AI systems can extract specific passages for citations or answers.
@@ -7015,34 +7015,34 @@ Unlike the separate Event ID 13 guide, Event ID 153 should not be assigned a roo
 Here is a safe diagnostic workflow that keeps the driver, workload, power, cooling, and hardware checks separate.
 
 <ErrorLookupBar initialCode="nvlddmkm" title="Instant GPU Driver & Stop Code Lookup" subtitle="Look up nvlddmkm.sys, Event 153/13, TDR crashes, or any Windows stop code." /
-Jump to a section:
-Event ID 153 Triage Decision Matrix
-Step 1: Capture Event and Probe Telemetry
-Step 2: Test Disabling GPU Scheduling
-Step 3: Avoid Risky TDR Registry Hacks
-Step 4: Verify PCIe Link and 12V Power
-Step 5: Clean DDU Driver Purge in Safe Mode
-Related GPU and Driver Diagnostic Guides
-
---
-Event ID 153 Triage Decision Matrix
-
-Direct Answer: Use this triage matrix to map the specific symptoms accompanying Event ID 153 to their root mechanical cause and targeted fix.
-
-| Trigger & Event Context | Underlying Failure Mechanism | Diagnostic Probe Command | Reversible Action | Hardware / System Impact |
-| :--| :--| :--| :--| :--|
-| IO Retried at Address  | PCIe Gen 4/5 signal degradation or riser reflections |  (verify negotiated link width) | Clean slot, reseat GPU, test direct motherboard PCIe slot | Eliminates packet stalls; restores full x16 bandwidth |
-| Event 153 During VRAM Spikes (AI/UE5) | Memory paging packet contention under heavy memory pressure | Run automated PowerShell probe; check VRAM allocation | Toggle HAGS to Off; close background GPU browsers/apps | Frees VRAM headroom and simplifies memory scheduling |
-| Event 153 Escalating to Event 4101 | GDDR6X memory junction thermal throttling (105°C) |  | Increase fan profile; inspect thermal pads / paste | Prevents permanent VRAM degradation and crash loops |
-| Event 153 on Transient 3D Spikes | Voltage droop on 12VHPWR / PCIe auxiliary power rail | Monitor 12V rail in HWInfo64 during load transients | Use dedicated PCIe cables; ensure 12VHPWR connector is clicked | Stabilizes voltage delivery; eliminates core brownouts |
-| Event 153 After Driver Update | Corrupted shader cache or stale driver registry state | Check Display driver history in Device Manager | Clean install via DDU in Windows Safe Mode | Sanitizes registry entries and rebuilds shader caches |
-
---
-Step 1: Capture Event and Probe Telemetry
-
-Direct Answer: Before making any configuration changes, audit the exact Event ID 153 retry timestamps, check whether retries escalate to Event 4101 TDRs, and query current PCIe link bandwidth.
-
-Rather than manually scrolling through thousands of lines in Event Viewer, our engineering team created an automated PowerShell probe. It parses your System Event Log, extracts recent  Event ID 153, 13, and 4101 occurrences, inspects your PCIe bus
++-----------------------------------------------------------------------------------+
+|    Windows 11 WDDM Video Memory Manager (VidMm) & GPU Paging Retry Architecture   |
++-----------------------------------------------------------------------------------+
+| [DirectX 12 / Vulkan / CUDA Workload]                                             |
+|  4K Gaming, Unreal Engine 5, Local LLMs (Ollama / vLLM)                          |
+|         |                                                                         |
+|         | Allocates Surface Buffers / Commits Command Lists                       |
+|         v                                                                         |
++-----------------------------------------------------------------------------------+
+| [WDDM Kernel Subsystem: dxgkrnl.sys]                                              |
+|  +------------------------------------------------------------------------------+ |
+|  | Video Memory Manager (VidMm)                                                 | |
+|  | Schedules DMA Paging Packets to Evict / Page-In VRAM Allocations             | |
+|  +--------------------------------------+---------------------------------------+ |
+|                                         |                                         |
+|                                         v                                         |
+|  +------------------------------------------------------------------------------+ |
+|  | NVIDIA Miniport Driver: nvlddmkm.sys                                         | |
+|  | Translates Paging Packets into Hardware Memory Interface Controller Commands  | |
+|  +--------------------------------------+---------------------------------------+ |
++-----------------------------------------|-----------------------------------------+
+| [Physical PCIe Bus & Frame Buffer]      v                                         |
+|  +------------------------------------------------------------------------------+ |
+|  | PCIe Controller (Link Speed / Signal Integrity / Riser Cable)                | |
+|  +--------------------------------------+---------------------------------------+ |
+|                                         |                                         |
+|                 [PCIe Latency / Signal Stall / VRAM Contention]                   |
+|                    
 
 ---
 
