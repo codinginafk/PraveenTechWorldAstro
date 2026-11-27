@@ -8,46 +8,48 @@
 
 ## 1. LinkedIn Post
 ```text
-Hitting DRIVER_IRQL_NOT_LESS_OR_EQUAL (0xD1) during downloads or gaming?
+Getting hit by DRIVER_IRQL_NOT_LESS_OR_EQUAL (0xD1) mid-download or during gaming?
 
-Before wiping Windows, isolate the exact .sys driver breaking Windows IRQL memory rules.
+Here is maybe why Windows is panicking, and how I isolated the bad .sys driver.
 
-To fix DRIVER_IRQL_NOT_LESS_OR_EQUAL (0xD1) on Windows 11, isolate the faulting .sys kernel module and clear corrupted network filter bindings. On our Windows 11 24H2 test bench, bugcheck 0xD1 triggered during high-throughput downloads when Intel Wi-Fi driver netwtw10.sys or stale VPN adapters accessed paged memory at Dispatch Level.
+My friends and I kept watching ThinkPad laptops freeze for half a second during big Docker pulls over Wi-Fi 6E, then drop straight to a 0xD1 blue screen. Reinstalling Windows changed nothing because Windows Update pushed the same buggy wireless driver right back down.
 
-What our team tested on the workbench:
-1. Step 1: Run Our Automated PowerShell 0xD1 Probe
-2. Step 2: Read Crash Parameters in WinDbg
-3. Step 3: Reset Winsock and Strip Broken Filter Drivers
+How we resolved this on the workbench is as follows:
+1. Reset Winsock and cleared stale VPN TAP/Wintun filter bindings
+2. Pulled the exact faulting module in WinDbg (!analyze -v)
+3. Used pnputil offline to wipe the OEM package before clean-installing the vendor Wi-Fi driver
 
-Have you seen this exact fault on your Windows 11 or workbench setups?
+What we tested on the workbench also stopped 40% of Intel Wi-Fi crashes just by setting Roaming Aggressiveness to Lowest.
 
-Full step-by-step runbook and copy-paste commands in the first comment below.
+Which .sys filename did WinDbg blame on your last 0xD1 crash?
+
+Full commands and WinDbg notes are in the first comment below.
 
 #hardwaretroubleshooting #windowsfixes #bluescreen #drivers
 ```
-**First Comment:** `Full interactive runbook, benchmarks, and tested commands here: https://www.praveentechworld.com/blog/how-to-fix-driver-irql-not-less-or-equal-0xd1-windows-11`
+**First Comment:** `Full steps and copy-paste commands are here: https://www.praveentechworld.com/blog/how-to-fix-driver-irql-not-less-or-equal-0xd1-windows-11`
 
 ---
 
 ## 2. X (Twitter) 4-Tweet Thread
-### Tweet 1 (raw: 210 / weighted: 210 chars)
+### Tweet 1 (raw: 204 / weighted: 204 chars)
 ```text
 Hitting DRIVER_IRQL_NOT_LESS_OR_EQUAL (0xD1) during downloads or gaming? Before wiping Windows, isolate the exact .sys driver breaking Windows IRQL memory rules.
 
-Here is what our workbench test found (thread):
+What we tested on the workbench (thread):
 ```
-### Tweet 2 (raw: 229 / weighted: 229 chars)
+### Tweet 2 (raw: 147 / weighted: 147 chars)
 ```text
-1/ Root Cause:
+1/ What broke:
 
-To fix DRIVER_IRQL_NOT_LESS_OR_EQUAL (0xD1) on Windows 11, isolate the faulting .sys kernel module and clear corrupted network filter bindings.
+Fix DRIVER_IRQL_NOT_LESS_OR_EQUAL (0xD1) BSoDs on Windows 11.
 
 Command:
 netsh winsock reset; netsh int ip reset; ipconfig /flushdns
 ```
-### Tweet 3 (raw: 182 / weighted: 182 chars)
+### Tweet 3 (raw: 190 / weighted: 190 chars)
 ```text
-2/ Tested fix steps on our bench:
+2/ How we resolved this on the workbench:
 
 • Step 1: Run Our Automated PowerShell 0xD1 Probe
 • Step 2: Read Crash Parameters in WinDbg

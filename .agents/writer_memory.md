@@ -3,6 +3,7 @@
 ## 1. Brand Voice & Perspective
 - **First-Person Team Perspective:** Always write articles and technical guides from the first-person perspective of 'our team', 'my friends and I', or 'our workbench'. Share real, firsthand dev-ops workbench testing, failure cases, and real benchmarks.
 - **The Veteran Voice:** Speak peer-to-peer. Assume the reader is smart but stressed. Lead with the architectural 'Why', then give the exact technical 'How'. Ban fluff words ('delve', 'robust', 'seamless', 'game-changer', 'revolutionize').
+- **No AI Slop / Casual Real-Engineer Phrasing (User Correction 2026-11-27):** Never use stiff corporate AI templates like *"Here is why X because Y"* or *"On our test bench, our team resolved X by addressing two distinct bottlenecks."* Write like an actual engineer talking: *"Here is maybe why your partition is out of room..."*, *"How I resolved the DISM error..."*, *"How we resolved this is as follows..."*, *"What we tested on the workbench:"*. Keep LinkedIn and X copy direct, casual, and conversational rather than sounding like an essay or PR press release.
 - **Battle Scars:** Mention what fails in production, not just what works in theory (e.g. VRAM allocations, CUDA out-of-memory errors, quantization quality degradation).
 
 ## 2. Technical SEO & Quality Gates (110/110 Criteria)

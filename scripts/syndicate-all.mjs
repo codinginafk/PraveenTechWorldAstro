@@ -259,9 +259,41 @@ function formatForDevTo(article) {
   };
 }
 
-/** Build LinkedIn dwell-time post with zero body URL + comment #1 link. */
+function humanizeSocialHook(text) {
+  return stripMarkdownSafe(text)
+    .replace(/\bHere is why\b/gi, "Here is maybe why")
+    .replace(/\bIn this guide,\s*/gi, "")
+    .replace(/\bour team resolved\b/gi, "we fixed")
+    .replace(/\bour engineering team\b/gi, "we")
+    .replace(/\bby addressing two distinct bottlenecks:\s*/gi, "after tracing two issues: ")
+    .replace(/\bOn our test bench running ([^,]+),\s*/gi, "On a $1 machine, ")
+    .trim();
+}
+
+/** Build LinkedIn post using curated override file if present, or natural human copy. */
 function formatForLinkedIn(article) {
-  const hookSource = article.socialHook || article.description;
+  const mdOverride = path.join(SOCIAL_PACK_DIR, `${article.slug}-linkedin.md`);
+  const txtOverride = path.join(SOCIAL_PACK_DIR, `${article.slug}-linkedin.txt`);
+  const overridePath = fs.existsSync(mdOverride) ? mdOverride : txtOverride;
+  const hashtags = [...new Set([article.category, ...(article.tags || [])])]
+    .filter(Boolean)
+    .slice(0, 4)
+    .map((t) => `#${t.replace(/[^a-zA-Z0-9]/g, "")}`)
+    .join(" ");
+
+  if (fs.existsSync(overridePath)) {
+    const customText = fs.readFileSync(overridePath, "utf8").trim();
+    return {
+      text: customText,
+      commentText: `Full steps and copy-paste commands are here: ${article.canonicalUrl}`,
+      title: article.rawTitle,
+      canonicalUrl: article.canonicalUrl,
+      imagePath: article.coverImagePath,
+      customOverride: true,
+    };
+  }
+
+  const hookSource = humanizeSocialHook(article.socialHook || article.description);
   const hookSentences = extractSentences(hookSource);
   const openerLines =
     hookSentences.length >= 2
@@ -272,20 +304,17 @@ function formatForLinkedIn(article) {
   const bullets =
     headings.length > 0
       ? headings.map((h, i) => `${i + 1}. ${h}`).join("\n")
-      : `1. Isolate the exact failure signature\n2. Apply the reversible workbench fix\n3. Verify system stability under load`;
+      : `1. Track down the exact error trigger\n2. Clean out bad state or drivers\n3. Verify under heavy load`;
 
-  const quickTakeaway = extractSentences(article.quickAnswer?.summary || article.description).slice(0, 2).join(" ");
-  const hashtags = [...new Set([article.category, ...(article.tags || [])])]
-    .filter(Boolean)
-    .slice(0, 4)
-    .map((t) => `#${t.replace(/[^a-zA-Z0-9]/g, "")}`)
-    .join(" ");
+  const quickTakeaway = humanizeSocialHook(
+    extractSentences(article.description || article.quickAnswer?.summary).slice(0, 2).join(" ")
+  );
 
-  let closingQuestion = "Have you seen this exact fault on your Windows 11 or workbench setups?";
+  let closingQuestion = "Have you run into this same fault on Windows 11 lately?";
   if (["privacy", "security", "homelab", "android-fixes"].includes(article.category)) {
-    closingQuestion = "Which cloud or Big Tech dependency was hardest for you to replace cleanly?";
+    closingQuestion = "Which Google or cloud tool gave you the hardest time when moving off it?";
   } else if (["ai", "ai-automation", "ai-tools", "ai-workflows"].includes(article.category)) {
-    closingQuestion = "Are you running this workload on local hardware or still routing through cloud APIs?";
+    closingQuestion = "Are you running this on your own hardware now or still paying cloud API bills?";
   }
 
   const text = [
@@ -293,12 +322,12 @@ function formatForLinkedIn(article) {
     "",
     quickTakeaway,
     "",
-    "What our team tested on the workbench:",
+    "How we resolved this on the workbench is as follows:",
     bullets,
     "",
     closingQuestion,
     "",
-    "Full step-by-step runbook and copy-paste commands in the first comment below.",
+    "Full notes and copy-paste commands are in the first comment below.",
     "",
     hashtags || "#ITOps #DevOps #SystemsEngineering",
   ]
@@ -307,10 +336,11 @@ function formatForLinkedIn(article) {
 
   return {
     text,
-    commentText: `Full interactive runbook, benchmarks, and tested commands here: ${article.canonicalUrl}`,
+    commentText: `Full steps and copy-paste commands are here: ${article.canonicalUrl}`,
     title: article.rawTitle,
     canonicalUrl: article.canonicalUrl,
     imagePath: article.coverImagePath,
+    customOverride: false,
   };
 }
 
@@ -324,27 +354,27 @@ function truncateForTweet(text, maxLen) {
 
 /** Build a 4-tweet thread (Tweet 1 link-free for reach, Tweet 4 carries canonical link). */
 function formatForXThread(article) {
-  const hook = stripMarkdownSafe(article.socialHook || article.description);
-  const qaSentences = extractSentences(article.quickAnswer?.summary || article.description);
+  const hook = humanizeSocialHook(article.socialHook || article.description);
+  const qaSentences = extractSentences(humanizeSocialHook(article.description || article.quickAnswer?.summary));
   const headings = extractSectionHeadings(article.body).slice(0, 3);
   const cmd = article.quickAnswer?.command ? article.quickAnswer.command.trim() : "";
 
-  const t1 = truncateForTweet(`${hook}\n\nHere is what our workbench test found (thread):`, 275);
+  const t1 = truncateForTweet(`${hook}\n\nWhat we tested on the workbench (thread):`, 275);
 
   const rootCause = qaSentences[0] || stripMarkdownSafe(article.description);
   const cmdBlock = cmd && cmd.length <= 110 ? `\n\nCommand:\n${cmd}` : "";
-  const t2 = cmdBlock && (`1/ Root Cause:\n\n${rootCause}`.length + cmdBlock.length <= 275)
-    ? `1/ Root Cause:\n\n${rootCause}${cmdBlock}`
-    : truncateForTweet(`1/ Root Cause & Scope:\n\n${rootCause}`, 275);
+  const t2 = cmdBlock && (`1/ What broke:\n\n${rootCause}`.length + cmdBlock.length <= 275)
+    ? `1/ What broke:\n\n${rootCause}${cmdBlock}`
+    : truncateForTweet(`1/ What broke:\n\n${rootCause}`, 275);
 
   const fixSteps =
     headings.length > 0
       ? headings.map((h) => `• ${h}`).join("\n")
       : qaSentences.slice(1, 3).join(" ");
   const cmdInT3 = (!cmdBlock || t2.indexOf(cmd) === -1) && cmd && cmd.length <= 120
-    ? `\n\nKey command:\n${cmd}`
+    ? `\n\nCommand:\n${cmd}`
     : "";
-  const t3Raw = `2/ Tested fix steps on our bench:\n\n${fixSteps}${cmdInT3}`;
+  const t3Raw = `2/ How we resolved this on the workbench:\n\n${fixSteps}${cmdInT3}`;
   const t3 = truncateForTweet(t3Raw, 275);
 
   const hashtags = (article.tags || [])
