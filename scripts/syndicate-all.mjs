@@ -11,8 +11,9 @@
  *
  * Usage:
  *   node --env-file=.env scripts/syndicate-all.mjs --slug <slug> [--dry-run] [--save-pack]
+ *   node --env-file=.env scripts/syndicate-all.mjs --slug <slug> --approve
  *   node --env-file=.env scripts/syndicate-all.mjs --latest [--dry-run] [--save-pack]
- *   node --env-file=.env scripts/syndicate-all.mjs --slug <slug> --platforms devto,linkedin,x,indexnow
+ *   node --env-file=.env scripts/syndicate-all.mjs --slug <slug> --platforms devto,linkedin,x,indexnow --approve
  */
 
 import fs from "node:fs";
@@ -58,6 +59,7 @@ function parseArgs(argv) {
     slug: null,
     latest: false,
     dryRun: argv.includes("--dry-run"),
+    approve: argv.includes("--approve"),
     savePack: argv.includes("--save-pack"),
     force: argv.includes("--force"),
     platforms: new Set(["devto", "linkedin", "x", "indexnow"]),
@@ -191,9 +193,11 @@ function extractSectionHeadings(body) {
   const headings = [...body.matchAll(/^##\s+(.+)$/gm)].map((m) =>
     m[1].replace(/[*`]/g, "").trim()
   );
-  return headings.filter(
+  const filtered = headings.filter(
     (h) => !/^(jump to|related|faq|frequently asked|conclusion|references|what (causes|is) )/i.test(h)
   );
+  const actionSteps = filtered.filter((h) => !/(matrix|we see most often|comparison)/i.test(h));
+  return actionSteps.length >= 2 ? actionSteps : filtered;
 }
 
 function stripMarkdownSafe(text) {
@@ -694,10 +698,31 @@ async function dispatchIndexNow(url, { dryRun }) {
 function writeSocialPack(article, devtoPayload, liPayload, xTweets) {
   fs.mkdirSync(SOCIAL_PACK_DIR, { recursive: true });
   const packPath = path.join(SOCIAL_PACK_DIR, `${article.slug}-pack.md`);
+  const devtoPath = path.join(SOCIAL_PACK_DIR, `${article.slug}-devto.md`);
+
+  const devtoFileContent = [
+    "---",
+    `title: "${devtoPayload.title.replace(/"/g, '\\"')}"`,
+    `published: ${devtoPayload.published}`,
+    `description: "${devtoPayload.description.replace(/"/g, '\\"')}"`,
+    `tags: [${devtoPayload.tags.join(", ")}]`,
+    `canonical_url: "${devtoPayload.canonical_url}"`,
+    devtoPayload.main_image ? `cover_image: "${devtoPayload.main_image}"` : null,
+    "---",
+    "",
+    devtoPayload.body_markdown,
+    "",
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
+
+  fs.writeFileSync(devtoPath, devtoFileContent, "utf8");
+
   const content = [
     `# Multi-Platform Distribution Pack: ${article.rawTitle}`,
     `- **Canonical URL:** ${article.canonicalUrl}`,
     `- **DEV.to Tags:** ${devtoPayload.tags.join(", ")}`,
+    `- **DEV.to Body File:** [social_posts/${article.slug}-devto.md](${article.slug}-devto.md) (${devtoPayload.body_markdown.length} chars)`,
     `- **Hero Image:** ${article.coverImage || "None"}`,
     "",
     "---",
@@ -711,12 +736,12 @@ function writeSocialPack(article, devtoPayload, liPayload, xTweets) {
     "---",
     "",
     "## 2. X (Twitter) 4-Tweet Thread",
-    ...xTweets.map((t, i) => `### Tweet ${i + 1} (${t.length} chars)\n\`\`\`text\n${t}\n\`\`\``),
+    ...xTweets.map((t, i) => `### Tweet ${i + 1} (raw: ${t.length} / weighted: ${xWeightedLength(t)} chars)\n\`\`\`text\n${t}\n\`\`\``),
     "",
   ].join("\n");
 
   fs.writeFileSync(packPath, content, "utf8");
-  return packPath;
+  return { packPath, devtoPath };
 }
 
 // ---------------------------------------------------------------------------
@@ -732,8 +757,17 @@ async function main() {
       : null;
 
   if (!article) {
-    console.error("Usage: node --env-file=.env scripts/syndicate-all.mjs --slug <slug> | --latest [--dry-run] [--save-pack] [--force]");
+    console.error("Usage: node --env-file=.env scripts/syndicate-all.mjs --slug <slug> | --latest [--dry-run] [--save-pack] [--approve] [--force]");
     process.exit(1);
+  }
+
+  // Enforce explicit human approval before any external platform write
+  if (!args.dryRun && !args.approve) {
+    console.error(
+      `BLOCKED: Live external publishing requires --approve after reviewing the generated packs.\n` +
+      `Run with --dry-run --save-pack first, review social_posts/${article.slug}-pack.md and ${article.slug}-devto.md, then re-run with --approve.`
+    );
+    process.exit(2);
   }
 
   if (article.draft && !args.dryRun) {
@@ -741,7 +775,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`\n=== Unified Syndication ${args.dryRun ? "(DRY RUN) " : ""}===`);
+  console.log(`\n=== Unified Syndication ${args.dryRun ? "(DRY RUN) " : "(APPROVED LIVE RUN) "}===`);
   console.log(`Article:   ${article.rawTitle}`);
   console.log(`Canonical: ${article.canonicalUrl}`);
   console.log(`Platforms: ${[...args.platforms].join(", ")}`);
@@ -751,8 +785,9 @@ async function main() {
   const xTweets = formatForXThread(article);
 
   if (args.savePack || !args.dryRun) {
-    const packPath = writeSocialPack(article, devtoPayload, liPayload, xTweets);
+    const { packPath, devtoPath } = writeSocialPack(article, devtoPayload, liPayload, xTweets);
     console.log(`Social Pack: ${path.relative(ROOT, packPath)}`);
+    console.log(`DEV.to Pack: ${path.relative(ROOT, devtoPath)}`);
   }
 
   const state = loadState();
